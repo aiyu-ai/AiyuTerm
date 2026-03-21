@@ -2,26 +2,7 @@
 
 ## Development
 
-Build locally with:
-
-```bash
-xcodebuild \
-  -project Liney.xcodeproj \
-  -scheme Liney \
-  -configuration Debug \
-  -destination 'platform=macOS,arch=arm64' \
-  build
-```
-
-Run tests with:
-
-```bash
-xcodebuild \
-  -project Liney.xcodeproj \
-  -scheme Liney \
-  -destination 'platform=macOS,arch=arm64' \
-  test
-```
+Build, test, run, and release documentation now lives in [`DEVELOP.md`](./DEVELOP.md).
 
 ## Pull Requests
 
