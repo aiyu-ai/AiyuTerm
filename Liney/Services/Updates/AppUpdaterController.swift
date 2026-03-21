@@ -30,9 +30,9 @@ private final class SparkleUpdaterDelegate: NSObject, SPUUpdaterDelegate {
 
 @MainActor
 final class AppUpdaterController {
-    static let repository = "wuwenrui/liney"
-    static let releasesURL = URL(string: "https://github.com/\(repository)/releases")!
-    static let feedURL = URL(string: "https://raw.githubusercontent.com/\(repository)/main/appcast.xml")!
+    nonisolated static let repository = "wuwenrui/liney"
+    nonisolated static let releasesURL = URL(string: "https://github.com/\(repository)/releases")!
+    nonisolated static let feedURL = URL(string: "https://raw.githubusercontent.com/\(repository)/stable/appcast.xml")!
     static let sparkleKeyAccount = "liney"
     static let defaultPrivateKeyPath: String = {
         let releaseHome = ProcessInfo.processInfo.environment["LINEY_RELEASE_HOME"] ?? "\(NSHomeDirectory())/.liney_release"
