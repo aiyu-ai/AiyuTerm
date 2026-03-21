@@ -192,6 +192,7 @@ extension SidebarItemIcon {
 struct AppSettings: Codable, Hashable {
     var autoRefreshEnabled: Bool
     var autoRefreshIntervalSeconds: Int
+    var autoClosePaneOnProcessExit: Bool
     var fileWatcherEnabled: Bool
     var githubIntegrationEnabled: Bool
     var autoCheckForUpdates: Bool
@@ -211,6 +212,7 @@ struct AppSettings: Codable, Hashable {
     init(
         autoRefreshEnabled: Bool = true,
         autoRefreshIntervalSeconds: Int = 30,
+        autoClosePaneOnProcessExit: Bool = true,
         fileWatcherEnabled: Bool = true,
         githubIntegrationEnabled: Bool = true,
         autoCheckForUpdates: Bool = true,
@@ -229,6 +231,7 @@ struct AppSettings: Codable, Hashable {
     ) {
         self.autoRefreshEnabled = autoRefreshEnabled
         self.autoRefreshIntervalSeconds = max(10, autoRefreshIntervalSeconds)
+        self.autoClosePaneOnProcessExit = autoClosePaneOnProcessExit
         self.fileWatcherEnabled = fileWatcherEnabled
         self.githubIntegrationEnabled = githubIntegrationEnabled
         self.autoCheckForUpdates = autoCheckForUpdates
@@ -251,6 +254,7 @@ extension AppSettings {
     private enum CodingKeys: String, CodingKey {
         case autoRefreshEnabled
         case autoRefreshIntervalSeconds
+        case autoClosePaneOnProcessExit
         case fileWatcherEnabled
         case githubIntegrationEnabled
         case autoCheckForUpdates
@@ -273,6 +277,7 @@ extension AppSettings {
         self.init(
             autoRefreshEnabled: try container.decodeIfPresent(Bool.self, forKey: .autoRefreshEnabled) ?? true,
             autoRefreshIntervalSeconds: try container.decodeIfPresent(Int.self, forKey: .autoRefreshIntervalSeconds) ?? 30,
+            autoClosePaneOnProcessExit: try container.decodeIfPresent(Bool.self, forKey: .autoClosePaneOnProcessExit) ?? true,
             fileWatcherEnabled: try container.decodeIfPresent(Bool.self, forKey: .fileWatcherEnabled) ?? true,
             githubIntegrationEnabled: try container.decodeIfPresent(Bool.self, forKey: .githubIntegrationEnabled) ?? true,
             autoCheckForUpdates: try container.decodeIfPresent(Bool.self, forKey: .autoCheckForUpdates) ?? true,

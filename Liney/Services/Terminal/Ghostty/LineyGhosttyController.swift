@@ -982,6 +982,7 @@ private final class LineyGhosttySurfaceView: NSView {
         configuration.userdata = userdata
         configuration.scale_factor = Double(window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2)
         configuration.context = GHOSTTY_SURFACE_CONTEXT_SPLIT
+        configuration.wait_after_command = false
 
         let workingDirectory = strdup(launchConfiguration.workingDirectory)
         let command = strdup(launchConfiguration.ghosttyCommand)

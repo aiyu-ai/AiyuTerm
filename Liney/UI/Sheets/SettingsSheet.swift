@@ -139,6 +139,7 @@ struct SettingsSheet: View {
         GroupBox("Behavior") {
             VStack(alignment: .leading, spacing: 12) {
                 Toggle("Enable automatic refresh", isOn: $appSettings.autoRefreshEnabled)
+                Toggle("Close terminal panes automatically after process exit", isOn: $appSettings.autoClosePaneOnProcessExit)
                 Toggle("Enable file watchers", isOn: $appSettings.fileWatcherEnabled)
                 Toggle("Enable GitHub integration", isOn: $appSettings.githubIntegrationEnabled)
                 Toggle("Allow system notifications", isOn: $appSettings.systemNotificationsEnabled)

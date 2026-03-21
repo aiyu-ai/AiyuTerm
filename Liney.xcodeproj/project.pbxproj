@@ -29,9 +29,22 @@
 		8B1A2B3C4D5E6F708090A004 /* LineyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LineyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		5A45D3002F70000100861AB5 /* Exceptions for "Liney" folder in "Liney" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 5A45CEF82F67D58F00861AB5 /* Liney */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		5A45CEFB2F67D58F00861AB5 /* Liney */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				5A45D3002F70000100861AB5 /* Exceptions for "Liney" folder in "Liney" target */,
+			);
 			path = Liney;
 			sourceTree = "<group>";
 		};
@@ -375,11 +388,10 @@
 				DEVELOPMENT_TEAM = YPV49M8592;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
-				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Liney/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
+					LD_RUNPATH_SEARCH_PATHS = (
+						"$(inherited)",
+						"@executable_path/../Frameworks",
 				);
 				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				MACOSX_DEPLOYMENT_TARGET = 15.6;
@@ -413,11 +425,10 @@
 				DEVELOPMENT_TEAM = YPV49M8592;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
-				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Liney/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
+					LD_RUNPATH_SEARCH_PATHS = (
+						"$(inherited)",
+						"@executable_path/../Frameworks",
 				);
 				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				MACOSX_DEPLOYMENT_TARGET = 15.6;

@@ -56,6 +56,7 @@ final class ReleaseUpdateTests: XCTestCase {
         let decoded = try JSONDecoder().decode(AppSettings.self, from: data)
         XCTAssertFalse(decoded.autoRefreshEnabled)
         XCTAssertEqual(decoded.autoRefreshIntervalSeconds, 60)
+        XCTAssertTrue(decoded.autoClosePaneOnProcessExit)
         XCTAssertTrue(decoded.autoCheckForUpdates)
         XCTAssertFalse(decoded.autoDownloadUpdates)
         XCTAssertFalse(decoded.showRemoteBranchesInCreateWorktree)

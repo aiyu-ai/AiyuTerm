@@ -18,6 +18,7 @@ struct TerminalPaneView: View {
     @State private var isSearchPresented = false
     @State private var searchDraft = ""
     @State private var searchTask: Task<Void, Never>?
+    @State private var autoCloseTask: Task<Void, Never>?
 
     private var isFocused: Bool {
         sessionController.focusedPaneID == paneID
@@ -178,9 +179,16 @@ struct TerminalPaneView: View {
         }
         .onAppear {
             syncSearchState(with: session.surfaceStatus.searchQuery)
+            scheduleAutoCloseIfNeeded()
         }
         .onChange(of: session.surfaceStatus.searchQuery) { _, newValue in
             syncSearchState(with: newValue)
+        }
+        .onChange(of: session.lifecycle) { _, _ in
+            scheduleAutoCloseIfNeeded()
+        }
+        .onChange(of: store.appSettings.autoClosePaneOnProcessExit) { _, _ in
+            scheduleAutoCloseIfNeeded()
         }
         .onChange(of: searchDraft) { _, newValue in
             guard isSearchPresented else { return }
@@ -189,6 +197,8 @@ struct TerminalPaneView: View {
         .onDisappear {
             searchTask?.cancel()
             searchTask = nil
+            autoCloseTask?.cancel()
+            autoCloseTask = nil
         }
     }
 
@@ -229,6 +239,22 @@ struct TerminalPaneView: View {
             try? await Task.sleep(nanoseconds: 120_000_000)
             guard !Task.isCancelled else { return }
             session.updateSearch(query)
+        }
+    }
+
+    private func scheduleAutoCloseIfNeeded() {
+        autoCloseTask?.cancel()
+        autoCloseTask = nil
+
+        guard store.appSettings.autoClosePaneOnProcessExit,
+              session.lifecycle == .exited else { return }
+
+        autoCloseTask = Task { @MainActor in
+            await Task.yield()
+            guard !Task.isCancelled,
+                  store.appSettings.autoClosePaneOnProcessExit,
+                  session.lifecycle == .exited else { return }
+            store.closePane(in: workspace, paneID: paneID)
         }
     }
 }
