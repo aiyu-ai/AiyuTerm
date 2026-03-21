@@ -13,7 +13,7 @@ private final class SparkleUpdaterDelegate: NSObject, SPUUpdaterDelegate {
     var updateChannel: ReleaseChannel = .stable
 
     nonisolated func feedURLString(for updater: SPUUpdater) -> String? {
-        AppUpdaterController.feedURL.absoluteString
+        AppUpdaterController.resolveFeedURLString(infoDictionary: Bundle.main.infoDictionary)
     }
 
     nonisolated func allowedChannels(for updater: SPUUpdater) -> Set<String> {
@@ -32,7 +32,8 @@ private final class SparkleUpdaterDelegate: NSObject, SPUUpdaterDelegate {
 final class AppUpdaterController {
     nonisolated static let repository = "wuwenrui/liney"
     nonisolated static let releasesURL = URL(string: "https://github.com/\(repository)/releases")!
-    nonisolated static let feedURL = URL(string: "https://raw.githubusercontent.com/\(repository)/stable/appcast.xml")!
+    nonisolated static let feedURLInfoPlistKey = "SUFeedURL"
+    nonisolated static let defaultFeedURLString = "https://raw.githubusercontent.com/\(repository)/stable/appcast.xml"
     static let sparkleKeyAccount = "liney"
     static let defaultPrivateKeyPath: String = {
         let releaseHome = ProcessInfo.processInfo.environment["LINEY_RELEASE_HOME"] ?? "\(NSHomeDirectory())/.liney_release"
@@ -65,5 +66,15 @@ final class AppUpdaterController {
 
     func checkForUpdates() {
         controller.updater.checkForUpdates()
+    }
+
+    nonisolated static func resolveFeedURLString(infoDictionary: [String: Any]?) -> String {
+        guard
+            let value = infoDictionary?[feedURLInfoPlistKey] as? String,
+            value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+        else {
+            return defaultFeedURLString
+        }
+        return value
     }
 }

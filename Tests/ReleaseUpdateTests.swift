@@ -9,6 +9,33 @@ import XCTest
 @testable import Liney
 
 final class ReleaseUpdateTests: XCTestCase {
+    func testAppUpdaterDefaultsToStableAppcastFeed() {
+        XCTAssertEqual(
+            AppUpdaterController.defaultFeedURLString,
+            "https://raw.githubusercontent.com/wuwenrui/liney/stable/appcast.xml"
+        )
+    }
+
+    func testAppUpdaterFallsBackToStableFeedWhenInfoPlistValueMissing() {
+        XCTAssertEqual(
+            AppUpdaterController.resolveFeedURLString(infoDictionary: nil),
+            AppUpdaterController.defaultFeedURLString
+        )
+        XCTAssertEqual(
+            AppUpdaterController.resolveFeedURLString(infoDictionary: [:]),
+            AppUpdaterController.defaultFeedURLString
+        )
+    }
+
+    func testAppUpdaterPrefersInfoPlistFeedURL() {
+        XCTAssertEqual(
+            AppUpdaterController.resolveFeedURLString(
+                infoDictionary: [AppUpdaterController.feedURLInfoPlistKey: "https://example.com/appcast.xml"]
+            ),
+            "https://example.com/appcast.xml"
+        )
+    }
+
     func testAppSettingsDecodesLegacyPayloadWithUpdateDefaults() throws {
         let data = Data(
             """
