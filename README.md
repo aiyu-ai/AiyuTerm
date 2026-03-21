@@ -23,7 +23,7 @@ It gives you one focused place to open codebases, switch worktrees, keep termina
 ### Homebrew
 
 ```bash
-brew install --cask wuwenrui/tap/liney
+brew update && brew install --cask wuwenrui/tap/liney
 ```
 
 ### Direct Download
