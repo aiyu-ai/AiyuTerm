@@ -1,0 +1,222 @@
+//
+//  LineyGhosttyInputSupportTests.swift
+//  LineyTests
+//
+//  Author: wuwenrui
+//
+
+import AppKit
+import Carbon
+import GhosttyKit
+import XCTest
+@testable import Liney
+
+final class LineyGhosttyInputSupportTests: XCTestCase {
+    private let returnKeyCode = UInt16(kVK_Return)
+    private let keypadEnterKeyCode = UInt16(kVK_ANSI_KeypadEnter)
+
+    func testShiftReturnUsesTextInputRouting() {
+        XCTAssertFalse(
+            LineyGhosttyTextInputRouting.shouldPreferRawKeyEvent(
+                keyCode: returnKeyCode,
+                modifierFlags: [.shift]
+            )
+        )
+    }
+
+    func testCommandReturnStillUsesRawKeyRouting() {
+        XCTAssertTrue(
+            LineyGhosttyTextInputRouting.shouldPreferRawKeyEvent(
+                keyCode: returnKeyCode,
+                modifierFlags: [.command]
+            )
+        )
+    }
+
+    func testOptionKeypadEnterStillUsesRawKeyRouting() {
+        XCTAssertTrue(
+            LineyGhosttyTextInputRouting.shouldPreferRawKeyEvent(
+                keyCode: keypadEnterKeyCode,
+                modifierFlags: [.option]
+            )
+        )
+    }
+
+    func testPlainReturnDoesNotUseRawKeyRouting() {
+        XCTAssertFalse(
+            LineyGhosttyTextInputRouting.shouldPreferRawKeyEvent(
+                keyCode: returnKeyCode,
+                modifierFlags: []
+            )
+        )
+    }
+
+    func testNonReturnKeyNeverUsesRawKeyRouting() {
+        XCTAssertFalse(
+            LineyGhosttyTextInputRouting.shouldPreferRawKeyEvent(
+                keyCode: UInt16(kVK_ANSI_A),
+                modifierFlags: [.command]
+            )
+        )
+    }
+
+    func testReturnIsNotSentAsLiteralText() {
+        XCTAssertFalse(shouldSendGhosttyText("\r"))
+        XCTAssertFalse(shouldSendGhosttyText("\n"))
+    }
+
+    func testPrintableTextIsStillSent() {
+        XCTAssertTrue(shouldSendGhosttyText("a"))
+        XCTAssertTrue(shouldSendGhosttyText("你"))
+    }
+
+    func testConsumedBindingWithoutActiveSequencesAttemptsMenu() {
+        XCTAssertTrue(
+            ghosttyShouldAttemptMenu(
+                flags: ghostty_binding_flags_e(GHOSTTY_BINDING_FLAGS_CONSUMED.rawValue),
+                hasActiveKeySequence: false,
+                hasActiveKeyTable: false
+            )
+        )
+    }
+
+    func testPerformableBindingDoesNotAttemptMenu() {
+        XCTAssertFalse(
+            ghosttyShouldAttemptMenu(
+                flags: ghostty_binding_flags_e(
+                    GHOSTTY_BINDING_FLAGS_CONSUMED.rawValue | GHOSTTY_BINDING_FLAGS_PERFORMABLE.rawValue
+                ),
+                hasActiveKeySequence: false,
+                hasActiveKeyTable: false
+            )
+        )
+    }
+
+    func testActiveKeySequenceSuppressesMenuAttempt() {
+        XCTAssertFalse(
+            ghosttyShouldAttemptMenu(
+                flags: ghostty_binding_flags_e(GHOSTTY_BINDING_FLAGS_CONSUMED.rawValue),
+                hasActiveKeySequence: true,
+                hasActiveKeyTable: false
+            )
+        )
+    }
+
+    func testAllBindingDoesNotAttemptMenu() {
+        XCTAssertFalse(
+            ghosttyShouldAttemptMenu(
+                flags: ghostty_binding_flags_e(
+                    GHOSTTY_BINDING_FLAGS_CONSUMED.rawValue | GHOSTTY_BINDING_FLAGS_ALL.rawValue
+                ),
+                hasActiveKeySequence: false,
+                hasActiveKeyTable: false
+            )
+        )
+    }
+
+    func testCtrlReturnEquivalentKeyStaysReturn() {
+        let resolution = resolveGhosttyEquivalentKey(
+            charactersIgnoringModifiers: "\r",
+            characters: "\r",
+            modifierFlags: [.control],
+            eventTimestamp: 42,
+            lastPerformKeyEvent: nil
+        )
+
+        XCTAssertEqual(resolution.equivalent, "\r")
+        XCTAssertNil(resolution.nextLastPerformKeyEvent)
+    }
+
+    func testCommandKeyEquivalentRequiresSecondPassToRedispatch() {
+        let firstResolution = resolveGhosttyEquivalentKey(
+            charactersIgnoringModifiers: "k",
+            characters: "k",
+            modifierFlags: [.command],
+            eventTimestamp: 42,
+            lastPerformKeyEvent: nil
+        )
+        XCTAssertNil(firstResolution.equivalent)
+        XCTAssertEqual(firstResolution.nextLastPerformKeyEvent, 42)
+
+        let secondResolution = resolveGhosttyEquivalentKey(
+            charactersIgnoringModifiers: "k",
+            characters: "k",
+            modifierFlags: [.command],
+            eventTimestamp: 42,
+            lastPerformKeyEvent: firstResolution.nextLastPerformKeyEvent
+        )
+        XCTAssertEqual(secondResolution.equivalent, "k")
+        XCTAssertNil(secondResolution.nextLastPerformKeyEvent)
+    }
+
+    func testCtrlSlashEquivalentKeyBecomesUnderscore() {
+        let resolution = resolveGhosttyEquivalentKey(
+            charactersIgnoringModifiers: "/",
+            characters: "/",
+            modifierFlags: [.control],
+            eventTimestamp: 42,
+            lastPerformKeyEvent: nil
+        )
+
+        XCTAssertEqual(resolution.equivalent, "_")
+        XCTAssertNil(resolution.nextLastPerformKeyEvent)
+    }
+
+    func testZeroTimestampDoesNotRedispatchEquivalentKey() {
+        let resolution = resolveGhosttyEquivalentKey(
+            charactersIgnoringModifiers: "k",
+            characters: "k",
+            modifierFlags: [.command],
+            eventTimestamp: 0,
+            lastPerformKeyEvent: 99
+        )
+
+        XCTAssertNil(resolution.equivalent)
+        XCTAssertEqual(resolution.nextLastPerformKeyEvent, 99)
+    }
+
+    func testClampUsesTextLengthForNotFoundSelection() {
+        XCTAssertEqual(
+            LineyGhosttyMarkedTextState.clamp(NSRange(location: NSNotFound, length: 3), textLength: 5),
+            NSRange(location: 5, length: 0)
+        )
+    }
+
+    func testClampCollapsesEmptyTextSelections() {
+        XCTAssertEqual(
+            LineyGhosttyMarkedTextState.clamp(NSRange(location: 4, length: 2), textLength: 0),
+            NSRange(location: 0, length: 0)
+        )
+    }
+
+    func testDeleteBackwardRemovesSingleComposedCharacter() {
+        var state = LineyGhosttyMarkedTextState(
+            text: "你好",
+            selectedRange: NSRange(location: 2, length: 0)
+        )
+
+        state.deleteBackward()
+
+        XCTAssertEqual(state.text, "你")
+        XCTAssertEqual(state.selectedRange, NSRange(location: 1, length: 0))
+    }
+
+    func testDeleteBackwardHonorsMarkedSelectionRange() {
+        var state = LineyGhosttyMarkedTextState(
+            text: "nihao",
+            selectedRange: NSRange(location: 1, length: 2)
+        )
+
+        state.deleteBackward()
+
+        XCTAssertEqual(state.text, "nao")
+        XCTAssertEqual(state.selectedRange, NSRange(location: 1, length: 0))
+    }
+
+    func testAppKitModsReplacesDirectionalModifiersButPreservesFallbackFlags() {
+        let mods = ghostty_input_mods_e(GHOSTTY_MODS_ALT.rawValue | GHOSTTY_MODS_SHIFT.rawValue)
+        let resolved = appKitMods(mods, fallback: [.capsLock, .command])
+
+        XCTAssertEqual(resolved.intersection([.shift, .option, .command, .capsLock]), [.shift, .option, .capsLock])
+    }
+}

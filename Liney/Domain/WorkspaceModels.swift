@@ -1,0 +1,1224 @@
+//
+//  WorkspaceModels.swift
+//  Liney
+//
+//  Author: wuwenrui
+//
+
+import Foundation
+
+enum WorkspaceKind: String, Codable {
+    case repository
+    case localTerminal
+
+    var displayName: String {
+        switch self {
+        case .repository:
+            return "Repository"
+        case .localTerminal:
+            return "Local terminal"
+        }
+    }
+}
+
+enum TerminalEngineKind: String, Codable, CaseIterable {
+    case libghosttyPreferred
+
+    var displayName: String {
+        "libghostty"
+    }
+}
+
+enum SessionBackendKind: String, Codable, CaseIterable {
+    case localShell
+    case ssh
+    case agent
+
+    var displayName: String {
+        switch self {
+        case .localShell:
+            return "Local shell"
+        case .ssh:
+            return "SSH"
+        case .agent:
+            return "Agent"
+        }
+    }
+}
+
+struct LocalShellSessionConfiguration: Codable, Hashable {
+    var shellPath: String
+    var shellArguments: [String]
+
+    static let `default` = LocalShellSessionConfiguration(
+        shellPath: "/bin/zsh",
+        shellArguments: ["-l"]
+    )
+}
+
+struct SSHSessionConfiguration: Codable, Hashable {
+    var host: String
+    var user: String?
+    var port: Int?
+    var identityFilePath: String?
+    var remoteWorkingDirectory: String?
+    var remoteCommand: String?
+
+    var destination: String {
+        guard let user, !user.isEmpty else { return host }
+        return "\(user)@\(host)"
+    }
+}
+
+struct AgentSessionConfiguration: Codable, Hashable {
+    var name: String
+    var launchPath: String
+    var arguments: [String]
+    var environment: [String: String]
+    var workingDirectory: String?
+}
+
+struct AgentPreset: Codable, Hashable, Identifiable {
+    var id: UUID
+    var name: String
+    var launchPath: String
+    var arguments: [String]
+    var environment: [String: String]
+    var workingDirectory: String?
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        launchPath: String,
+        arguments: [String],
+        environment: [String: String] = [:],
+        workingDirectory: String? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.launchPath = launchPath
+        self.arguments = arguments
+        self.environment = environment
+        self.workingDirectory = workingDirectory
+    }
+
+    static let codex = AgentPreset(
+        name: "Codex",
+        launchPath: "/usr/bin/env",
+        arguments: ["codex", "resume"]
+    )
+
+    var configuration: AgentSessionConfiguration {
+        AgentSessionConfiguration(
+            name: name,
+            launchPath: launchPath,
+            arguments: arguments,
+            environment: environment,
+            workingDirectory: workingDirectory
+        )
+    }
+}
+
+struct RemoteWorkspaceTarget: Codable, Hashable, Identifiable {
+    var id: UUID
+    var name: String
+    var ssh: SSHSessionConfiguration
+    var agentPresetID: UUID?
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        ssh: SSHSessionConfiguration,
+        agentPresetID: UUID? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.ssh = ssh
+        self.agentPresetID = agentPresetID
+    }
+}
+
+struct WorkspaceSettings: Codable, Hashable {
+    var isPinned: Bool
+    var isArchived: Bool
+    var workspaceIcon: SidebarItemIcon?
+    var worktreeIconOverrides: [String: SidebarItemIcon]
+    var runScript: String
+    var setupScript: String
+    var agentPresets: [AgentPreset]
+    var preferredAgentPresetID: UUID?
+    var remoteTargets: [RemoteWorkspaceTarget]
+    var workflows: [WorkspaceWorkflow]
+    var preferredWorkflowID: UUID?
+
+    init(
+        isPinned: Bool = false,
+        isArchived: Bool = false,
+        workspaceIcon: SidebarItemIcon? = nil,
+        worktreeIconOverrides: [String: SidebarItemIcon] = [:],
+        runScript: String = "",
+        setupScript: String = "",
+        agentPresets: [AgentPreset] = [.codex],
+        preferredAgentPresetID: UUID? = AgentPreset.codex.id,
+        remoteTargets: [RemoteWorkspaceTarget] = [],
+        workflows: [WorkspaceWorkflow] = [],
+        preferredWorkflowID: UUID? = nil
+    ) {
+        self.isPinned = isPinned
+        self.isArchived = isArchived
+        self.workspaceIcon = workspaceIcon
+        self.worktreeIconOverrides = worktreeIconOverrides
+        self.runScript = runScript
+        self.setupScript = setupScript
+        self.agentPresets = agentPresets
+        self.preferredAgentPresetID = preferredAgentPresetID
+        self.remoteTargets = remoteTargets
+        self.workflows = workflows
+        self.preferredWorkflowID = preferredWorkflowID
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case isPinned
+        case isArchived
+        case workspaceIcon
+        case worktreeIconOverrides
+        case runScript
+        case setupScript
+        case agentPresets
+        case preferredAgentPresetID
+        case remoteTargets
+        case workflows
+        case preferredWorkflowID
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            isPinned: try container.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false,
+            isArchived: try container.decodeIfPresent(Bool.self, forKey: .isArchived) ?? false,
+            workspaceIcon: try container.decodeIfPresent(SidebarItemIcon.self, forKey: .workspaceIcon),
+            worktreeIconOverrides: try container.decodeIfPresent([String: SidebarItemIcon].self, forKey: .worktreeIconOverrides) ?? [:],
+            runScript: try container.decodeIfPresent(String.self, forKey: .runScript) ?? "",
+            setupScript: try container.decodeIfPresent(String.self, forKey: .setupScript) ?? "",
+            agentPresets: try container.decodeIfPresent([AgentPreset].self, forKey: .agentPresets) ?? [.codex],
+            preferredAgentPresetID: try container.decodeIfPresent(UUID.self, forKey: .preferredAgentPresetID) ?? AgentPreset.codex.id,
+            remoteTargets: try container.decodeIfPresent([RemoteWorkspaceTarget].self, forKey: .remoteTargets) ?? [],
+            workflows: try container.decodeIfPresent([WorkspaceWorkflow].self, forKey: .workflows) ?? [],
+            preferredWorkflowID: try container.decodeIfPresent(UUID.self, forKey: .preferredWorkflowID)
+        )
+    }
+}
+
+enum WorkspaceWorkflowLocalSessionMode: String, Codable, Hashable, CaseIterable, Identifiable {
+    case reuseFocused
+    case newSession
+    case splitRight
+    case splitDown
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .reuseFocused:
+            return "Reuse focused"
+        case .newSession:
+            return "New session"
+        case .splitRight:
+            return "Split right"
+        case .splitDown:
+            return "Split down"
+        }
+    }
+}
+
+enum WorkspaceWorkflowAgentMode: String, Codable, Hashable, CaseIterable, Identifiable {
+    case none
+    case newSession
+    case splitRight
+    case splitDown
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .none:
+            return "No agent"
+        case .newSession:
+            return "New session"
+        case .splitRight:
+            return "Split right"
+        case .splitDown:
+            return "Split down"
+        }
+    }
+}
+
+struct WorkspaceWorkflow: Codable, Hashable, Identifiable {
+    var id: UUID
+    var name: String
+    var localSessionMode: WorkspaceWorkflowLocalSessionMode
+    var runSetupScript: Bool
+    var runWorkspaceScript: Bool
+    var agentPresetID: UUID?
+    var agentMode: WorkspaceWorkflowAgentMode
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        localSessionMode: WorkspaceWorkflowLocalSessionMode = .reuseFocused,
+        runSetupScript: Bool = true,
+        runWorkspaceScript: Bool = true,
+        agentPresetID: UUID? = nil,
+        agentMode: WorkspaceWorkflowAgentMode = .none
+    ) {
+        self.id = id
+        self.name = name
+        self.localSessionMode = localSessionMode
+        self.runSetupScript = runSetupScript
+        self.runWorkspaceScript = runWorkspaceScript
+        self.agentPresetID = agentPresetID
+        self.agentMode = agentMode
+    }
+}
+
+enum WorkspaceActivityKind: String, Codable, Hashable, CaseIterable {
+    case workflow
+    case command
+    case agent
+    case remote
+    case github
+    case release
+
+    var displayName: String {
+        switch self {
+        case .workflow:
+            return "Workflow"
+        case .command:
+            return "Command"
+        case .agent:
+            return "Agent"
+        case .remote:
+            return "Remote"
+        case .github:
+            return "GitHub"
+        case .release:
+            return "Release"
+        }
+    }
+}
+
+enum WorkspaceReplayKind: String, Codable, Hashable {
+    case runWorkspaceScript
+    case runSetupScript
+    case runWorkflow
+    case createSession
+    case openPullRequest
+    case markPullRequestReady
+    case openLatestRun
+}
+
+struct WorkspaceReplayAction: Codable, Hashable {
+    var kind: WorkspaceReplayKind
+    var workflowID: UUID?
+    var worktreePath: String?
+    var backendConfiguration: SessionBackendConfiguration?
+    var workingDirectory: String?
+
+    static func runWorkflow(_ workflowID: UUID) -> WorkspaceReplayAction {
+        WorkspaceReplayAction(
+            kind: .runWorkflow,
+            workflowID: workflowID,
+            worktreePath: nil,
+            backendConfiguration: nil,
+            workingDirectory: nil
+        )
+    }
+
+    static func createSession(
+        backendConfiguration: SessionBackendConfiguration,
+        workingDirectory: String
+    ) -> WorkspaceReplayAction {
+        WorkspaceReplayAction(
+            kind: .createSession,
+            workflowID: nil,
+            worktreePath: nil,
+            backendConfiguration: backendConfiguration,
+            workingDirectory: workingDirectory
+        )
+    }
+
+    static func gitHub(_ kind: WorkspaceReplayKind, worktreePath: String) -> WorkspaceReplayAction {
+        WorkspaceReplayAction(
+            kind: kind,
+            workflowID: nil,
+            worktreePath: worktreePath,
+            backendConfiguration: nil,
+            workingDirectory: nil
+        )
+    }
+}
+
+struct WorkspaceActivityEntry: Codable, Hashable, Identifiable {
+    var id: UUID
+    var timestamp: TimeInterval
+    var kind: WorkspaceActivityKind
+    var title: String
+    var detail: String
+    var worktreePath: String?
+    var replayAction: WorkspaceReplayAction?
+
+    init(
+        id: UUID = UUID(),
+        timestamp: TimeInterval = Date().timeIntervalSince1970,
+        kind: WorkspaceActivityKind,
+        title: String,
+        detail: String,
+        worktreePath: String? = nil,
+        replayAction: WorkspaceReplayAction? = nil
+    ) {
+        self.id = id
+        self.timestamp = timestamp
+        self.kind = kind
+        self.title = title
+        self.detail = detail
+        self.worktreePath = worktreePath
+        self.replayAction = replayAction
+    }
+}
+
+struct SessionBackendConfiguration: Codable, Hashable {
+    var kind: SessionBackendKind
+    var localShell: LocalShellSessionConfiguration?
+    var ssh: SSHSessionConfiguration?
+    var agent: AgentSessionConfiguration?
+
+    static func local(
+        shellPath: String = LocalShellSessionConfiguration.default.shellPath,
+        shellArguments: [String] = LocalShellSessionConfiguration.default.shellArguments
+    ) -> SessionBackendConfiguration {
+        SessionBackendConfiguration(
+            kind: .localShell,
+            localShell: LocalShellSessionConfiguration(
+                shellPath: shellPath,
+                shellArguments: shellArguments
+            ),
+            ssh: nil,
+            agent: nil
+        )
+    }
+
+    static func ssh(_ configuration: SSHSessionConfiguration) -> SessionBackendConfiguration {
+        SessionBackendConfiguration(
+            kind: .ssh,
+            localShell: nil,
+            ssh: configuration,
+            agent: nil
+        )
+    }
+
+    static func agent(_ configuration: AgentSessionConfiguration) -> SessionBackendConfiguration {
+        SessionBackendConfiguration(
+            kind: .agent,
+            localShell: nil,
+            ssh: nil,
+            agent: configuration
+        )
+    }
+
+    var displayName: String {
+        switch kind {
+        case .localShell:
+            return kind.displayName
+        case .ssh:
+            return ssh?.destination ?? kind.displayName
+        case .agent:
+            return agent?.name ?? kind.displayName
+        }
+    }
+
+    var localShellConfiguration: LocalShellSessionConfiguration {
+        localShell ?? .default
+    }
+}
+
+struct WorktreeModel: Codable, Hashable, Identifiable {
+    var id: String { path }
+    var path: String
+    var branch: String?
+    var head: String
+    var isMainWorktree: Bool
+    var isLocked: Bool
+    var lockReason: String?
+
+    var displayName: String {
+        if isMainWorktree {
+            return "main"
+        }
+        if let branch, !branch.isEmpty {
+            return branch
+        }
+        return URL(fileURLWithPath: path).lastPathComponent
+    }
+
+    var branchLabel: String {
+        branch ?? "detached"
+    }
+}
+
+struct WorkspaceCanvasCardLayoutRecord: Codable, Hashable, Identifiable {
+    var id: UUID { tabID }
+    var tabID: UUID
+    var centerX: Double
+    var centerY: Double
+    var width: Double
+    var height: Double
+}
+
+struct WorkspaceCanvasStateRecord: Codable, Hashable {
+    var scale: Double
+    var offsetX: Double
+    var offsetY: Double
+    var cardLayouts: [WorkspaceCanvasCardLayoutRecord]
+
+    init(
+        scale: Double = 1,
+        offsetX: Double = 0,
+        offsetY: Double = 0,
+        cardLayouts: [WorkspaceCanvasCardLayoutRecord] = []
+    ) {
+        self.scale = scale
+        self.offsetX = offsetX
+        self.offsetY = offsetY
+        self.cardLayouts = cardLayouts
+    }
+
+    func pruned(to validTabIDs: Set<UUID>) -> WorkspaceCanvasStateRecord {
+        WorkspaceCanvasStateRecord(
+            scale: scale,
+            offsetX: offsetX,
+            offsetY: offsetY,
+            cardLayouts: cardLayouts.filter { validTabIDs.contains($0.tabID) }
+        )
+    }
+}
+
+struct GlobalCanvasCardID: Codable, Hashable, Identifiable {
+    var workspaceID: UUID
+    var worktreePath: String
+    var tabID: UUID
+
+    var id: String {
+        "\(workspaceID.uuidString)::\(worktreePath)::\(tabID.uuidString)"
+    }
+}
+
+enum GlobalCanvasColorGroup: String, Codable, Hashable, CaseIterable, Identifiable {
+    case none
+    case blue
+    case teal
+    case green
+    case amber
+    case rose
+    case slate
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .none:
+            return "None"
+        case .blue:
+            return "Blue"
+        case .teal:
+            return "Teal"
+        case .green:
+            return "Green"
+        case .amber:
+            return "Amber"
+        case .rose:
+            return "Rose"
+        case .slate:
+            return "Slate"
+        }
+    }
+}
+
+struct GlobalCanvasCardLayoutRecord: Codable, Hashable, Identifiable {
+    var workspaceID: UUID
+    var worktreePath: String
+    var tabID: UUID
+    var centerX: Double
+    var centerY: Double
+    var width: Double
+    var height: Double
+    var isMinimized: Bool
+    var isPinned: Bool
+    var colorGroup: GlobalCanvasColorGroup
+
+    private enum CodingKeys: String, CodingKey {
+        case workspaceID
+        case worktreePath
+        case tabID
+        case centerX
+        case centerY
+        case width
+        case height
+        case isMinimized
+        case isPinned
+        case colorGroup
+    }
+
+    init(
+        workspaceID: UUID,
+        worktreePath: String,
+        tabID: UUID,
+        centerX: Double,
+        centerY: Double,
+        width: Double,
+        height: Double,
+        isMinimized: Bool = false,
+        isPinned: Bool = false,
+        colorGroup: GlobalCanvasColorGroup = .none
+    ) {
+        self.workspaceID = workspaceID
+        self.worktreePath = worktreePath
+        self.tabID = tabID
+        self.centerX = centerX
+        self.centerY = centerY
+        self.width = width
+        self.height = height
+        self.isMinimized = isMinimized
+        self.isPinned = isPinned
+        self.colorGroup = colorGroup
+    }
+
+    var id: String {
+        cardID.id
+    }
+
+    var cardID: GlobalCanvasCardID {
+        GlobalCanvasCardID(
+            workspaceID: workspaceID,
+            worktreePath: worktreePath,
+            tabID: tabID
+        )
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        workspaceID = try container.decode(UUID.self, forKey: .workspaceID)
+        worktreePath = try container.decode(String.self, forKey: .worktreePath)
+        tabID = try container.decode(UUID.self, forKey: .tabID)
+        centerX = try container.decode(Double.self, forKey: .centerX)
+        centerY = try container.decode(Double.self, forKey: .centerY)
+        width = try container.decode(Double.self, forKey: .width)
+        height = try container.decode(Double.self, forKey: .height)
+        isMinimized = try container.decodeIfPresent(Bool.self, forKey: .isMinimized) ?? false
+        isPinned = try container.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false
+        colorGroup = try container.decodeIfPresent(GlobalCanvasColorGroup.self, forKey: .colorGroup) ?? .none
+    }
+}
+
+struct GlobalCanvasStateRecord: Codable, Hashable {
+    var scale: Double
+    var offsetX: Double
+    var offsetY: Double
+    var cardLayouts: [GlobalCanvasCardLayoutRecord]
+
+    init(
+        scale: Double = 1,
+        offsetX: Double = 0,
+        offsetY: Double = 0,
+        cardLayouts: [GlobalCanvasCardLayoutRecord] = []
+    ) {
+        self.scale = scale
+        self.offsetX = offsetX
+        self.offsetY = offsetY
+        self.cardLayouts = cardLayouts
+    }
+
+    func pruned(to validCardIDs: Set<GlobalCanvasCardID>) -> GlobalCanvasStateRecord {
+        GlobalCanvasStateRecord(
+            scale: scale,
+            offsetX: offsetX,
+            offsetY: offsetY,
+            cardLayouts: cardLayouts.filter { validCardIDs.contains($0.cardID) }
+        )
+    }
+}
+
+struct RepositoryStatusSnapshot: Codable, Hashable {
+    var hasUncommittedChanges: Bool
+    var changedFileCount: Int
+    var aheadCount: Int
+    var behindCount: Int
+    var localBranches: [String]
+    var remoteBranches: [String]
+}
+
+struct RepositorySnapshot: Codable, Hashable {
+    var rootPath: String
+    var currentBranch: String
+    var head: String
+    var worktrees: [WorktreeModel]
+    var status: RepositoryStatusSnapshot
+}
+
+struct PaneSnapshot: Codable, Hashable, Identifiable {
+    var id: UUID
+    var preferredWorkingDirectory: String
+    var preferredEngine: TerminalEngineKind
+    var backendConfiguration: SessionBackendConfiguration
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case preferredWorkingDirectory
+        case preferredEngine
+        case backendConfiguration
+        case shellPath
+        case shellArguments
+    }
+
+    init(
+        id: UUID,
+        preferredWorkingDirectory: String,
+        preferredEngine: TerminalEngineKind,
+        backendConfiguration: SessionBackendConfiguration
+    ) {
+        self.id = id
+        self.preferredWorkingDirectory = preferredWorkingDirectory
+        self.preferredEngine = preferredEngine
+        self.backendConfiguration = backendConfiguration
+    }
+
+    static func makeDefault(id: UUID = UUID(), cwd: String) -> PaneSnapshot {
+        PaneSnapshot(
+            id: id,
+            preferredWorkingDirectory: cwd,
+            preferredEngine: .libghosttyPreferred,
+            backendConfiguration: .local()
+        )
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        preferredWorkingDirectory = try container.decode(String.self, forKey: .preferredWorkingDirectory)
+        if let preferredEngineRawValue = try container.decodeIfPresent(String.self, forKey: .preferredEngine) {
+            preferredEngine = TerminalEngineKind(rawValue: preferredEngineRawValue) ?? .libghosttyPreferred
+        } else {
+            preferredEngine = .libghosttyPreferred
+        }
+
+        if let backendConfiguration = try container.decodeIfPresent(SessionBackendConfiguration.self, forKey: .backendConfiguration) {
+            self.backendConfiguration = backendConfiguration
+        } else {
+            let shellPath = try container.decodeIfPresent(String.self, forKey: .shellPath) ?? LocalShellSessionConfiguration.default.shellPath
+            let shellArguments = try container.decodeIfPresent([String].self, forKey: .shellArguments) ?? LocalShellSessionConfiguration.default.shellArguments
+            backendConfiguration = .local(shellPath: shellPath, shellArguments: shellArguments)
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(preferredWorkingDirectory, forKey: .preferredWorkingDirectory)
+        try container.encode(preferredEngine, forKey: .preferredEngine)
+        try container.encode(backendConfiguration, forKey: .backendConfiguration)
+    }
+}
+
+struct WorkspaceTabStateRecord: Codable, Hashable, Identifiable {
+    var id: UUID
+    var title: String
+    var isManuallyNamed: Bool
+    var layout: SessionLayoutNode?
+    var panes: [PaneSnapshot]
+    var focusedPaneID: UUID?
+    var zoomedPaneID: UUID?
+
+    init(
+        id: UUID = UUID(),
+        title: String = "Tab",
+        isManuallyNamed: Bool = false,
+        layout: SessionLayoutNode?,
+        panes: [PaneSnapshot],
+        focusedPaneID: UUID?,
+        zoomedPaneID: UUID? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.isManuallyNamed = isManuallyNamed
+        self.layout = layout
+        self.panes = panes
+        self.focusedPaneID = focusedPaneID
+        self.zoomedPaneID = zoomedPaneID
+    }
+
+    static func makeDefault(for worktreePath: String, title: String = "Tab 1") -> WorkspaceTabStateRecord {
+        let initialPane = PaneSnapshot.makeDefault(cwd: worktreePath)
+        return WorkspaceTabStateRecord(
+            title: title,
+            layout: .pane(PaneLeaf(paneID: initialPane.id)),
+            panes: [initialPane],
+            focusedPaneID: initialPane.id,
+            zoomedPaneID: nil
+        )
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case isManuallyNamed
+        case layout
+        case panes
+        case focusedPaneID
+        case zoomedPaneID
+    }
+}
+
+extension WorkspaceTabStateRecord {
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        title = try container.decodeIfPresent(String.self, forKey: .title) ?? "Tab"
+        isManuallyNamed = try container.decodeIfPresent(Bool.self, forKey: .isManuallyNamed) ?? false
+        layout = try container.decodeIfPresent(SessionLayoutNode.self, forKey: .layout)
+        panes = try container.decodeIfPresent([PaneSnapshot].self, forKey: .panes) ?? []
+        focusedPaneID = try container.decodeIfPresent(UUID.self, forKey: .focusedPaneID)
+        zoomedPaneID = try container.decodeIfPresent(UUID.self, forKey: .zoomedPaneID)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(title, forKey: .title)
+        try container.encode(isManuallyNamed, forKey: .isManuallyNamed)
+        try container.encode(layout, forKey: .layout)
+        try container.encode(panes, forKey: .panes)
+        try container.encode(focusedPaneID, forKey: .focusedPaneID)
+        try container.encode(zoomedPaneID, forKey: .zoomedPaneID)
+    }
+}
+
+struct WorktreeSessionStateRecord: Codable, Hashable, Identifiable {
+    var id: String { worktreePath }
+    var worktreePath: String
+    var tabs: [WorkspaceTabStateRecord]
+    var selectedTabID: UUID?
+    var layout: SessionLayoutNode?
+    var panes: [PaneSnapshot]
+    var focusedPaneID: UUID?
+    var zoomedPaneID: UUID?
+    var canvasState: WorkspaceCanvasStateRecord
+
+    private enum CodingKeys: String, CodingKey {
+        case worktreePath
+        case tabs
+        case selectedTabID
+        case layout
+        case panes
+        case focusedPaneID
+        case zoomedPaneID
+        case canvasState
+    }
+
+    init(
+        worktreePath: String,
+        layout: SessionLayoutNode?,
+        panes: [PaneSnapshot],
+        focusedPaneID: UUID?,
+        zoomedPaneID: UUID? = nil,
+        canvasState: WorkspaceCanvasStateRecord = WorkspaceCanvasStateRecord(),
+        tabs: [WorkspaceTabStateRecord]? = nil,
+        selectedTabID: UUID? = nil
+    ) {
+        self.worktreePath = worktreePath
+        self.layout = layout
+        self.panes = panes
+        self.focusedPaneID = focusedPaneID
+        self.zoomedPaneID = zoomedPaneID
+        self.canvasState = canvasState
+
+        if let tabs, !tabs.isEmpty {
+            self.tabs = tabs
+            self.selectedTabID = selectedTabID ?? tabs.first?.id
+        } else if !panes.isEmpty || layout != nil || focusedPaneID != nil || zoomedPaneID != nil {
+            let title = Self.defaultTitle(index: 1)
+            let tab = WorkspaceTabStateRecord(
+                id: selectedTabID ?? UUID(),
+                title: title,
+                isManuallyNamed: false,
+                layout: layout,
+                panes: panes,
+                focusedPaneID: focusedPaneID ?? panes.first?.id,
+                zoomedPaneID: zoomedPaneID
+            )
+            self.tabs = [tab]
+            self.selectedTabID = tab.id
+        } else {
+            let tab = WorkspaceTabStateRecord.makeDefault(for: worktreePath)
+            self.tabs = [tab]
+            self.selectedTabID = tab.id
+        }
+
+        syncLegacyFields()
+    }
+
+    static func makeDefault(for worktreePath: String) -> WorktreeSessionStateRecord {
+        return WorktreeSessionStateRecord(
+            worktreePath: worktreePath,
+            layout: nil,
+            panes: [],
+            focusedPaneID: nil,
+            zoomedPaneID: nil
+        )
+    }
+
+    var selectedTab: WorkspaceTabStateRecord? {
+        guard !tabs.isEmpty else { return nil }
+        if let selectedTabID,
+           let match = tabs.first(where: { $0.id == selectedTabID }) {
+            return match
+        }
+        return tabs.first
+    }
+
+    mutating func ensureTabs() {
+        if tabs.isEmpty {
+            let fallback = WorkspaceTabStateRecord(
+                id: selectedTabID ?? UUID(),
+                title: Self.defaultTitle(index: 1),
+                layout: layout,
+                panes: panes.isEmpty ? WorktreeSessionStateRecord.makeDefault(for: worktreePath).tabs.first?.panes ?? [] : panes,
+                focusedPaneID: focusedPaneID ?? panes.first?.id,
+                zoomedPaneID: zoomedPaneID
+            )
+            tabs = [fallback]
+        }
+        if selectedTabID == nil || tabs.contains(where: { $0.id == selectedTabID }) == false {
+            selectedTabID = tabs.first?.id
+        }
+        syncLegacyFields()
+    }
+
+    mutating func setSelectedTabID(_ id: UUID?) {
+        ensureTabs()
+        if let id,
+           tabs.contains(where: { $0.id == id }) {
+            selectedTabID = id
+        } else {
+            selectedTabID = tabs.first?.id
+        }
+        syncLegacyFields()
+    }
+
+    func tabID(at index: Int) -> UUID? {
+        guard tabs.indices.contains(index) else { return nil }
+        return tabs[index].id
+    }
+
+    mutating func upsertTab(_ tab: WorkspaceTabStateRecord, selecting: Bool) {
+        ensureTabs()
+        if let index = tabs.firstIndex(where: { $0.id == tab.id }) {
+            tabs[index] = tab
+        } else {
+            tabs.append(tab)
+        }
+        if selecting {
+            selectedTabID = tab.id
+        }
+        syncLegacyFields()
+    }
+
+    mutating func renameTab(_ id: UUID, title: String) {
+        ensureTabs()
+        guard let index = tabs.firstIndex(where: { $0.id == id }) else { return }
+        let normalized = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else { return }
+        tabs[index].title = normalized
+        tabs[index].isManuallyNamed = true
+        syncLegacyFields()
+    }
+
+    mutating func moveTab(_ id: UUID, to destinationIndex: Int) {
+        ensureTabs()
+        guard let sourceIndex = tabs.firstIndex(where: { $0.id == id }) else { return }
+        let clampedDestination = min(max(destinationIndex, 0), tabs.count - 1)
+        guard sourceIndex != clampedDestination else { return }
+
+        let item = tabs.remove(at: sourceIndex)
+        let adjustedDestination = min(max(clampedDestination, 0), tabs.count)
+        tabs.insert(item, at: adjustedDestination)
+        syncLegacyFields()
+    }
+
+    mutating func moveTab(_ id: UUID, by offset: Int) {
+        ensureTabs()
+        guard let sourceIndex = tabs.firstIndex(where: { $0.id == id }) else { return }
+        moveTab(id, to: sourceIndex + offset)
+    }
+
+    mutating func removeTab(_ id: UUID) {
+        tabs.removeAll { $0.id == id }
+        if selectedTabID == id {
+            selectedTabID = tabs.first?.id
+        }
+        syncLegacyFields()
+    }
+
+    private mutating func syncLegacyFields() {
+        let selected = selectedTab ?? tabs.first
+        layout = selected?.layout
+        panes = selected?.panes ?? []
+        focusedPaneID = selected?.focusedPaneID
+        zoomedPaneID = selected?.zoomedPaneID
+        canvasState = canvasState.pruned(to: Set(tabs.map(\.id)))
+    }
+
+    private static func defaultTitle(index: Int) -> String {
+        "Tab \(index)"
+    }
+}
+
+extension WorktreeSessionStateRecord {
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let worktreePath = try container.decode(String.self, forKey: .worktreePath)
+        let tabs = try container.decodeIfPresent([WorkspaceTabStateRecord].self, forKey: .tabs)
+        let selectedTabID = try container.decodeIfPresent(UUID.self, forKey: .selectedTabID)
+        let layout = try container.decodeIfPresent(SessionLayoutNode.self, forKey: .layout)
+        let panes = try container.decodeIfPresent([PaneSnapshot].self, forKey: .panes) ?? []
+        let focusedPaneID = try container.decodeIfPresent(UUID.self, forKey: .focusedPaneID)
+        let zoomedPaneID = try container.decodeIfPresent(UUID.self, forKey: .zoomedPaneID)
+        let canvasState = try container.decodeIfPresent(WorkspaceCanvasStateRecord.self, forKey: .canvasState) ?? WorkspaceCanvasStateRecord()
+
+        self.init(
+            worktreePath: worktreePath,
+            layout: layout,
+            panes: panes,
+            focusedPaneID: focusedPaneID,
+            zoomedPaneID: zoomedPaneID,
+            canvasState: canvasState,
+            tabs: tabs,
+            selectedTabID: selectedTabID
+        )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var copy = self
+        copy.ensureTabs()
+
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(copy.worktreePath, forKey: .worktreePath)
+        try container.encode(copy.tabs, forKey: .tabs)
+        try container.encode(copy.selectedTabID, forKey: .selectedTabID)
+        try container.encode(copy.layout, forKey: .layout)
+        try container.encode(copy.panes, forKey: .panes)
+        try container.encode(copy.focusedPaneID, forKey: .focusedPaneID)
+        try container.encode(copy.zoomedPaneID, forKey: .zoomedPaneID)
+        try container.encode(copy.canvasState, forKey: .canvasState)
+    }
+}
+
+struct WorkspaceRecord: Codable, Identifiable {
+    var id: UUID
+    var kind: WorkspaceKind
+    var name: String
+    var repositoryRoot: String
+    var activeWorktreePath: String
+    var worktreeStates: [WorktreeSessionStateRecord]
+    var isSidebarExpanded: Bool
+    var worktrees: [WorktreeModel]
+    var settings: WorkspaceSettings
+    var activityLog: [WorkspaceActivityEntry]
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case kind
+        case name
+        case repositoryRoot
+        case activeWorktreePath
+        case worktreeStates
+        case isSidebarExpanded
+        case worktrees
+        case settings
+        case activityLog
+        case layout
+        case panes
+        case focusedPaneID
+    }
+
+    init(
+        id: UUID,
+        kind: WorkspaceKind,
+        name: String,
+        repositoryRoot: String,
+        activeWorktreePath: String,
+        worktreeStates: [WorktreeSessionStateRecord],
+        isSidebarExpanded: Bool,
+        worktrees: [WorktreeModel] = [],
+        settings: WorkspaceSettings = WorkspaceSettings(),
+        activityLog: [WorkspaceActivityEntry] = []
+    ) {
+        self.id = id
+        self.kind = kind
+        self.name = name
+        self.repositoryRoot = repositoryRoot
+        self.activeWorktreePath = activeWorktreePath
+        self.worktreeStates = worktreeStates
+        self.isSidebarExpanded = isSidebarExpanded
+        self.worktrees = worktrees
+        self.settings = settings
+        self.activityLog = activityLog
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        kind = try container.decodeIfPresent(WorkspaceKind.self, forKey: .kind) ?? .repository
+        name = try container.decode(String.self, forKey: .name)
+        repositoryRoot = try container.decode(String.self, forKey: .repositoryRoot)
+        activeWorktreePath = try container.decode(String.self, forKey: .activeWorktreePath)
+        isSidebarExpanded = try container.decodeIfPresent(Bool.self, forKey: .isSidebarExpanded) ?? false
+        worktrees = try container.decodeIfPresent([WorktreeModel].self, forKey: .worktrees) ?? []
+        settings = try container.decodeIfPresent(WorkspaceSettings.self, forKey: .settings) ?? WorkspaceSettings()
+        activityLog = try container.decodeIfPresent([WorkspaceActivityEntry].self, forKey: .activityLog) ?? []
+
+        if let states = try container.decodeIfPresent([WorktreeSessionStateRecord].self, forKey: .worktreeStates), !states.isEmpty {
+            worktreeStates = states
+        } else {
+            let legacyLayout = try container.decodeIfPresent(SessionLayoutNode.self, forKey: .layout)
+            let legacyPanes = try container.decodeIfPresent([PaneSnapshot].self, forKey: .panes) ?? []
+            let legacyFocusedPaneID = try container.decodeIfPresent(UUID.self, forKey: .focusedPaneID)
+            worktreeStates = [
+                WorktreeSessionStateRecord(
+                    worktreePath: activeWorktreePath,
+                    layout: legacyLayout,
+                    panes: legacyPanes.isEmpty ? WorktreeSessionStateRecord.makeDefault(for: activeWorktreePath).panes : legacyPanes,
+                    focusedPaneID: legacyFocusedPaneID ?? legacyPanes.first?.id
+                )
+            ]
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(kind, forKey: .kind)
+        try container.encode(name, forKey: .name)
+        try container.encode(repositoryRoot, forKey: .repositoryRoot)
+        try container.encode(activeWorktreePath, forKey: .activeWorktreePath)
+        try container.encode(worktreeStates, forKey: .worktreeStates)
+        try container.encode(isSidebarExpanded, forKey: .isSidebarExpanded)
+        try container.encode(worktrees, forKey: .worktrees)
+        try container.encode(settings, forKey: .settings)
+        try container.encode(activityLog, forKey: .activityLog)
+    }
+}
+
+struct PersistedWorkspaceState: Codable {
+    var selectedWorkspaceID: UUID?
+    var workspaces: [WorkspaceRecord]
+    var globalCanvasState: GlobalCanvasStateRecord
+
+    private enum CodingKeys: String, CodingKey {
+        case selectedWorkspaceID
+        case workspaces
+        case globalCanvasState
+    }
+
+    init(
+        selectedWorkspaceID: UUID?,
+        workspaces: [WorkspaceRecord],
+        globalCanvasState: GlobalCanvasStateRecord = GlobalCanvasStateRecord()
+    ) {
+        self.selectedWorkspaceID = selectedWorkspaceID
+        self.workspaces = workspaces
+        self.globalCanvasState = globalCanvasState
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        selectedWorkspaceID = try container.decodeIfPresent(UUID.self, forKey: .selectedWorkspaceID)
+        workspaces = try container.decodeIfPresent([WorkspaceRecord].self, forKey: .workspaces) ?? []
+        if let storedCanvasState = try container.decodeIfPresent(GlobalCanvasStateRecord.self, forKey: .globalCanvasState) {
+            globalCanvasState = storedCanvasState
+        } else {
+            globalCanvasState = Self.migratedGlobalCanvasState(
+                from: workspaces,
+                selectedWorkspaceID: selectedWorkspaceID
+            )
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(selectedWorkspaceID, forKey: .selectedWorkspaceID)
+        try container.encode(workspaces, forKey: .workspaces)
+        try container.encode(globalCanvasState, forKey: .globalCanvasState)
+    }
+}
+
+private extension PersistedWorkspaceState {
+    static func migratedGlobalCanvasState(
+        from workspaces: [WorkspaceRecord],
+        selectedWorkspaceID: UUID?
+    ) -> GlobalCanvasStateRecord {
+        let preferredCanvasState = preferredLegacyCanvasState(
+            from: workspaces,
+            selectedWorkspaceID: selectedWorkspaceID
+        )
+
+        var seen = Set<GlobalCanvasCardID>()
+        var cardLayouts: [GlobalCanvasCardLayoutRecord] = []
+
+        for workspace in workspaces {
+            for worktreeState in workspace.worktreeStates {
+                for legacyLayout in worktreeState.canvasState.cardLayouts {
+                    let cardID = GlobalCanvasCardID(
+                        workspaceID: workspace.id,
+                        worktreePath: worktreeState.worktreePath,
+                        tabID: legacyLayout.tabID
+                    )
+                    guard seen.insert(cardID).inserted else { continue }
+                    cardLayouts.append(
+                        GlobalCanvasCardLayoutRecord(
+                            workspaceID: workspace.id,
+                            worktreePath: worktreeState.worktreePath,
+                            tabID: legacyLayout.tabID,
+                            centerX: legacyLayout.centerX,
+                            centerY: legacyLayout.centerY,
+                            width: legacyLayout.width,
+                            height: legacyLayout.height
+                        )
+                    )
+                }
+            }
+        }
+
+        return GlobalCanvasStateRecord(
+            scale: preferredCanvasState?.scale ?? 1,
+            offsetX: preferredCanvasState?.offsetX ?? 0,
+            offsetY: preferredCanvasState?.offsetY ?? 0,
+            cardLayouts: cardLayouts
+        )
+    }
+
+    static func preferredLegacyCanvasState(
+        from workspaces: [WorkspaceRecord],
+        selectedWorkspaceID: UUID?
+    ) -> WorkspaceCanvasStateRecord? {
+        if let selectedWorkspaceID,
+           let workspace = workspaces.first(where: { $0.id == selectedWorkspaceID }),
+           let selectedState = workspace.worktreeStates.first(where: { $0.worktreePath == workspace.activeWorktreePath }),
+           !selectedState.canvasState.cardLayouts.isEmpty {
+            return selectedState.canvasState
+        }
+
+        return workspaces
+            .flatMap(\.worktreeStates)
+            .first(where: { !$0.canvasState.cardLayouts.isEmpty })?
+            .canvasState
+    }
+}

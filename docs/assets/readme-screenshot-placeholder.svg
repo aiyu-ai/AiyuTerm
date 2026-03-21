@@ -1,0 +1,63 @@
+<svg width="1440" height="900" viewBox="0 0 1440 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1440" height="900" rx="32" fill="#0B0F14"/>
+  <rect x="24" y="24" width="1392" height="852" rx="24" fill="#10161D" stroke="#1F2A36"/>
+  <rect x="56" y="56" width="1328" height="56" rx="16" fill="#0D1319"/>
+  <circle cx="92" cy="84" r="8" fill="#FF5F57"/>
+  <circle cx="120" cy="84" r="8" fill="#FEBC2E"/>
+  <circle cx="148" cy="84" r="8" fill="#28C840"/>
+  <rect x="180" y="70" width="180" height="28" rx="8" fill="#151F29"/>
+  <rect x="380" y="70" width="480" height="28" rx="8" fill="#151F29"/>
+  <rect x="56" y="136" width="288" height="708" rx="20" fill="#0C1218"/>
+  <rect x="372" y="136" width="1012" height="708" rx="20" fill="#0E141B"/>
+  <rect x="392" y="156" width="972" height="42" rx="12" fill="#131C25"/>
+  <rect x="76" y="164" width="248" height="36" rx="10" fill="#131C25"/>
+  <rect x="76" y="224" width="248" height="72" rx="14" fill="#13202A"/>
+  <rect x="88" y="238" width="14" height="14" rx="4" fill="#2EAADC"/>
+  <rect x="112" y="236" width="116" height="10" rx="5" fill="#D9E3EE" fill-opacity="0.92"/>
+  <rect x="112" y="254" width="164" height="8" rx="4" fill="#8FA1B3" fill-opacity="0.75"/>
+  <rect x="88" y="270" width="72" height="8" rx="4" fill="#5D7085" fill-opacity="0.85"/>
+  <rect x="168" y="270" width="48" height="8" rx="4" fill="#5D7085" fill-opacity="0.55"/>
+  <rect x="76" y="308" width="248" height="64" rx="14" fill="#101820"/>
+  <rect x="88" y="322" width="14" height="14" rx="4" fill="#75C46B"/>
+  <rect x="112" y="320" width="98" height="10" rx="5" fill="#D9E3EE" fill-opacity="0.92"/>
+  <rect x="112" y="338" width="140" height="8" rx="4" fill="#8FA1B3" fill-opacity="0.75"/>
+  <rect x="76" y="384" width="248" height="64" rx="14" fill="#101820"/>
+  <rect x="88" y="398" width="14" height="14" rx="4" fill="#F4B942"/>
+  <rect x="112" y="396" width="128" height="10" rx="5" fill="#D9E3EE" fill-opacity="0.92"/>
+  <rect x="112" y="414" width="154" height="8" rx="4" fill="#8FA1B3" fill-opacity="0.75"/>
+  <rect x="76" y="472" width="108" height="10" rx="5" fill="#D9E3EE" fill-opacity="0.85"/>
+  <rect x="76" y="494" width="224" height="8" rx="4" fill="#5D7085" fill-opacity="0.7"/>
+  <rect x="76" y="524" width="96" height="10" rx="5" fill="#D9E3EE" fill-opacity="0.85"/>
+  <rect x="76" y="546" width="210" height="8" rx="4" fill="#5D7085" fill-opacity="0.7"/>
+  <rect x="392" y="224" width="474" height="284" rx="18" fill="#0B1016" stroke="#1A2631"/>
+  <rect x="890" y="224" width="474" height="284" rx="18" fill="#0B1016" stroke="#1A2631"/>
+  <rect x="392" y="532" width="972" height="292" rx="18" fill="#0B1016" stroke="#1A2631"/>
+  <rect x="420" y="252" width="126" height="12" rx="6" fill="#E8F0F8" fill-opacity="0.95"/>
+  <rect x="918" y="252" width="172" height="12" rx="6" fill="#E8F0F8" fill-opacity="0.95"/>
+  <rect x="420" y="280" width="226" height="8" rx="4" fill="#6E8195"/>
+  <rect x="918" y="280" width="264" height="8" rx="4" fill="#6E8195"/>
+  <rect x="420" y="560" width="210" height="12" rx="6" fill="#E8F0F8" fill-opacity="0.95"/>
+  <rect x="420" y="588" width="324" height="8" rx="4" fill="#6E8195"/>
+  <rect x="420" y="630" width="916" height="1" fill="#1D2935"/>
+  <rect x="420" y="666" width="212" height="14" rx="7" fill="#D9E3EE" fill-opacity="0.92"/>
+  <rect x="420" y="694" width="390" height="8" rx="4" fill="#708397"/>
+  <rect x="420" y="728" width="884" height="56" rx="14" fill="#101822"/>
+  <rect x="438" y="746" width="180" height="10" rx="5" fill="#D9E3EE" fill-opacity="0.88"/>
+  <rect x="1210" y="742" width="94" height="18" rx="9" fill="#1E8FFF"/>
+  <rect x="420" y="306" width="418" height="174" rx="14" fill="url(#paint0_linear_290_2)"/>
+  <rect x="918" y="306" width="418" height="174" rx="14" fill="url(#paint1_linear_290_2)"/>
+  <path d="M476 430C532 376 572 344 630 344C696 344 728 398 784 398C808 398 828 390 850 376V452H476V430Z" fill="#A6C8FF" fill-opacity="0.22"/>
+  <path d="M972 432C1034 380 1076 338 1140 338C1208 338 1238 396 1294 396C1310 396 1322 392 1336 384V452H972V432Z" fill="#9FE1B1" fill-opacity="0.22"/>
+  <text x="720" y="458" text-anchor="middle" fill="#EAF2FA" font-family="SF Pro Display, Inter, system-ui, sans-serif" font-size="40" font-weight="700">Liney Screenshot Placeholder</text>
+  <text x="720" y="500" text-anchor="middle" fill="#91A4B8" font-family="SF Pro Text, Inter, system-ui, sans-serif" font-size="20">Replace this file with a real product screenshot for release-ready README presentation.</text>
+  <defs>
+    <linearGradient id="paint0_linear_290_2" x1="420" y1="306" x2="838" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#123B66"/>
+      <stop offset="1" stop-color="#0D1823"/>
+    </linearGradient>
+    <linearGradient id="paint1_linear_290_2" x1="918" y1="306" x2="1336" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#163F31"/>
+      <stop offset="1" stop-color="#0D1823"/>
+    </linearGradient>
+  </defs>
+</svg>

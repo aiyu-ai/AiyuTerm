@@ -1,0 +1,779 @@
+//
+//  SettingsSheet.swift
+//  Liney
+//
+//  Author: wuwenrui
+//
+
+import SwiftUI
+
+private enum SettingsSheetSection: String, CaseIterable, Identifiable {
+    case general
+    case sidebar
+    case updates
+    case workspace
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .general:
+            return "General"
+        case .sidebar:
+            return "Sidebar"
+        case .updates:
+            return "Updates"
+        case .workspace:
+            return "Workspace"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .general:
+            return "App behavior and integrations"
+        case .sidebar:
+            return "Navigation density and default icons"
+        case .updates:
+            return "Automatic update checks"
+        case .workspace:
+            return "Per-workspace scripts, presets, and overrides"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .general:
+            return "gearshape"
+        case .sidebar:
+            return "sidebar.leading"
+        case .updates:
+            return "arrow.down.circle"
+        case .workspace:
+            return "square.grid.2x2"
+        }
+    }
+}
+
+struct SettingsSheet: View {
+    let request: WorkspaceSettingsRequest
+
+    @EnvironmentObject private var store: WorkspaceStore
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var appSettings = AppSettings()
+    @State private var selection: SettingsSheetSection = .general
+    @State private var selectedWorkspaceID: UUID?
+    @State private var workspaceSettings = WorkspaceSettings()
+
+    var body: some View {
+        HStack(spacing: 0) {
+            List(SettingsSheetSection.allCases, selection: $selection) { section in
+                Label(section.title, systemImage: section.systemImage)
+                    .tag(section)
+            }
+            .listStyle(.sidebar)
+            .frame(width: 200)
+
+            Divider()
+
+            VStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(selection.title)
+                        .font(.system(size: 20, weight: .semibold))
+                    Text(selection.subtitle)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 18)
+
+                Divider()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        detailContent
+                    }
+                    .padding(20)
+                }
+
+                Divider()
+
+                HStack {
+                    Spacer()
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    Button("Save") {
+                        save()
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .padding(20)
+            }
+        }
+        .frame(width: 980, height: 720)
+        .task {
+            appSettings = store.appSettings
+            selectedWorkspaceID = request.workspaceID ?? store.selectedWorkspace?.id
+            loadWorkspaceSettings()
+        }
+    }
+
+    @ViewBuilder
+    private var detailContent: some View {
+        switch selection {
+        case .general:
+            generalSettingsView
+        case .sidebar:
+            sidebarSettingsView
+        case .updates:
+            updatesSettingsView
+        case .workspace:
+            workspaceSettingsView
+        }
+    }
+
+    private var generalSettingsView: some View {
+        GroupBox("Behavior") {
+            VStack(alignment: .leading, spacing: 12) {
+                Toggle("Enable automatic refresh", isOn: $appSettings.autoRefreshEnabled)
+                Toggle("Enable file watchers", isOn: $appSettings.fileWatcherEnabled)
+                Toggle("Enable GitHub integration", isOn: $appSettings.githubIntegrationEnabled)
+                Toggle("Allow system notifications", isOn: $appSettings.systemNotificationsEnabled)
+                Toggle("Show archived workspaces in sidebar", isOn: $appSettings.showArchivedWorkspaces)
+                Toggle("Show remote branches in Create Worktree", isOn: $appSettings.showRemoteBranchesInCreateWorktree)
+
+                HStack {
+                    Text("Refresh interval")
+                    Spacer()
+                    TextField("30", value: $appSettings.autoRefreshIntervalSeconds, format: .number)
+                        .frame(width: 72)
+                        .textFieldStyle(.roundedBorder)
+                    Text("seconds")
+                        .foregroundStyle(.secondary)
+                }
+
+                Text("GitHub CLI status: \(store.gitHubIntegrationState.summary)")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.top, 8)
+        }
+    }
+
+    private var sidebarSettingsView: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            GroupBox("Sidebar") {
+                VStack(alignment: .leading, spacing: 12) {
+                    Toggle("Show branch or path subtitles", isOn: $appSettings.sidebarShowsSecondaryLabels)
+                    Toggle("Show workspace badges", isOn: $appSettings.sidebarShowsWorkspaceBadges)
+                    Toggle("Show worktree badges", isOn: $appSettings.sidebarShowsWorktreeBadges)
+                }
+                .padding(.top, 8)
+            }
+
+            GroupBox("Default Icons") {
+                VStack(alignment: .leading, spacing: 12) {
+                    SidebarIconEditorCard(
+                        title: "Repository",
+                        subtitle: "Top-level repo workspaces",
+                        icon: $appSettings.defaultRepositoryIcon,
+                        randomizer: SidebarItemIcon.randomRepository
+                    )
+
+                    SidebarIconEditorCard(
+                        title: "Terminal",
+                        subtitle: "Local shell workspaces",
+                        icon: $appSettings.defaultLocalTerminalIcon
+                    )
+
+                    SidebarIconEditorCard(
+                        title: "Worktree",
+                        subtitle: "Branch and worktree rows",
+                        icon: $appSettings.defaultWorktreeIcon
+                    )
+                }
+                .padding(.top, 8)
+            }
+        }
+    }
+
+    private var updatesSettingsView: some View {
+        GroupBox("Automatic Updates") {
+            VStack(alignment: .leading, spacing: 12) {
+                Toggle("Check for app updates automatically", isOn: $appSettings.autoCheckForUpdates)
+                Toggle("Download and install updates automatically", isOn: $appSettings.autoDownloadUpdates)
+                    .disabled(!appSettings.autoCheckForUpdates)
+
+                Text("Current app: \(store.currentReleaseVersion)\(store.currentReleaseBuild.map { " (\($0))" } ?? "")")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+
+                Text("Signed app updates are delivered through Sparkle.")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+
+                Button("Check for Updates Now") {
+                    store.dispatch(.checkForUpdates)
+                }
+            }
+            .padding(.top, 8)
+        }
+    }
+
+    private var workspaceSettingsView: some View {
+        GroupBox("Workspace") {
+            VStack(alignment: .leading, spacing: 12) {
+                Picker("Workspace", selection: Binding(
+                    get: { selectedWorkspaceID ?? store.selectedWorkspace?.id },
+                    set: { newValue in
+                        selectedWorkspaceID = newValue
+                        loadWorkspaceSettings()
+                    }
+                )) {
+                    ForEach(store.workspaces) { workspace in
+                        Text(workspace.name).tag(Optional(workspace.id))
+                    }
+                }
+
+                if selectedWorkspace != nil {
+                    WorkspaceSidebarAppearanceSection(
+                        workspace: selectedWorkspace,
+                        appSettings: appSettings,
+                        workspaceSettings: $workspaceSettings
+                    )
+
+                    Toggle("Pinned in sidebar", isOn: $workspaceSettings.isPinned)
+                    Toggle("Archived", isOn: $workspaceSettings.isArchived)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Run script")
+                            .font(.system(size: 12, weight: .semibold))
+                        TextEditor(text: $workspaceSettings.runScript)
+                            .font(.system(size: 12, design: .monospaced))
+                            .frame(height: 80)
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.08)))
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Setup script")
+                            .font(.system(size: 12, weight: .semibold))
+                        TextEditor(text: $workspaceSettings.setupScript)
+                            .font(.system(size: 12, design: .monospaced))
+                            .frame(height: 80)
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.08)))
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Agent presets")
+                                .font(.system(size: 12, weight: .semibold))
+                            Spacer()
+                            Button("Add Preset") {
+                                workspaceSettings.agentPresets.append(
+                                    AgentPreset(name: "Agent", launchPath: "/usr/bin/env", arguments: ["codex", "resume"])
+                                )
+                            }
+                        }
+
+                        ForEach($workspaceSettings.agentPresets) { $preset in
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    TextField("Name", text: $preset.name)
+                                    TextField("Launch path", text: $preset.launchPath)
+                                    Button(role: .destructive) {
+                                        workspaceSettings.agentPresets.removeAll { $0.id == preset.id }
+                                        if workspaceSettings.preferredAgentPresetID == preset.id {
+                                            workspaceSettings.preferredAgentPresetID = workspaceSettings.agentPresets.first?.id
+                                        }
+                                    } label: {
+                                        Image(systemName: "trash")
+                                    }
+                                }
+
+                                TextField(
+                                    "Arguments",
+                                    text: Binding(
+                                        get: { preset.arguments.joined(separator: "\n") },
+                                        set: { preset.arguments = $0.split(whereSeparator: \.isNewline).map(String.init) }
+                                    ),
+                                    axis: .vertical
+                                )
+                                .lineLimit(2...5)
+
+                                TextField(
+                                    "Environment",
+                                    text: Binding(
+                                        get: {
+                                            preset.environment
+                                                .sorted { $0.key < $1.key }
+                                                .map { "\($0.key)=\($0.value)" }
+                                                .joined(separator: "\n")
+                                        },
+                                        set: { value in
+                                            preset.environment = value
+                                                .split(whereSeparator: \.isNewline)
+                                                .reduce(into: [:]) { result, line in
+                                                    let text = String(line)
+                                                    guard let index = text.firstIndex(of: "=") else { return }
+                                                    let key = String(text[..<index]).trimmingCharacters(in: .whitespacesAndNewlines)
+                                                    let envValue = String(text[text.index(after: index)...]).trimmingCharacters(in: .whitespacesAndNewlines)
+                                                    guard !key.isEmpty else { return }
+                                                    result[key] = envValue
+                                                }
+                                        }
+                                    ),
+                                    axis: .vertical
+                                )
+                                .lineLimit(2...5)
+                            }
+                            .padding(12)
+                            .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        }
+
+                        if !workspaceSettings.agentPresets.isEmpty {
+                            Picker("Preferred preset", selection: Binding(
+                                get: { workspaceSettings.preferredAgentPresetID ?? workspaceSettings.agentPresets.first?.id },
+                                set: { workspaceSettings.preferredAgentPresetID = $0 }
+                            )) {
+                                ForEach(workspaceSettings.agentPresets) { preset in
+                                    Text(preset.name).tag(Optional(preset.id))
+                                }
+                            }
+                        }
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("Remote targets")
+                                    .font(.system(size: 12, weight: .semibold))
+                                Spacer()
+                                Button("Add Remote Target") {
+                                    workspaceSettings.remoteTargets.append(
+                                        RemoteWorkspaceTarget(
+                                            name: "Remote",
+                                            ssh: SSHSessionConfiguration(
+                                                host: "",
+                                                user: nil,
+                                                port: nil,
+                                                identityFilePath: nil,
+                                                remoteWorkingDirectory: nil,
+                                                remoteCommand: nil
+                                            ),
+                                            agentPresetID: workspaceSettings.preferredAgentPresetID
+                                        )
+                                    )
+                                }
+                            }
+
+                            if workspaceSettings.remoteTargets.isEmpty {
+                                Text("Define reusable remote hosts and optionally bind an agent preset for remote execution.")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            ForEach($workspaceSettings.remoteTargets) { $target in
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        TextField("Target name", text: $target.name)
+                                        TextField("Host", text: $target.ssh.host)
+                                        Button(role: .destructive) {
+                                            workspaceSettings.remoteTargets.removeAll { $0.id == target.id }
+                                        } label: {
+                                            Image(systemName: "trash")
+                                        }
+                                    }
+
+                                    HStack {
+                                        TextField("User", text: Binding(
+                                            get: { target.ssh.user ?? "" },
+                                            set: { target.ssh.user = $0.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty }
+                                        ))
+                                        TextField("Port", text: Binding(
+                                            get: { target.ssh.port.map(String.init) ?? "" },
+                                            set: { target.ssh.port = Int($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
+                                        ))
+                                        .frame(width: 90)
+                                        TextField("Identity file", text: Binding(
+                                            get: { target.ssh.identityFilePath ?? "" },
+                                            set: { target.ssh.identityFilePath = $0.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty }
+                                        ))
+                                    }
+
+                                    TextField("Remote workspace path", text: Binding(
+                                        get: { target.ssh.remoteWorkingDirectory ?? "" },
+                                        set: { target.ssh.remoteWorkingDirectory = $0.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty }
+                                    ))
+
+                                    Picker("Remote agent preset", selection: Binding(
+                                        get: { target.agentPresetID },
+                                        set: { target.agentPresetID = $0 }
+                                    )) {
+                                        Text("No remote agent").tag(Optional<UUID>.none)
+                                        ForEach(workspaceSettings.agentPresets) { preset in
+                                            Text(preset.name).tag(Optional(preset.id))
+                                        }
+                                    }
+                                }
+                                .padding(12)
+                                .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            }
+                        }
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("Workflows")
+                                    .font(.system(size: 12, weight: .semibold))
+                                Spacer()
+                                Button("Add Workflow") {
+                                    workspaceSettings.workflows.append(
+                                        WorkspaceWorkflow(
+                                            name: "Ship",
+                                            localSessionMode: .reuseFocused,
+                                            runSetupScript: !workspaceSettings.setupScript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                                            runWorkspaceScript: !workspaceSettings.runScript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                                            agentPresetID: workspaceSettings.preferredAgentPresetID ?? workspaceSettings.agentPresets.first?.id,
+                                            agentMode: workspaceSettings.agentPresets.isEmpty ? .none : .splitRight
+                                        )
+                                    )
+                                }
+                            }
+
+                            if workspaceSettings.workflows.isEmpty {
+                                Text("Create reusable playbooks that chain setup, run, and agent launch.")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            ForEach($workspaceSettings.workflows) { $workflow in
+                                VStack(alignment: .leading, spacing: 10) {
+                                    HStack {
+                                        TextField("Workflow name", text: $workflow.name)
+                                        Button(role: .destructive) {
+                                            workspaceSettings.workflows.removeAll { $0.id == workflow.id }
+                                            if workspaceSettings.preferredWorkflowID == workflow.id {
+                                                workspaceSettings.preferredWorkflowID = workspaceSettings.workflows.first?.id
+                                            }
+                                        } label: {
+                                            Image(systemName: "trash")
+                                        }
+                                    }
+
+                                    Picker("Local shell", selection: $workflow.localSessionMode) {
+                                        ForEach(WorkspaceWorkflowLocalSessionMode.allCases) { mode in
+                                            Text(mode.title).tag(mode)
+                                        }
+                                    }
+
+                                    Toggle("Run setup script", isOn: $workflow.runSetupScript)
+                                    Toggle("Run workspace script", isOn: $workflow.runWorkspaceScript)
+
+                                    Picker("Agent preset", selection: Binding(
+                                        get: { workflow.agentPresetID },
+                                        set: { workflow.agentPresetID = $0 }
+                                    )) {
+                                        Text("No agent").tag(Optional<UUID>.none)
+                                        ForEach(workspaceSettings.agentPresets) { preset in
+                                            Text(preset.name).tag(Optional(preset.id))
+                                        }
+                                    }
+
+                                    Picker("Agent launch", selection: $workflow.agentMode) {
+                                        ForEach(WorkspaceWorkflowAgentMode.allCases) { mode in
+                                            Text(mode.title).tag(mode)
+                                        }
+                                    }
+                                }
+                                .padding(12)
+                                .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            }
+
+                            if !workspaceSettings.workflows.isEmpty {
+                                Picker("Preferred workflow", selection: Binding(
+                                    get: { workspaceSettings.preferredWorkflowID ?? workspaceSettings.workflows.first?.id },
+                                    set: { workspaceSettings.preferredWorkflowID = $0 }
+                                )) {
+                                    ForEach(workspaceSettings.workflows) { workflow in
+                                        Text(workflow.name).tag(Optional(workflow.id))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Text("Select a workspace to edit repository-specific settings.")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.top, 8)
+        }
+    }
+
+    private var selectedWorkspace: WorkspaceModel? {
+        guard let selectedWorkspaceID else { return nil }
+        return store.workspaces.first(where: { $0.id == selectedWorkspaceID })
+    }
+
+    private func loadWorkspaceSettings() {
+        if let selectedWorkspace {
+            workspaceSettings = selectedWorkspace.settings
+        } else {
+            workspaceSettings = WorkspaceSettings()
+        }
+    }
+
+    private func save() {
+        appSettings.autoRefreshIntervalSeconds = max(10, appSettings.autoRefreshIntervalSeconds)
+        store.updateAppSettings(appSettings)
+
+        if let selectedWorkspaceID {
+            store.updateWorkspaceSettings(workspaceID: selectedWorkspaceID, settings: workspaceSettings)
+        }
+        dismiss()
+    }
+}
+
+private struct WorkspaceSidebarAppearanceSection: View {
+    let workspace: WorkspaceModel?
+    let appSettings: AppSettings
+    @Binding var workspaceSettings: WorkspaceSettings
+
+    private var workspaceIconFallback: SidebarItemIcon {
+        guard let workspace else { return .repositoryDefault }
+        return workspace.supportsRepositoryFeatures ? appSettings.defaultRepositoryIcon : appSettings.defaultLocalTerminalIcon
+    }
+
+    private var workspaceIconBinding: Binding<SidebarItemIcon> {
+        Binding(
+            get: { workspaceSettings.workspaceIcon ?? workspaceIconFallback },
+            set: { workspaceSettings.workspaceIcon = $0 }
+        )
+    }
+
+    private var workspaceIconRandomizer: () -> SidebarItemIcon {
+        guard let workspace, workspace.supportsRepositoryFeatures else {
+            return SidebarItemIcon.random
+        }
+        return SidebarItemIcon.randomRepository
+    }
+
+    private var activeWorktree: WorktreeModel? {
+        workspace?.activeWorktree
+    }
+
+    private var activeWorktreeIconBinding: Binding<SidebarItemIcon> {
+        Binding(
+            get: {
+                guard let activeWorktree else { return appSettings.defaultWorktreeIcon }
+                return workspaceSettings.worktreeIconOverrides[activeWorktree.path] ?? appSettings.defaultWorktreeIcon
+            },
+            set: { updated in
+                guard let activeWorktree else { return }
+                workspaceSettings.worktreeIconOverrides[activeWorktree.path] = updated
+            }
+        )
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Sidebar appearance")
+                .font(.system(size: 12, weight: .semibold))
+
+            Toggle(
+                "Use custom workspace icon",
+                isOn: Binding(
+                    get: { workspaceSettings.workspaceIcon != nil },
+                    set: { isEnabled in
+                        workspaceSettings.workspaceIcon = isEnabled ? workspaceIconFallback : nil
+                    }
+                )
+            )
+
+            if workspaceSettings.workspaceIcon != nil {
+                SidebarIconEditorCard(
+                    title: "Workspace icon",
+                    subtitle: "Overrides the app default for this workspace",
+                    icon: workspaceIconBinding,
+                    randomizer: workspaceIconRandomizer
+                )
+            }
+
+            if let activeWorktree {
+                Toggle(
+                    "Use custom icon for active worktree (\(activeWorktree.displayName))",
+                    isOn: Binding(
+                        get: { workspaceSettings.worktreeIconOverrides[activeWorktree.path] != nil },
+                        set: { isEnabled in
+                            workspaceSettings.worktreeIconOverrides[activeWorktree.path] = isEnabled ? appSettings.defaultWorktreeIcon : nil
+                        }
+                    )
+                )
+
+                if workspaceSettings.worktreeIconOverrides[activeWorktree.path] != nil {
+                    SidebarIconEditorCard(
+                        title: "Active worktree icon",
+                        subtitle: "For other branches, use the sidebar context menu",
+                        icon: activeWorktreeIconBinding
+                    )
+                }
+
+                if workspaceSettings.worktreeIconOverrides.count > 0 {
+                    Text("\(workspaceSettings.worktreeIconOverrides.count) worktree icon overrides configured")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(12)
+        .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+}
+
+private struct SidebarIconEditorCard: View {
+    let title: String
+    let subtitle: String?
+    @Binding var icon: SidebarItemIcon
+    var randomizer: () -> SidebarItemIcon = SidebarItemIcon.random
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 12) {
+                SidebarItemIconView(icon: icon, size: 26)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.system(size: 12, weight: .semibold))
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                Button("Random") {
+                    icon = randomizer()
+                }
+            }
+
+            Picker("Symbol", selection: $icon.symbolName) {
+                ForEach(SidebarIconCatalog.symbols, id: \.systemName) { symbol in
+                    Label(symbol.title, systemImage: symbol.systemName).tag(symbol.systemName)
+                }
+            }
+
+            Picker("Style", selection: $icon.fillStyle) {
+                ForEach(SidebarIconFillStyle.allCases) { style in
+                    Text(style.title).tag(style)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Palette")
+                    .font(.system(size: 11, weight: .semibold))
+
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 34), spacing: 8)], spacing: 8) {
+                    ForEach(SidebarIconPalette.allCases) { palette in
+                        Button {
+                            icon.palette = palette
+                        } label: {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [palette.descriptor.gradientStart, palette.descriptor.gradientEnd],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .stroke(icon.palette == palette ? Color.white.opacity(0.9) : palette.descriptor.border, lineWidth: icon.palette == palette ? 2 : 1)
+                                )
+                                .frame(width: 34, height: 24)
+                        }
+                        .buttonStyle(.plain)
+                        .help(palette.title)
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .background(Color.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+}
+
+struct SidebarIconCustomizationSheet: View {
+    let request: SidebarIconCustomizationRequest
+
+    @EnvironmentObject private var store: WorkspaceStore
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var icon = SidebarItemIcon.repositoryDefault
+
+    private var title: String {
+        store.sidebarIconRequestTitle(request)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text("Customize Sidebar Icon")
+                .font(.system(size: 20, weight: .semibold))
+
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.secondary)
+
+            SidebarIconEditorCard(
+                title: "Icon",
+                subtitle: "Choose a symbol, palette, and fill treatment",
+                icon: $icon,
+                randomizer: randomizer
+            )
+
+            HStack {
+                Spacer()
+                if resetSupported {
+                    Button("Reset") {
+                        store.resetSidebarIcon(for: request.target)
+                        dismiss()
+                    }
+                }
+                Button("Cancel") {
+                    dismiss()
+                }
+                Button("Save") {
+                    store.updateSidebarIcon(icon, for: request.target)
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        }
+        .padding(20)
+        .frame(width: 480)
+        .task {
+            icon = store.sidebarIconSelection(for: request.target)
+        }
+    }
+
+    private var resetSupported: Bool {
+        true
+    }
+
+    private var randomizer: () -> SidebarItemIcon {
+        switch request.target {
+        case .workspace(let workspaceID):
+            if store.workspaces.first(where: { $0.id == workspaceID })?.supportsRepositoryFeatures == true {
+                return SidebarItemIcon.randomRepository
+            }
+            return SidebarItemIcon.random
+        case .appDefaultRepository:
+            return SidebarItemIcon.randomRepository
+        case .worktree, .appDefaultLocalTerminal, .appDefaultWorktree:
+            return SidebarItemIcon.random
+        }
+    }
+}
