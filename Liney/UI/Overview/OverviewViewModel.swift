@@ -117,6 +117,7 @@ struct OverviewViewModel {
             .flatMap { workspace in
                 workspace.recentActivity.map { OverviewTimelineItem(workspace: workspace, entry: $0) }
             }
+            .filter { $0.entry.kind != .release }
             .sorted { $0.entry.timestamp > $1.entry.timestamp }
             .prefix(12)
             .map { $0 }

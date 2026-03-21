@@ -440,6 +440,10 @@ final class WorkspaceModel: ObservableObject, Identifiable {
         }
     }
 
+    func clearActivityLog() {
+        activityLog.removeAll()
+    }
+
     var activeWorktreeState: WorktreeSessionStateRecord {
         var state = worktreeStates[activeWorktreePath] ?? WorktreeSessionStateRecord.makeDefault(for: activeWorktreePath)
         state.ensureTabs()

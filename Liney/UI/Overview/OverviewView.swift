@@ -36,6 +36,7 @@ struct OverviewView: View {
                         OverviewTimelinePanel(
                             items: model.recentActivities,
                             onOpenWorkspace: openWorkspace,
+                            onClear: store.clearTimeline,
                             onReplay: { item in
                                 store.replayActivity(workspaceID: item.workspace.id, activityID: item.entry.id)
                             }
@@ -261,6 +262,7 @@ private struct OverviewWorkflowStrip: View {
 private struct OverviewTimelinePanel: View {
     let items: [OverviewTimelineItem]
     let onOpenWorkspace: (UUID) -> Void
+    let onClear: () -> Void
     let onReplay: (OverviewTimelineItem) -> Void
 
     var body: some View {
@@ -274,6 +276,10 @@ private struct OverviewTimelinePanel: View {
                         .foregroundStyle(LineyTheme.mutedText)
                 }
                 Spacer()
+                Button("Clear Timeline", action: onClear)
+                    .buttonStyle(.plain)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(LineyTheme.danger)
                 Text("\(items.count) recent")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundStyle(LineyTheme.mutedText)

@@ -113,6 +113,55 @@ final class OverviewViewModelTests: XCTestCase {
         XCTAssertEqual(model.todayFocusItems.first?.workspace.id, workspace.id)
         XCTAssertEqual(model.todayFocusItems.first?.headline, "Fix failing checks")
     }
+
+    func testRecentActivitiesExcludeReleaseEntriesAndRemainSorted() {
+        let workflowEntry = WorkspaceActivityEntry(
+            timestamp: 300,
+            kind: .workflow,
+            title: "Ran workflow",
+            detail: "Ship"
+        )
+        let commandEntry = WorkspaceActivityEntry(
+            timestamp: 200,
+            kind: .command,
+            title: "Ran command",
+            detail: "make test"
+        )
+        let releaseEntry = WorkspaceActivityEntry(
+            timestamp: 400,
+            kind: .release,
+            title: "Checked for updates",
+            detail: "1.0.5"
+        )
+
+        let workspace = OverviewWorkspaceSnapshot(
+            id: UUID(),
+            name: "Alpha",
+            supportsRepositoryFeatures: true,
+            hasUncommittedChanges: false,
+            changedFileCount: 0,
+            currentBranch: "main",
+            activeSessionCount: 1,
+            preferredWorkflow: nil,
+            recentActivity: [commandEntry, releaseEntry, workflowEntry],
+            worktrees: [
+                WorktreeModel(
+                    path: "/tmp/alpha",
+                    branch: "main",
+                    head: "abc123",
+                    isMainWorktree: true,
+                    isLocked: false,
+                    lockReason: nil
+                )
+            ],
+            gitHubStatuses: [:]
+        )
+
+        let model = OverviewViewModel(snapshots: [workspace])
+
+        XCTAssertEqual(model.recentActivities.map(\.entry.kind), [.workflow, .command])
+        XCTAssertEqual(model.recentActivities.map(\.entry.title), ["Ran workflow", "Ran command"])
+    }
 }
 
 @MainActor

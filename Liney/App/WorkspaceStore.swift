@@ -1616,6 +1616,16 @@ final class WorkspaceStore: ObservableObject {
         replayActivity(entry, in: workspace)
     }
 
+    func clearTimeline() {
+        let hadActivity = workspaces.contains { !$0.activityLog.isEmpty }
+        guard hadActivity else { return }
+        for workspace in workspaces where !workspace.activityLog.isEmpty {
+            workspace.clearActivityLog()
+        }
+        persist()
+        receive(.statusMessage("Cleared task timeline.", .neutral, deliverSystemNotification: false))
+    }
+
     private func command(for item: CommandPaletteItem) -> WorkspaceCommand {
         switch item.kind {
         case .command(let command):
@@ -1941,7 +1951,6 @@ final class WorkspaceStore: ObservableObject {
 
     private func openLatestRelease() {
         NSWorkspace.shared.open(AppUpdaterController.releasesURL)
-        recordReleaseActivity(title: "Opened releases page", detail: AppUpdaterController.releasesURL.absoluteString)
         receive(.statusMessage("Opened Liney release notes on GitHub.", .neutral, deliverSystemNotification: false))
     }
 
@@ -1949,7 +1958,6 @@ final class WorkspaceStore: ObservableObject {
         configureUpdater(checkInBackground: false)
         updaterController.checkForUpdates()
         receive(.statusMessage("Checking for updates…", .neutral, deliverSystemNotification: false))
-        recordReleaseActivity(title: "Checked for updates", detail: currentReleaseBuild.map { "\(currentReleaseVersion) (\($0))" } ?? currentReleaseVersion)
     }
 
     private func gitHubTargets(
@@ -2293,18 +2301,6 @@ final class WorkspaceStore: ObservableObject {
             return compact
         }
         return String(compact.prefix(72)) + "..."
-    }
-
-    private func recordReleaseActivity(title: String, detail: String) {
-        guard let workspace = selectedWorkspace ?? workspaces.first else { return }
-        recordActivity(
-            in: workspace,
-            kind: .release,
-            title: title,
-            detail: detail,
-            worktreePath: workspace.activeWorktreePath,
-            replayAction: nil
-        )
     }
 
     private func normalizeLaunchState(_ state: PersistedWorkspaceState) -> PersistedWorkspaceState {
