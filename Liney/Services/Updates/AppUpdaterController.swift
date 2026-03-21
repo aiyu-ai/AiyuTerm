@@ -12,6 +12,10 @@ import Sparkle
 private final class SparkleUpdaterDelegate: NSObject, SPUUpdaterDelegate {
     var updateChannel: ReleaseChannel = .stable
 
+    nonisolated func feedURLString(for updater: SPUUpdater) -> String? {
+        AppUpdaterController.feedURL.absoluteString
+    }
+
     nonisolated func allowedChannels(for updater: SPUUpdater) -> Set<String> {
         MainActor.assumeIsolated {
             switch updateChannel {
