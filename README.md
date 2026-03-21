@@ -41,7 +41,7 @@ Download the latest signed `.dmg` from GitHub Releases:
 
 ## Requirements
 
-- macOS 14 or later
+- macOS 15.6 or later
 - Apple Silicon Mac
 
 ## Links
