@@ -6,6 +6,16 @@
         <description>Signed Sparkle updates for Liney.</description>
         <language>en</language>
         <item>
+            <title>1.0.8</title>
+            <pubDate>Sat, 21 Mar 2026 01:59:03 -0700</pubDate>
+            <link>https://github.com/wuwenrui/liney</link>
+            <sparkle:fullReleaseNotesLink>https://github.com/wuwenrui/liney/releases/tag/v1.0.8</sparkle:fullReleaseNotesLink>
+            <sparkle:version>8</sparkle:version>
+            <sparkle:shortVersionString>1.0.8</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.6</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/wuwenrui/liney/releases/download/v1.0.8/Liney-1.0.8.app.zip" length="19884364" type="application/octet-stream" sparkle:edSignature="3N+vouEzui33+mb2nLqCFNjBvDDQD9XSBjtY6/RVx/AW6UCiWT8euXx0h7SJJtGehH3cXXRaU0ltfXyMbOsQAg=="/>
+        </item>
+        <item>
             <title>1.0.7</title>
             <pubDate>Sat, 21 Mar 2026 01:48:23 -0700</pubDate>
             <link>https://github.com/wuwenrui/liney</link>
