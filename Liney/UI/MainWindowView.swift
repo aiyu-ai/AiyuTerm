@@ -41,7 +41,11 @@ struct MainWindowView: View {
                 WorkspaceSidebarView()
                     .navigationSplitViewColumnWidth(min: 190, ideal: 240, max: 320)
             } detail: {
-                WorkspaceDetailView()
+                if isCanvasPresented {
+                    Color.clear
+                } else {
+                    WorkspaceDetailView()
+                }
             }
             .navigationSplitViewStyle(.balanced)
 

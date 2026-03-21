@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum DiffFileStatus: String, CaseIterable, Hashable {
+enum DiffFileStatus: String, CaseIterable, Hashable, Sendable {
     case modified
     case added
     case deleted
@@ -51,7 +51,7 @@ enum DiffFileStatus: String, CaseIterable, Hashable {
     }
 }
 
-struct DiffChangedFile: Identifiable, Hashable {
+struct DiffChangedFile: Identifiable, Hashable, Sendable {
     let status: DiffFileStatus
     let oldPath: String?
     let newPath: String?

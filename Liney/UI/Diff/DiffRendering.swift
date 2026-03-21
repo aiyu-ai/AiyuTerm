@@ -7,13 +7,13 @@
 
 import Foundation
 
-enum DiffRenderedLineKind: Hashable {
+enum DiffRenderedLineKind: Hashable, Sendable {
     case context
     case added
     case removed
 }
 
-enum DiffSplitCellKind: Hashable {
+enum DiffSplitCellKind: Hashable, Sendable {
     case context
     case added
     case removed
@@ -21,7 +21,7 @@ enum DiffSplitCellKind: Hashable {
     case changedRemoved
 }
 
-struct DiffUnifiedLine: Identifiable, Hashable {
+struct DiffUnifiedLine: Identifiable, Hashable, Sendable {
     let id: String
     let kind: DiffRenderedLineKind
     let oldLineNumber: Int?
@@ -29,24 +29,221 @@ struct DiffUnifiedLine: Identifiable, Hashable {
     let text: String
 }
 
-struct DiffSplitCell: Hashable {
+struct DiffSplitCell: Hashable, Sendable {
     let lineNumber: Int?
     let text: String
     let kind: DiffSplitCellKind
 }
 
-struct DiffSplitRow: Identifiable, Hashable {
+struct DiffSplitRow: Identifiable, Hashable, Sendable {
     let id: String
     let left: DiffSplitCell?
     let right: DiffSplitCell?
 }
 
-struct StructuredDiffDocument: Hashable {
+struct StructuredDiffDocument: Hashable, Sendable {
     let unifiedLines: [DiffUnifiedLine]
     let splitRows: [DiffSplitRow]
     let addedLineCount: Int
     let removedLineCount: Int
     let usesFallbackLayout: Bool
+}
+
+extension StructuredDiffDocument {
+    nonisolated static func empty(usesFallbackLayout: Bool = false) -> StructuredDiffDocument {
+        StructuredDiffDocument(
+            unifiedLines: [],
+            splitRows: [],
+            addedLineCount: 0,
+            removedLineCount: 0,
+            usesFallbackLayout: usesFallbackLayout
+        )
+    }
+
+    func displayedUnifiedLines(showsFullFile: Bool, contextLineCount: Int = 3) -> [DiffUnifiedLine] {
+        guard !showsFullFile else { return unifiedLines }
+        return collapseUnifiedContext(contextLineCount: contextLineCount)
+    }
+
+    func displayedSplitRows(showsFullFile: Bool, contextLineCount: Int = 3) -> [DiffSplitRow] {
+        guard !showsFullFile else { return splitRows }
+        return collapseSplitContext(contextLineCount: contextLineCount)
+    }
+
+    private func collapseUnifiedContext(contextLineCount: Int) -> [DiffUnifiedLine] {
+        var collapsed: [DiffUnifiedLine] = []
+        var index = 0
+
+        while index < unifiedLines.count {
+            if unifiedLines[index].kind != .context {
+                collapsed.append(unifiedLines[index])
+                index += 1
+                continue
+            }
+
+            let start = index
+            while index < unifiedLines.count, unifiedLines[index].kind == .context {
+                index += 1
+            }
+
+            let run = Array(unifiedLines[start..<index])
+            collapsed.append(
+                contentsOf: collapsedUnifiedRun(
+                    run,
+                    startIndex: start,
+                    hasPreviousChange: start > 0,
+                    hasNextChange: index < unifiedLines.count,
+                    contextLineCount: contextLineCount
+                )
+            )
+        }
+
+        return collapsed
+    }
+
+    private func collapseSplitContext(contextLineCount: Int) -> [DiffSplitRow] {
+        var collapsed: [DiffSplitRow] = []
+        var index = 0
+
+        while index < splitRows.count {
+            if !splitRows[index].isContextRow {
+                collapsed.append(splitRows[index])
+                index += 1
+                continue
+            }
+
+            let start = index
+            while index < splitRows.count, splitRows[index].isContextRow {
+                index += 1
+            }
+
+            let run = Array(splitRows[start..<index])
+            collapsed.append(
+                contentsOf: collapsedSplitRun(
+                    run,
+                    startIndex: start,
+                    hasPreviousChange: start > 0,
+                    hasNextChange: index < splitRows.count,
+                    contextLineCount: contextLineCount
+                )
+            )
+        }
+
+        return collapsed
+    }
+
+    private func collapsedUnifiedRun(
+        _ run: [DiffUnifiedLine],
+        startIndex: Int,
+        hasPreviousChange: Bool,
+        hasNextChange: Bool,
+        contextLineCount: Int
+    ) -> [DiffUnifiedLine] {
+        if !hasPreviousChange && !hasNextChange {
+            return run
+        }
+
+        let clampedContext = max(contextLineCount, 0)
+
+        if hasPreviousChange && hasNextChange {
+            let leadingCount = min(clampedContext, run.count)
+            let trailingCount = min(clampedContext, max(run.count - leadingCount, 0))
+            let omittedCount = run.count - leadingCount - trailingCount
+            if omittedCount <= 0 {
+                return run
+            }
+            return Array(run.prefix(leadingCount))
+                + [collapsedUnifiedMarker(startIndex: startIndex, omittedCount: omittedCount)]
+                + Array(run.suffix(trailingCount))
+        }
+
+        if hasNextChange {
+            let trailingCount = min(clampedContext, run.count)
+            let omittedCount = run.count - trailingCount
+            if omittedCount <= 0 {
+                return run
+            }
+            return [collapsedUnifiedMarker(startIndex: startIndex, omittedCount: omittedCount)] + Array(run.suffix(trailingCount))
+        }
+
+        let leadingCount = min(clampedContext, run.count)
+        let omittedCount = run.count - leadingCount
+        if omittedCount <= 0 {
+            return run
+        }
+        return Array(run.prefix(leadingCount)) + [collapsedUnifiedMarker(startIndex: startIndex, omittedCount: omittedCount)]
+    }
+
+    private func collapsedSplitRun(
+        _ run: [DiffSplitRow],
+        startIndex: Int,
+        hasPreviousChange: Bool,
+        hasNextChange: Bool,
+        contextLineCount: Int
+    ) -> [DiffSplitRow] {
+        if !hasPreviousChange && !hasNextChange {
+            return run
+        }
+
+        let clampedContext = max(contextLineCount, 0)
+
+        if hasPreviousChange && hasNextChange {
+            let leadingCount = min(clampedContext, run.count)
+            let trailingCount = min(clampedContext, max(run.count - leadingCount, 0))
+            let omittedCount = run.count - leadingCount - trailingCount
+            if omittedCount <= 0 {
+                return run
+            }
+            return Array(run.prefix(leadingCount))
+                + [collapsedSplitMarker(startIndex: startIndex, omittedCount: omittedCount)]
+                + Array(run.suffix(trailingCount))
+        }
+
+        if hasNextChange {
+            let trailingCount = min(clampedContext, run.count)
+            let omittedCount = run.count - trailingCount
+            if omittedCount <= 0 {
+                return run
+            }
+            return [collapsedSplitMarker(startIndex: startIndex, omittedCount: omittedCount)] + Array(run.suffix(trailingCount))
+        }
+
+        let leadingCount = min(clampedContext, run.count)
+        let omittedCount = run.count - leadingCount
+        if omittedCount <= 0 {
+            return run
+        }
+        return Array(run.prefix(leadingCount)) + [collapsedSplitMarker(startIndex: startIndex, omittedCount: omittedCount)]
+    }
+
+    private func collapsedUnifiedMarker(startIndex: Int, omittedCount: Int) -> DiffUnifiedLine {
+        DiffUnifiedLine(
+            id: "u-collapse-\(startIndex)-\(omittedCount)",
+            kind: .context,
+            oldLineNumber: nil,
+            newLineNumber: nil,
+            text: "… \(omittedCount) unchanged line\(omittedCount == 1 ? "" : "s")"
+        )
+    }
+
+    private func collapsedSplitMarker(startIndex: Int, omittedCount: Int) -> DiffSplitRow {
+        let marker = DiffSplitCell(
+            lineNumber: nil,
+            text: "… \(omittedCount) unchanged line\(omittedCount == 1 ? "" : "s")",
+            kind: .context
+        )
+        return DiffSplitRow(
+            id: "s-collapse-\(startIndex)-\(omittedCount)",
+            left: marker,
+            right: marker
+        )
+    }
+}
+
+private extension DiffSplitRow {
+    var isContextRow: Bool {
+        left?.kind == .context && right?.kind == .context
+    }
 }
 
 private enum DiffEditOperation {

@@ -10,7 +10,7 @@ Liney is a native macOS terminal workspace manager for developers who jump betwe
 
 It combines a fast workspace sidebar, persistent pane layouts, and Ghostty-powered terminal surfaces into one focused desktop app.
 
-![Liney Screenshot Placeholder](./docs/assets/readme-screenshot-placeholder.svg)
+![Liney Screenshot Placeholder](./images/screenshot.png)
 
 ## Links
 

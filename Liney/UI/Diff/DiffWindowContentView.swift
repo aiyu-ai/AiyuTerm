@@ -12,20 +12,33 @@ private enum DiffPresentationStyle: String {
     case unified
 }
 
+private enum DiffContentVisibilityMode: String {
+    case changesOnly
+    case fullFile
+}
+
 struct DiffWindowContentView: View {
     @ObservedObject var state: DiffWindowState
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
+    @State private var listSelection: String?
     @AppStorage("liney.diff.viewStyle") private var diffStyleRaw = DiffPresentationStyle.split.rawValue
+    @AppStorage("liney.diff.contentVisibility") private var contentVisibilityRaw = DiffContentVisibilityMode.changesOnly.rawValue
 
     private var diffStyle: DiffPresentationStyle {
         DiffPresentationStyle(rawValue: diffStyleRaw) ?? .split
     }
 
-    private var selectedFileBinding: Binding<String?> {
-        Binding(
-            get: { state.selectedFileID },
-            set: { state.selectFile(id: $0) }
-        )
+    private var contentVisibility: DiffContentVisibilityMode {
+        DiffContentVisibilityMode(rawValue: contentVisibilityRaw) ?? .changesOnly
+    }
+
+    private var showsFullFile: Bool {
+        contentVisibility == .fullFile
+    }
+
+    init(state: DiffWindowState) {
+        self.state = state
+        _listSelection = State(initialValue: state.selectedFileID)
     }
 
     var body: some View {
@@ -36,6 +49,15 @@ struct DiffWindowContentView: View {
             diffDetail
         }
         .background(LineyTheme.appBackground)
+        .onChange(of: listSelection) { _, newValue in
+            guard state.selectedFileID != newValue else { return }
+            state.selectedFileID = newValue
+            state.updateDocumentSelection(for: newValue)
+        }
+        .onChange(of: state.selectedFileID) { _, newValue in
+            guard listSelection != newValue else { return }
+            listSelection = newValue
+        }
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 Button {
@@ -60,6 +82,22 @@ struct DiffWindowContentView: View {
 
             ToolbarItem(placement: .primaryAction) {
                 Button {
+                    contentVisibilityRaw = showsFullFile
+                        ? DiffContentVisibilityMode.changesOnly.rawValue
+                        : DiffContentVisibilityMode.fullFile.rawValue
+                } label: {
+                    Image(systemName: showsFullFile ? "rectangle.compress.vertical" : "rectangle.expand.vertical")
+                }
+                .disabled(state.document?.isPatchOnly == true)
+                .help(
+                    state.document?.isPatchOnly == true
+                        ? "Raw patch preview does not support full-file expansion"
+                        : (showsFullFile ? "Show Diff Hunks" : "Show Full File")
+                )
+            }
+
+            ToolbarItem(placement: .primaryAction) {
+                Button {
                     state.refresh()
                 } label: {
                     Image(systemName: "arrow.clockwise")
@@ -70,7 +108,7 @@ struct DiffWindowContentView: View {
     }
 
     private var fileListSidebar: some View {
-        List(selection: selectedFileBinding) {
+        List(selection: $listSelection) {
             ForEach(state.changedFiles) { file in
                 DiffFileRow(file: file)
                     .tag(file.id)
@@ -106,11 +144,15 @@ struct DiffWindowContentView: View {
                     DiffDocumentHeader(file: document.file)
                     DiffDocumentSummary(document: document)
 
-                    switch diffStyle {
-                    case .split:
-                        DiffSplitDocumentView(document: document)
-                    case .unified:
-                        DiffUnifiedDocumentView(document: document)
+                    if document.isPatchOnly {
+                        DiffRawPatchDocumentView(text: document.unifiedPatch)
+                    } else {
+                        switch diffStyle {
+                        case .split:
+                            DiffSplitDocumentView(document: document, showsFullFile: showsFullFile)
+                        case .unified:
+                            DiffUnifiedDocumentView(document: document, showsFullFile: showsFullFile)
+                        }
                     }
                 }
             } else if state.isLoadingFiles {
@@ -229,6 +271,9 @@ private struct DiffDocumentSummary: View {
         HStack(spacing: 10) {
             DiffSummaryBadge(label: "+\(document.renderedDiff.addedLineCount)", tint: LineyTheme.success)
             DiffSummaryBadge(label: "-\(document.renderedDiff.removedLineCount)", tint: LineyTheme.danger)
+            if document.isPatchOnly {
+                DiffSummaryBadge(label: "Patch Only", tint: LineyTheme.warning)
+            }
             if document.renderedDiff.usesFallbackLayout {
                 DiffSummaryBadge(label: "Fallback Layout", tint: LineyTheme.warning)
             }
@@ -247,22 +292,34 @@ private struct DiffDocumentSummary: View {
 
 private struct DiffSplitDocumentView: View {
     let document: DiffFileDocument
+    let showsFullFile: Bool
+    private let minimumColumnWidth: CGFloat = 420
 
     var body: some View {
-        ScrollView([.vertical, .horizontal]) {
-            LazyVStack(spacing: 0) {
-                HStack(spacing: 0) {
-                    DiffSplitColumnHeader(title: "HEAD", tint: LineyTheme.danger)
-                    DiffSplitColumnHeader(title: "Working Tree", tint: LineyTheme.success)
-                }
+        GeometryReader { proxy in
+            let availableWidth = max(proxy.size.width, 0)
+            let columnWidth = max(minimumColumnWidth, floor(availableWidth / 2))
+            let contentWidth = max(availableWidth, columnWidth * 2)
+            let displayedRows = document.renderedDiff.displayedSplitRows(showsFullFile: showsFullFile)
 
-                ForEach(document.renderedDiff.splitRows) { row in
+            ScrollView([.vertical, .horizontal]) {
+                LazyVStack(spacing: 0) {
                     HStack(spacing: 0) {
-                        DiffSplitCellView(cell: row.left)
-                        DiffSplitCellView(cell: row.right)
+                        DiffSplitColumnHeader(title: "HEAD", tint: LineyTheme.danger, columnWidth: columnWidth)
+                        DiffSplitColumnHeader(title: "Working Tree", tint: LineyTheme.success, columnWidth: columnWidth)
+                    }
+
+                    ForEach(displayedRows) { row in
+                        HStack(spacing: 0) {
+                            DiffSplitCellView(cell: row.left, columnWidth: columnWidth)
+                            DiffSplitCellView(cell: row.right, columnWidth: columnWidth)
+                        }
                     }
                 }
+                .frame(minWidth: contentWidth, maxWidth: .infinity, alignment: .topLeading)
+                .frame(minHeight: proxy.size.height, alignment: .topLeading)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .background(LineyTheme.canvasBackground)
     }
@@ -270,23 +327,49 @@ private struct DiffSplitDocumentView: View {
 
 private struct DiffUnifiedDocumentView: View {
     let document: DiffFileDocument
+    let showsFullFile: Bool
+
+    var body: some View {
+        GeometryReader { proxy in
+            let availableWidth = max(proxy.size.width, 0)
+            let displayedLines = document.renderedDiff.displayedUnifiedLines(showsFullFile: showsFullFile)
+
+            ScrollView([.vertical, .horizontal]) {
+                LazyVStack(spacing: 0) {
+                    ForEach(displayedLines) { line in
+                        DiffUnifiedLineRow(line: line)
+                    }
+
+                    if displayedLines.isEmpty {
+                        Text(document.unifiedPatch.isEmpty ? "No visible changes." : document.unifiedPatch)
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundStyle(LineyTheme.secondaryText)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(14)
+                    }
+                }
+                .frame(minWidth: availableWidth, maxWidth: .infinity, alignment: .topLeading)
+                .frame(minHeight: proxy.size.height, alignment: .topLeading)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+        .background(LineyTheme.canvasBackground)
+    }
+}
+
+private struct DiffRawPatchDocumentView: View {
+    let text: String
 
     var body: some View {
         ScrollView([.vertical, .horizontal]) {
-            LazyVStack(spacing: 0) {
-                ForEach(document.renderedDiff.unifiedLines) { line in
-                    DiffUnifiedLineRow(line: line)
-                }
-
-                if document.renderedDiff.unifiedLines.isEmpty {
-                    Text(document.unifiedPatch.isEmpty ? "No visible changes." : document.unifiedPatch)
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundStyle(LineyTheme.secondaryText)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(14)
-                }
-            }
+            Text(text.isEmpty ? "No patch available." : text)
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundStyle(LineyTheme.secondaryText)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(14)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(LineyTheme.canvasBackground)
     }
 }
@@ -294,6 +377,7 @@ private struct DiffUnifiedDocumentView: View {
 private struct DiffSplitColumnHeader: View {
     let title: String
     let tint: Color
+    let columnWidth: CGFloat
 
     var body: some View {
         HStack {
@@ -304,7 +388,7 @@ private struct DiffSplitColumnHeader: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .frame(minWidth: 420, alignment: .leading)
+        .frame(minWidth: columnWidth, alignment: .leading)
         .background(LineyTheme.panelBackground)
         .overlay(alignment: .bottomTrailing) {
             Rectangle()
@@ -316,6 +400,7 @@ private struct DiffSplitColumnHeader: View {
 
 private struct DiffSplitCellView: View {
     let cell: DiffSplitCell?
+    let columnWidth: CGFloat
 
     var body: some View {
         HStack(spacing: 0) {
@@ -340,7 +425,7 @@ private struct DiffSplitCellView: View {
                 .padding(.vertical, 4)
                 .background(backgroundColor)
         }
-        .frame(minWidth: 420, alignment: .leading)
+        .frame(minWidth: columnWidth, alignment: .leading)
         .overlay(alignment: .bottomTrailing) {
             Rectangle()
                 .fill(LineyTheme.border.opacity(0.65))
@@ -416,6 +501,7 @@ private struct DiffUnifiedLineRow: View {
                 .padding(.vertical, 4)
                 .background(backgroundColor)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(LineyTheme.border.opacity(0.65))

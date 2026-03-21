@@ -7,6 +7,11 @@
 
 import Foundation
 
+enum LineyFeatureFlags {
+    // TODO: Re-enable after the SSH / agent session flows have a defined QA plan.
+    static let showsRemoteSessionCreationUI = false
+}
+
 struct PresentedError: Identifiable {
     let id = UUID()
     let title: String
@@ -66,6 +71,7 @@ struct CreateSSHSessionRequest: Identifiable {
 }
 
 struct CreateAgentSessionRequest: Identifiable {
+    // TODO: Keep the request models wired while the UI entry points stay hidden behind the feature flag above.
     let id = UUID()
     let workspaceID: UUID
     let workspaceName: String

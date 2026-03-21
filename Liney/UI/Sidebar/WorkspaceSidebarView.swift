@@ -391,20 +391,22 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
                 )
             }
 
-            addMenuItem(
-                to: menu,
-                title: "New SSH Session",
-                action: #selector(newSSHSession(_:)),
-                representedObject: workspace.id
-            )
-            addMenuItem(
-                to: menu,
-                title: "New Agent Session",
-                action: #selector(newAgentSession(_:)),
-                representedObject: workspace.id
-            )
+            if LineyFeatureFlags.showsRemoteSessionCreationUI {
+                addMenuItem(
+                    to: menu,
+                    title: "New SSH Session",
+                    action: #selector(newSSHSession(_:)),
+                    representedObject: workspace.id
+                )
+                addMenuItem(
+                    to: menu,
+                    title: "New Agent Session",
+                    action: #selector(newAgentSession(_:)),
+                    representedObject: workspace.id
+                )
 
-            menu.addItem(.separator())
+                menu.addItem(.separator())
+            }
 
             addMenuItem(
                 to: menu,

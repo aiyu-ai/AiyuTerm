@@ -365,28 +365,30 @@ final class WorkspaceStore: ObservableObject {
                     )
                 )
             }
-            items.append(
-                CommandPaletteItem(
-                    id: "workspace-ssh:\(workspace.id.uuidString)",
-                    title: "New SSH Session in \(workspace.name)",
-                    subtitle: nil,
-                    group: .sessions,
-                    keywords: ["remote", "server", "ssh"],
-                    isGlobal: false,
-                    kind: .command(.createSSHSession(workspace.id))
+            if LineyFeatureFlags.showsRemoteSessionCreationUI {
+                items.append(
+                    CommandPaletteItem(
+                        id: "workspace-ssh:\(workspace.id.uuidString)",
+                        title: "New SSH Session in \(workspace.name)",
+                        subtitle: nil,
+                        group: .sessions,
+                        keywords: ["remote", "server", "ssh"],
+                        isGlobal: false,
+                        kind: .command(.createSSHSession(workspace.id))
+                    )
                 )
-            )
-            items.append(
-                CommandPaletteItem(
-                    id: "workspace-agent:\(workspace.id.uuidString)",
-                    title: "New Agent Session in \(workspace.name)",
-                    subtitle: workspace.agentPresets.first?.name,
-                    group: .sessions,
-                    keywords: ["ai", "agent", "codex"],
-                    isGlobal: false,
-                    kind: .command(.createAgentSession(workspace.id, workspace.preferredAgentPreset))
+                items.append(
+                    CommandPaletteItem(
+                        id: "workspace-agent:\(workspace.id.uuidString)",
+                        title: "New Agent Session in \(workspace.name)",
+                        subtitle: workspace.agentPresets.first?.name,
+                        group: .sessions,
+                        keywords: ["ai", "agent", "codex"],
+                        isGlobal: false,
+                        kind: .command(.createAgentSession(workspace.id, workspace.preferredAgentPreset))
+                    )
                 )
-            )
+            }
             if !workspace.setupScript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 items.append(
                     CommandPaletteItem(
