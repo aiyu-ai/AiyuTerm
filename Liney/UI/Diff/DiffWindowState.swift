@@ -17,9 +17,44 @@ struct DiffFileDocument: Sendable {
     let isPatchOnly: Bool
 }
 
+enum DiffDiagnostics {
+    nonisolated static func log(_ message: String) {
+#if DEBUG
+        print("[Diff] \(message)")
+#endif
+    }
+
+    nonisolated static func error(_ message: String) {
+#if DEBUG
+        print("[Diff][Error] \(message)")
+#endif
+    }
+
+    nonisolated static func now() -> UInt64 {
+        DispatchTime.now().uptimeNanoseconds
+    }
+
+    nonisolated static func elapsedMilliseconds(since start: UInt64) -> Double {
+        Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000
+    }
+
+    nonisolated static func formatMilliseconds(_ value: Double) -> String {
+        String(format: "%.1fms", value)
+    }
+
+    nonisolated static func describeText(_ text: String) -> String {
+        "\(text.utf8.count)B/\(lineCount(in: text)) lines"
+    }
+
+    nonisolated static func lineCount(in text: String) -> Int {
+        guard !text.isEmpty else { return 0 }
+        return text.split(separator: "\n", omittingEmptySubsequences: false).count
+    }
+}
+
 @MainActor
 final class DiffWindowState: ObservableObject {
-    private static let documentLoadTimeoutNanoseconds: UInt64 = 4_000_000_000
+    nonisolated private static let documentLoadTimeoutNanoseconds: UInt64 = 4_000_000_000
 
     @Published var worktreePath: String?
     @Published var branchName: String = ""
@@ -37,6 +72,7 @@ final class DiffWindowState: ObservableObject {
     private var documentTask: Task<Void, Never>?
 
     func load(worktreePath: String?, branchName: String, emptyStateMessage: String) {
+        DiffDiagnostics.log("Loading diff window state for branch \(branchName) at \(worktreePath ?? "<nil>")")
         self.worktreePath = worktreePath
         self.branchName = branchName
         self.emptyStateMessage = emptyStateMessage
@@ -57,6 +93,7 @@ final class DiffWindowState: ObservableObject {
 
     func refresh() {
         guard let worktreePath else { return }
+        DiffDiagnostics.log("Refreshing diff file list for \(worktreePath)")
         documentCache = [:]
         fileListTask?.cancel()
         documentTask?.cancel()
@@ -65,16 +102,19 @@ final class DiffWindowState: ObservableObject {
 
     func updateDocumentSelection(for id: String?) {
         documentTask?.cancel()
+        DiffDiagnostics.log("Selecting diff file id \(id ?? "<nil>")")
 
         guard let id,
               let worktreePath,
               let file = changedFiles.first(where: { $0.id == id }) else {
+            DiffDiagnostics.log("Clearing diff document because selection is empty or missing")
             document = nil
             isLoadingDocument = false
             return
         }
 
         if let cached = documentCache[id] {
+            DiffDiagnostics.log("Using cached diff document for \(file.displayPath)")
             document = cached
             isLoadingDocument = false
             return
@@ -83,6 +123,8 @@ final class DiffWindowState: ObservableObject {
         document = nil
         isLoadingDocument = true
         documentTask = Task {
+            let start = DiffDiagnostics.now()
+            DiffDiagnostics.log("Starting diff load for \(file.displayPath)")
             do {
                 let loadedDocument = try await Task.detached(priority: .userInitiated) {
                     try await Self.loadDocumentWithTimeout(for: file, worktreePath: worktreePath)
@@ -91,8 +133,14 @@ final class DiffWindowState: ObservableObject {
                 documentCache[file.id] = loadedDocument
                 document = loadedDocument
                 isLoadingDocument = false
+                DiffDiagnostics.log(
+                    "Finished diff load for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))) [patchOnly=\(loadedDocument.isPatchOnly)]"
+                )
             } catch {
                 guard !Task.isCancelled else { return }
+                DiffDiagnostics.error(
+                    "Diff load failed for \(file.displayPath) after \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))): \(error.localizedDescription)"
+                )
                 document = DiffFileDocument(
                     file: file,
                     oldContents: "",
@@ -107,6 +155,8 @@ final class DiffWindowState: ObservableObject {
     }
 
     private func reloadFileList(for worktreePath: String) async {
+        let start = DiffDiagnostics.now()
+        DiffDiagnostics.log("Loading changed files for \(worktreePath)")
         isLoadingFiles = true
         loadErrorMessage = nil
 
@@ -127,6 +177,9 @@ final class DiffWindowState: ObservableObject {
 
             changedFiles = allFiles
             isLoadingFiles = false
+            DiffDiagnostics.log(
+                "Loaded \(allFiles.count) changed files in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start)))"
+            )
 
             if let selectedFileID,
                allFiles.contains(where: { $0.id == selectedFileID }) {
@@ -138,6 +191,9 @@ final class DiffWindowState: ObservableObject {
             }
         } catch {
             guard !Task.isCancelled else { return }
+            DiffDiagnostics.error(
+                "Loading changed files failed after \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))): \(error.localizedDescription)"
+            )
             changedFiles = []
             document = nil
             selectedFileID = nil
@@ -149,6 +205,7 @@ final class DiffWindowState: ObservableObject {
 
     nonisolated private static func loadDocument(for file: DiffChangedFile, worktreePath: String) async throws -> DiffFileDocument {
         let gitRepositoryService = GitRepositoryService()
+        let start = DiffDiagnostics.now()
         let oldContents: String
         let newContents: String
 
@@ -157,23 +214,41 @@ final class DiffWindowState: ObservableObject {
             oldContents = ""
             newContents = Self.readFile(at: URL(fileURLWithPath: worktreePath).appendingPathComponent(file.displayPath))
         case .deleted:
+            let headLoadStart = DiffDiagnostics.now()
+            DiffDiagnostics.log("Loading HEAD contents for deleted file \(file.displayPath)")
             oldContents = try await gitRepositoryService.showFileAtHEAD(file.oldPath ?? file.displayPath, in: worktreePath) ?? ""
+            DiffDiagnostics.log(
+                "Loaded HEAD contents for deleted file \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: headLoadStart))) [\(DiffDiagnostics.describeText(oldContents))]"
+            )
             newContents = ""
         case .renamed, .copied, .modified, .unknown:
             let oldPath = file.oldPath ?? file.displayPath
             let newPath = file.newPath ?? file.displayPath
+            let headLoadStart = DiffDiagnostics.now()
+            DiffDiagnostics.log("Loading HEAD contents for \(oldPath)")
             oldContents = try await gitRepositoryService.showFileAtHEAD(oldPath, in: worktreePath) ?? ""
+            DiffDiagnostics.log(
+                "Loaded HEAD contents for \(oldPath) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: headLoadStart))) [\(DiffDiagnostics.describeText(oldContents))]"
+            )
             newContents = Self.readFile(at: URL(fileURLWithPath: worktreePath).appendingPathComponent(newPath))
         }
 
         let unifiedPatch = try await loadUnifiedPatch(for: file, worktreePath: worktreePath, oldContents: oldContents, newContents: newContents)
+        let renderStart = DiffDiagnostics.now()
+        let renderedDiff = DiffRenderingEngine.render(old: oldContents, new: newContents, debugLabel: file.displayPath)
+        DiffDiagnostics.log(
+            "Rendered structured diff for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: renderStart))) [added=\(renderedDiff.addedLineCount), removed=\(renderedDiff.removedLineCount), fallbackLayout=\(renderedDiff.usesFallbackLayout)]"
+        )
+        DiffDiagnostics.log(
+            "Completed document assembly for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))) [old=\(DiffDiagnostics.describeText(oldContents)), new=\(DiffDiagnostics.describeText(newContents)), patch=\(unifiedPatch.utf8.count)B]"
+        )
 
         return DiffFileDocument(
             file: file,
             oldContents: oldContents,
             newContents: newContents,
             unifiedPatch: unifiedPatch,
-            renderedDiff: DiffRenderingEngine.render(old: oldContents, new: newContents),
+            renderedDiff: renderedDiff,
             isPatchOnly: false
         )
     }
@@ -182,12 +257,18 @@ final class DiffWindowState: ObservableObject {
         for file: DiffChangedFile,
         worktreePath: String
     ) async throws -> DiffFileDocument {
-        try await withThrowingTaskGroup(of: DiffFileDocument.self) { group in
+        let start = DiffDiagnostics.now()
+        let timeoutNanoseconds = documentLoadTimeoutNanoseconds
+        DiffDiagnostics.log("Starting timed diff load for \(file.displayPath)")
+        return try await withThrowingTaskGroup(of: DiffFileDocument.self) { group in
             group.addTask {
                 try await loadDocument(for: file, worktreePath: worktreePath)
             }
             group.addTask {
-                try await Task.sleep(nanoseconds: documentLoadTimeoutNanoseconds)
+                try await Task.sleep(nanoseconds: timeoutNanoseconds)
+                DiffDiagnostics.log(
+                    "Structured diff timed out for \(file.displayPath) after \(DiffDiagnostics.formatMilliseconds(Double(timeoutNanoseconds) / 1_000_000))"
+                )
                 return try await loadPatchOnlyDocument(
                     for: file,
                     worktreePath: worktreePath,
@@ -199,6 +280,9 @@ final class DiffWindowState: ObservableObject {
                 throw CancellationError()
             }
             group.cancelAll()
+            DiffDiagnostics.log(
+                "Timed diff load finished for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))) [patchOnly=\(first.isPatchOnly)]"
+            )
             return first
         }
     }
@@ -211,11 +295,17 @@ final class DiffWindowState: ObservableObject {
     ) async throws -> String {
         let gitRepositoryService = GitRepositoryService()
         if file.status == .added, file.oldPath == nil {
+            DiffDiagnostics.log("Using synthetic patch for added file \(file.displayPath)")
             return Self.syntheticPatch(for: file, oldContents: oldContents, newContents: newContents)
         }
 
         let diffPath = file.newPath ?? file.oldPath ?? file.displayPath
+        let start = DiffDiagnostics.now()
+        DiffDiagnostics.log("Loading git patch for \(diffPath)")
         let patch = try await gitRepositoryService.diffPatch(for: worktreePath, filePath: diffPath)
+        DiffDiagnostics.log(
+            "Loaded git patch for \(diffPath) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))) [\(patch.utf8.count)B]"
+        )
         return patch.nilIfEmpty ?? Self.syntheticPatch(for: file, oldContents: oldContents, newContents: newContents)
     }
 
@@ -224,6 +314,8 @@ final class DiffWindowState: ObservableObject {
         worktreePath: String,
         reason: String?
     ) async throws -> DiffFileDocument {
+        let start = DiffDiagnostics.now()
+        DiffDiagnostics.log("Loading patch-only fallback for \(file.displayPath)")
         let patch: String
 
         if file.status == .added, file.oldPath == nil {
@@ -247,6 +339,10 @@ final class DiffWindowState: ObservableObject {
             annotatedPatch = patch
         }
 
+        DiffDiagnostics.log(
+            "Loaded patch-only fallback for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))) [\(patch.utf8.count)B]"
+        )
+
         return DiffFileDocument(
             file: file,
             oldContents: "",
@@ -258,14 +354,28 @@ final class DiffWindowState: ObservableObject {
     }
 
     nonisolated private static func readFile(at url: URL) -> String {
-        guard let data = try? Data(contentsOf: url) else { return "" }
+        let start = DiffDiagnostics.now()
+        guard let data = try? Data(contentsOf: url) else {
+            DiffDiagnostics.error("Reading file failed for \(url.path)")
+            return ""
+        }
         if data.contains(0) {
+            DiffDiagnostics.log(
+                "Read binary file \(url.path) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))) [\(data.count)B]"
+            )
             return "<<Binary file>>"
         }
         if let string = String(data: data, encoding: .utf8) {
+            DiffDiagnostics.log(
+                "Read file \(url.path) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))) [\(data.count)B/\(DiffDiagnostics.lineCount(in: string)) lines]"
+            )
             return string
         }
-        return String(decoding: data, as: UTF8.self)
+        let string = String(decoding: data, as: UTF8.self)
+        DiffDiagnostics.log(
+            "Read non-UTF8 file \(url.path) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))) [\(data.count)B/\(DiffDiagnostics.lineCount(in: string)) lines]"
+        )
+        return string
     }
 
     nonisolated private static func syntheticPatch(
@@ -308,7 +418,6 @@ final class DiffWindowState: ObservableObject {
     }
 
     nonisolated private static func lineCount(in text: String) -> Int {
-        guard !text.isEmpty else { return 0 }
-        return text.split(separator: "\n", omittingEmptySubsequences: false).count
+        DiffDiagnostics.lineCount(in: text)
     }
 }

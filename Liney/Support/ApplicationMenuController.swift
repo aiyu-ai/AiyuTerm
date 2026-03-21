@@ -34,7 +34,8 @@ final class ApplicationMenuController: NSObject {
 
         let appMenu = NSMenu(title: appName)
         appMenuItem.submenu = appMenu
-        addItem(title: "About \(appName)", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "", to: appMenu)
+        let aboutItem = addItem(title: "About \(appName)", action: #selector(AppDelegate.showAboutPanel(_:)), keyEquivalent: "", to: appMenu)
+        aboutItem.target = target
         let checkForUpdatesItem = addItem(title: "Check for Updates...", action: #selector(AppDelegate.checkForUpdates(_:)), keyEquivalent: "", to: appMenu)
         checkForUpdatesItem.target = target
         appMenu.addItem(.separator())

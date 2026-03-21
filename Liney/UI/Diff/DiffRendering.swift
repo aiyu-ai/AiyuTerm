@@ -255,20 +255,36 @@ private enum DiffEditOperation {
 enum DiffRenderingEngine {
     nonisolated private static let maxDynamicProgrammingCells = 250_000
 
-    nonisolated static func render(old oldText: String, new newText: String) -> StructuredDiffDocument {
+    nonisolated static func render(old oldText: String, new newText: String, debugLabel: String? = nil) -> StructuredDiffDocument {
+        let start = DiffDiagnostics.now()
         let oldLines = normalizedLines(in: oldText)
         let newLines = normalizedLines(in: newText)
+        let dpCellCount = oldLines.count * newLines.count
+        let label = debugLabel ?? "<unknown>"
+
+        DiffDiagnostics.log(
+            "Diff render start for \(label) [oldLines=\(oldLines.count), newLines=\(newLines.count), dpCells=\(dpCellCount)]"
+        )
 
         if oldText == "<<Binary file>>" || newText == "<<Binary file>>" {
+            DiffDiagnostics.log("Diff render using fallback layout for \(label) because file is binary")
             return fallbackDocument(oldLines: oldLines, newLines: newLines)
         }
 
-        if oldLines.count * newLines.count > maxDynamicProgrammingCells {
+        if dpCellCount > maxDynamicProgrammingCells {
+            DiffDiagnostics.log(
+                "Diff render using fallback layout for \(label) because dpCells \(dpCellCount) exceed limit \(maxDynamicProgrammingCells)"
+            )
             return fallbackDocument(oldLines: oldLines, newLines: newLines)
         }
 
+        let operationsStart = DiffDiagnostics.now()
         let operations = operations(oldLines: oldLines, newLines: newLines)
-        return makeDocument(from: operations, usesFallbackLayout: false)
+        let document = makeDocument(from: operations, usesFallbackLayout: false)
+        DiffDiagnostics.log(
+            "Diff render finished for \(label) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))) [operations=\(operations.count), lcs=\(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: operationsStart))), unified=\(document.unifiedLines.count), split=\(document.splitRows.count)]"
+        )
+        return document
     }
 
     private nonisolated static func makeDocument(

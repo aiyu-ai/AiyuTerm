@@ -8,6 +8,9 @@
 import Cocoa
 
 class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
+    private let websiteURL = URL(string: "https://liney.dev")!
+    private let repositoryURL = URL(string: "https://github.com/wuwenrui/liney")!
+
     @MainActor private var desktopApplication: LineyDesktopApplication?
     @MainActor private let applicationMenuController = ApplicationMenuController()
 
@@ -35,6 +38,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         Task { @MainActor in
             desktopApplication?.presentSettings()
         }
+    }
+
+    @objc func showAboutPanel(_ sender: Any?) {
+        let appName = applicationName()
+        let aboutOptions: [NSApplication.AboutPanelOptionKey: Any] = [
+            .applicationName: appName,
+            .applicationVersion: formattedApplicationVersion(),
+            .credits: aboutCredits(),
+        ]
+        NSApp.orderFrontStandardAboutPanel(options: aboutOptions)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     @objc func checkForUpdates(_ sender: Any?) {
@@ -99,5 +113,59 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             return bundleName
         }
         return "Liney"
+    }
+
+    @MainActor
+    private func formattedApplicationVersion() -> String {
+        let shortVersion = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let buildVersion = (Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        switch (shortVersion?.isEmpty == false ? shortVersion : nil, buildVersion?.isEmpty == false ? buildVersion : nil) {
+        case let (shortVersion?, buildVersion?) where shortVersion != buildVersion:
+            return "Version \(shortVersion) (\(buildVersion))"
+        case let (shortVersion?, _):
+            return "Version \(shortVersion)"
+        case let (_, buildVersion?):
+            return "Build \(buildVersion)"
+        default:
+            return "Version 1.0.0"
+        }
+    }
+
+    @MainActor
+    private func aboutCredits() -> NSAttributedString {
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = .center
+        paragraphStyle.paragraphSpacing = 6
+
+        let baseAttributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 13),
+            .paragraphStyle: paragraphStyle,
+        ]
+        let linkAttributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 13),
+            .paragraphStyle: paragraphStyle,
+            .link: websiteURL,
+        ]
+
+        let credits = NSMutableAttributedString(
+            string: "Native macOS terminal workspace.\n\n",
+            attributes: baseAttributes
+        )
+        credits.append(
+            NSAttributedString(
+                string: "Website: \(websiteURL.absoluteString)\n",
+                attributes: linkAttributes.merging([.link: websiteURL]) { _, newValue in newValue }
+            )
+        )
+        credits.append(
+            NSAttributedString(
+                string: "GitHub: \(repositoryURL.absoluteString)",
+                attributes: linkAttributes.merging([.link: repositoryURL]) { _, newValue in newValue }
+            )
+        )
+        return credits
     }
 }
