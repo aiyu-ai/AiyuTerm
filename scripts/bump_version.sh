@@ -39,6 +39,16 @@ validate_semver() {
   [[ "$1" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]
 }
 
+next_patch_without_four() {
+  local patch_value="$1"
+
+  while [[ "$patch_value" == *4* ]]; do
+    patch_value=$((patch_value + 1))
+  done
+
+  echo "$patch_value"
+}
+
 CURRENT_VERSION="$(read_setting MARKETING_VERSION)"
 CURRENT_BUILD_NUMBER="$(read_setting CURRENT_PROJECT_VERSION)"
 
@@ -63,6 +73,7 @@ case "$PART" in
     ;;
   patch)
     patch=$((patch + 1))
+    patch="$(next_patch_without_four "$patch")"
     NEW_VERSION="$major.$minor.$patch"
     ;;
   set)

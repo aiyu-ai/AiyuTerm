@@ -23,6 +23,7 @@ scripts/bump_version.sh set 1.2.0
 ```
 
 The script updates both `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION`.
+Patch bumps skip patch numbers that contain the digit `4`, so `1.0.3` becomes `1.0.5` and `1.0.39` becomes `1.0.50`.
 
 ## Sparkle Setup
 
