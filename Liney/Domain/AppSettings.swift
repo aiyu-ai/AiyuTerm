@@ -5,6 +5,7 @@
 //  Author: wuwenrui
 //
 
+import AppKit
 import Foundation
 
 nonisolated enum SidebarIconFillStyle: String, Codable, Hashable, CaseIterable, Identifiable {
@@ -247,6 +248,7 @@ struct AppSettings: Codable, Hashable {
     var quickCommandRecentIDs: [String]
     var releaseChannel: ReleaseChannel
     var commandPaletteRecents: [String: TimeInterval]
+    var keyboardShortcutOverrides: [String: KeyboardShortcutOverride]
 
     init(
         autoRefreshEnabled: Bool = true,
@@ -268,7 +270,8 @@ struct AppSettings: Codable, Hashable {
         quickCommandPresets: [QuickCommandPreset] = QuickCommandCatalog.defaultCommands,
         quickCommandRecentIDs: [String] = [],
         releaseChannel: ReleaseChannel = .stable,
-        commandPaletteRecents: [String: TimeInterval] = [:]
+        commandPaletteRecents: [String: TimeInterval] = [:],
+        keyboardShortcutOverrides: [String: KeyboardShortcutOverride] = [:]
     ) {
         self.autoRefreshEnabled = autoRefreshEnabled
         self.autoRefreshIntervalSeconds = max(10, autoRefreshIntervalSeconds)
@@ -293,6 +296,7 @@ struct AppSettings: Codable, Hashable {
         )
         self.releaseChannel = releaseChannel
         self.commandPaletteRecents = commandPaletteRecents
+        self.keyboardShortcutOverrides = LineyKeyboardShortcuts.normalizedOverrides(keyboardShortcutOverrides)
     }
 }
 
@@ -318,6 +322,7 @@ extension AppSettings {
         case quickCommandRecentIDs
         case releaseChannel
         case commandPaletteRecents
+        case keyboardShortcutOverrides
     }
 
     init(from decoder: any Decoder) throws {
@@ -349,8 +354,493 @@ extension AppSettings {
             quickCommandPresets: try container.decodeIfPresent([QuickCommandPreset].self, forKey: .quickCommandPresets) ?? QuickCommandCatalog.defaultCommands,
             quickCommandRecentIDs: try container.decodeIfPresent([String].self, forKey: .quickCommandRecentIDs) ?? [],
             releaseChannel: try container.decodeIfPresent(ReleaseChannel.self, forKey: .releaseChannel) ?? .stable,
-            commandPaletteRecents: try container.decodeIfPresent([String: TimeInterval].self, forKey: .commandPaletteRecents) ?? [:]
+            commandPaletteRecents: try container.decodeIfPresent([String: TimeInterval].self, forKey: .commandPaletteRecents) ?? [:],
+            keyboardShortcutOverrides: try container.decodeIfPresent([String: KeyboardShortcutOverride].self, forKey: .keyboardShortcutOverrides) ?? [:]
         )
+    }
+}
+
+struct StoredShortcut: Codable, Hashable {
+    var key: String
+    var command: Bool
+    var shift: Bool
+    var option: Bool
+    var control: Bool
+
+    var displayString: String {
+        modifierDisplayString + keyDisplayString
+    }
+
+    var modifierDisplayString: String {
+        var parts: [String] = []
+        if control { parts.append("⌃") }
+        if option { parts.append("⌥") }
+        if shift { parts.append("⇧") }
+        if command { parts.append("⌘") }
+        return parts.joined()
+    }
+
+    var keyDisplayString: String {
+        switch key {
+        case "\t":
+            return "TAB"
+        case "\r":
+            return "↩"
+        case " ":
+            return "SPACE"
+        default:
+            return key.uppercased()
+        }
+    }
+
+    var modifierFlags: NSEvent.ModifierFlags {
+        var flags: NSEvent.ModifierFlags = []
+        if command { flags.insert(.command) }
+        if shift { flags.insert(.shift) }
+        if option { flags.insert(.option) }
+        if control { flags.insert(.control) }
+        return flags
+    }
+
+    var menuItemKeyEquivalent: String? {
+        switch key {
+        case "←":
+            guard let scalar = UnicodeScalar(NSLeftArrowFunctionKey) else { return nil }
+            return String(Character(scalar))
+        case "→":
+            guard let scalar = UnicodeScalar(NSRightArrowFunctionKey) else { return nil }
+            return String(Character(scalar))
+        case "↑":
+            guard let scalar = UnicodeScalar(NSUpArrowFunctionKey) else { return nil }
+            return String(Character(scalar))
+        case "↓":
+            guard let scalar = UnicodeScalar(NSDownArrowFunctionKey) else { return nil }
+            return String(Character(scalar))
+        case "\t":
+            return "\t"
+        case "\r":
+            return "\r"
+        case " ":
+            return " "
+        default:
+            let lowered = key.lowercased()
+            guard lowered.count == 1 else { return nil }
+            return lowered
+        }
+    }
+
+    func withKey(_ key: String) -> StoredShortcut {
+        StoredShortcut(
+            key: key,
+            command: command,
+            shift: shift,
+            option: option,
+            control: control
+        )
+    }
+
+    static func from(event: NSEvent) -> StoredShortcut? {
+        guard let key = storedKey(from: event) else { return nil }
+
+        let flags = event.modifierFlags
+            .intersection(.deviceIndependentFlagsMask)
+            .subtracting([.numericPad, .function])
+
+        let shortcut = StoredShortcut(
+            key: key,
+            command: flags.contains(.command),
+            shift: flags.contains(.shift),
+            option: flags.contains(.option),
+            control: flags.contains(.control)
+        )
+
+        guard shortcut.command || shortcut.shift || shortcut.option || shortcut.control else {
+            return nil
+        }
+        return shortcut
+    }
+
+    private static func storedKey(from event: NSEvent) -> String? {
+        switch event.keyCode {
+        case 123: return "←"
+        case 124: return "→"
+        case 125: return "↓"
+        case 126: return "↑"
+        case 48: return "\t"
+        case 36, 76: return "\r"
+        case 49: return " "
+        case 33: return "["
+        case 30: return "]"
+        case 27: return "-"
+        case 24: return "="
+        case 43: return ","
+        case 47: return "."
+        case 44: return "/"
+        case 41: return ";"
+        case 39: return "'"
+        case 50: return "`"
+        case 42: return "\\"
+        default:
+            break
+        }
+
+        guard let chars = event.charactersIgnoringModifiers?.lowercased(),
+              let char = chars.first else {
+            return nil
+        }
+
+        if char.isLetter || char.isNumber {
+            return String(char)
+        }
+        return nil
+    }
+}
+
+struct KeyboardShortcutOverride: Codable, Hashable {
+    var shortcut: StoredShortcut?
+}
+
+enum LineyShortcutCategory: String, CaseIterable, Hashable, Identifiable {
+    case general
+    case workspace
+    case tabs
+    case panes
+    case window
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .general:
+            return "General"
+        case .workspace:
+            return "Workspace"
+        case .tabs:
+            return "Tabs"
+        case .panes:
+            return "Panes"
+        case .window:
+            return "Window"
+        }
+    }
+}
+
+enum LineyShortcutAction: String, CaseIterable, Hashable, Identifiable {
+    case openSettings
+    case toggleCommandPalette
+    case toggleSidebar
+    case toggleOverview
+    case openDiff
+    case refreshSelectedWorkspace
+    case refreshAllRepositories
+    case newTab
+    case closeTab
+    case nextTab
+    case previousTab
+    case selectTabByNumber
+    case splitRight
+    case splitDown
+    case duplicatePane
+    case togglePaneZoom
+    case closePane
+    case closeWindow
+    case enterFullScreen
+
+    var id: String { rawValue }
+
+    var category: LineyShortcutCategory {
+        switch self {
+        case .openSettings,
+             .toggleCommandPalette,
+             .toggleSidebar,
+             .toggleOverview,
+             .openDiff:
+            return .general
+        case .refreshSelectedWorkspace,
+             .refreshAllRepositories:
+            return .workspace
+        case .newTab,
+             .closeTab,
+             .nextTab,
+             .previousTab,
+             .selectTabByNumber:
+            return .tabs
+        case .splitRight,
+             .splitDown,
+             .duplicatePane,
+             .togglePaneZoom,
+             .closePane:
+            return .panes
+        case .closeWindow,
+             .enterFullScreen:
+            return .window
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .openSettings:
+            return "Settings"
+        case .toggleCommandPalette:
+            return "Command Palette"
+        case .toggleSidebar:
+            return "Toggle Sidebar"
+        case .toggleOverview:
+            return "Toggle Overview"
+        case .openDiff:
+            return "Open Diff"
+        case .refreshSelectedWorkspace:
+            return "Refresh Selected Workspace"
+        case .refreshAllRepositories:
+            return "Refresh All Repositories"
+        case .newTab:
+            return "New Tab"
+        case .closeTab:
+            return "Close Tab"
+        case .nextTab:
+            return "Next Tab"
+        case .previousTab:
+            return "Previous Tab"
+        case .selectTabByNumber:
+            return "Select Tab 1…9"
+        case .splitRight:
+            return "Split Right"
+        case .splitDown:
+            return "Split Down"
+        case .duplicatePane:
+            return "Duplicate Pane"
+        case .togglePaneZoom:
+            return "Toggle Pane Zoom"
+        case .closePane:
+            return "Close Pane"
+        case .closeWindow:
+            return "Close Window"
+        case .enterFullScreen:
+            return "Enter Full Screen"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .openSettings:
+            return "Open the Liney settings window."
+        case .toggleCommandPalette:
+            return "Search and run workspace actions."
+        case .toggleSidebar:
+            return "Show or hide the repository sidebar."
+        case .toggleOverview:
+            return "Open or close the workspace overview."
+        case .openDiff:
+            return "Open the current workspace diff window."
+        case .refreshSelectedWorkspace:
+            return "Reload git status for the selected workspace."
+        case .refreshAllRepositories:
+            return "Refresh every repository in the sidebar."
+        case .newTab:
+            return "Create a new tab in the selected workspace."
+        case .closeTab:
+            return "Close the active tab without closing the app window."
+        case .nextTab:
+            return "Select the next tab in the current workspace."
+        case .previousTab:
+            return "Select the previous tab in the current workspace."
+        case .selectTabByNumber:
+            return "Jump directly to tabs 1 through 9."
+        case .splitRight:
+            return "Split the focused pane to the right."
+        case .splitDown:
+            return "Split the focused pane downward."
+        case .duplicatePane:
+            return "Duplicate the focused pane."
+        case .togglePaneZoom:
+            return "Zoom or unzoom the focused pane."
+        case .closePane:
+            return "Close the focused pane."
+        case .closeWindow:
+            return "Close the current Liney window."
+        case .enterFullScreen:
+            return "Toggle macOS full screen for the current window."
+        }
+    }
+
+    var defaultShortcut: StoredShortcut? {
+        switch self {
+        case .openSettings:
+            return StoredShortcut(key: ",", command: true, shift: false, option: false, control: false)
+        case .toggleCommandPalette:
+            return StoredShortcut(key: "p", command: true, shift: false, option: false, control: false)
+        case .toggleSidebar:
+            return StoredShortcut(key: "b", command: true, shift: false, option: false, control: false)
+        case .toggleOverview:
+            return StoredShortcut(key: "o", command: true, shift: true, option: false, control: false)
+        case .openDiff:
+            return nil
+        case .refreshSelectedWorkspace:
+            return StoredShortcut(key: "r", command: true, shift: false, option: false, control: false)
+        case .refreshAllRepositories:
+            return StoredShortcut(key: "r", command: true, shift: true, option: false, control: false)
+        case .newTab:
+            return StoredShortcut(key: "t", command: true, shift: false, option: false, control: false)
+        case .closeTab:
+            return StoredShortcut(key: "w", command: true, shift: false, option: false, control: false)
+        case .nextTab:
+            return StoredShortcut(key: "]", command: true, shift: false, option: false, control: false)
+        case .previousTab:
+            return StoredShortcut(key: "[", command: true, shift: false, option: false, control: false)
+        case .selectTabByNumber:
+            return StoredShortcut(key: "1", command: true, shift: false, option: false, control: false)
+        case .splitRight:
+            return StoredShortcut(key: "d", command: true, shift: false, option: false, control: false)
+        case .splitDown:
+            return StoredShortcut(key: "d", command: true, shift: true, option: false, control: false)
+        case .duplicatePane:
+            return nil
+        case .togglePaneZoom:
+            return nil
+        case .closePane:
+            return StoredShortcut(key: "w", command: true, shift: true, option: false, control: false)
+        case .closeWindow:
+            return StoredShortcut(key: "w", command: true, shift: false, option: false, control: true)
+        case .enterFullScreen:
+            return StoredShortcut(key: "f", command: true, shift: false, option: false, control: true)
+        }
+    }
+
+    var usesNumberedDigitMatching: Bool {
+        self == .selectTabByNumber
+    }
+
+    func normalizedRecordedShortcut(_ shortcut: StoredShortcut) -> StoredShortcut? {
+        guard usesNumberedDigitMatching else { return shortcut }
+        guard let digit = Int(shortcut.key), (1...9).contains(digit) else {
+            return nil
+        }
+        return shortcut.withKey("1")
+    }
+
+    func displayedShortcutString(for shortcut: StoredShortcut) -> String {
+        if usesNumberedDigitMatching {
+            return shortcut.modifierDisplayString + "1…9"
+        }
+        return shortcut.displayString
+    }
+}
+
+enum LineyKeyboardShortcutState: Equatable {
+    case `default`
+    case custom
+    case disabled
+}
+
+enum LineyKeyboardShortcuts {
+    private enum Candidate {
+        case inheritDefault
+        case custom(StoredShortcut)
+        case disabled
+    }
+
+    static func effectiveShortcut(for action: LineyShortcutAction, in settings: AppSettings) -> StoredShortcut? {
+        if let override = settings.keyboardShortcutOverrides[action.rawValue] {
+            return override.shortcut
+        }
+        return action.defaultShortcut
+    }
+
+    static func state(for action: LineyShortcutAction, in settings: AppSettings) -> LineyKeyboardShortcutState {
+        guard let override = settings.keyboardShortcutOverrides[action.rawValue] else {
+            return .default
+        }
+        return override.shortcut == nil ? .disabled : .custom
+    }
+
+    static func displayString(for action: LineyShortcutAction, in settings: AppSettings) -> String {
+        guard let shortcut = effectiveShortcut(for: action, in: settings) else {
+            return "Not Set"
+        }
+        return action.displayedShortcutString(for: shortcut)
+    }
+
+    static func setShortcut(_ shortcut: StoredShortcut, for action: LineyShortcutAction, in settings: inout AppSettings) {
+        guard let normalizedShortcut = action.normalizedRecordedShortcut(shortcut) else { return }
+
+        for otherAction in LineyShortcutAction.allCases where otherAction != action {
+            if effectiveShortcut(for: otherAction, in: settings) == normalizedShortcut {
+                settings.keyboardShortcutOverrides[otherAction.rawValue] = KeyboardShortcutOverride(shortcut: nil)
+            }
+        }
+
+        if normalizedShortcut == action.defaultShortcut {
+            settings.keyboardShortcutOverrides.removeValue(forKey: action.rawValue)
+        } else {
+            settings.keyboardShortcutOverrides[action.rawValue] = KeyboardShortcutOverride(shortcut: normalizedShortcut)
+        }
+
+        settings.keyboardShortcutOverrides = normalizedOverrides(settings.keyboardShortcutOverrides)
+    }
+
+    static func disableShortcut(for action: LineyShortcutAction, in settings: inout AppSettings) {
+        settings.keyboardShortcutOverrides[action.rawValue] = KeyboardShortcutOverride(shortcut: nil)
+        settings.keyboardShortcutOverrides = normalizedOverrides(settings.keyboardShortcutOverrides)
+    }
+
+    static func resetShortcut(for action: LineyShortcutAction, in settings: inout AppSettings) {
+        settings.keyboardShortcutOverrides.removeValue(forKey: action.rawValue)
+        settings.keyboardShortcutOverrides = normalizedOverrides(settings.keyboardShortcutOverrides)
+    }
+
+    static func resetAll(in settings: inout AppSettings) {
+        settings.keyboardShortcutOverrides = [:]
+    }
+
+    static func normalizedOverrides(_ overrides: [String: KeyboardShortcutOverride]) -> [String: KeyboardShortcutOverride] {
+        var candidates: [LineyShortcutAction: Candidate] = [:]
+
+        for action in LineyShortcutAction.allCases {
+            guard let override = overrides[action.rawValue] else { continue }
+
+            if let shortcut = override.shortcut {
+                guard let normalizedShortcut = action.normalizedRecordedShortcut(shortcut) else { continue }
+                if normalizedShortcut == action.defaultShortcut {
+                    continue
+                }
+                candidates[action] = .custom(normalizedShortcut)
+            } else {
+                candidates[action] = .disabled
+            }
+        }
+
+        var normalized: [String: KeyboardShortcutOverride] = [:]
+        var seenShortcuts = Set<StoredShortcut>()
+
+        for action in LineyShortcutAction.allCases {
+            let candidate = candidates[action] ?? .inheritDefault
+
+            let effectiveShortcut: StoredShortcut?
+            switch candidate {
+            case .inheritDefault:
+                effectiveShortcut = action.defaultShortcut
+            case .custom(let shortcut):
+                effectiveShortcut = shortcut
+            case .disabled:
+                effectiveShortcut = nil
+            }
+
+            if let effectiveShortcut {
+                if seenShortcuts.contains(effectiveShortcut) {
+                    normalized[action.rawValue] = KeyboardShortcutOverride(shortcut: nil)
+                    continue
+                }
+                seenShortcuts.insert(effectiveShortcut)
+
+                if case .custom(let shortcut) = candidate {
+                    normalized[action.rawValue] = KeyboardShortcutOverride(shortcut: shortcut)
+                }
+            } else if case .disabled = candidate {
+                normalized[action.rawValue] = KeyboardShortcutOverride(shortcut: nil)
+            }
+        }
+
+        return normalized
     }
 }
 

@@ -14,6 +14,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     @MainActor private var desktopApplication: LineyDesktopApplication?
     @MainActor private let applicationMenuController = ApplicationMenuController()
+    private var appSettingsObserver: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         
@@ -29,14 +30,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
         
         Task { @MainActor in
-            applicationMenuController.installMainMenu(appName: applicationName(), target: self)
             let desktopApplication = LineyDesktopApplication()
             self.desktopApplication = desktopApplication
+            applicationMenuController.installMainMenu(appName: applicationName(), target: self, settings: AppSettings())
+            appSettingsObserver = NotificationCenter.default.addObserver(
+                forName: .lineyAppSettingsDidChange,
+                object: nil,
+                queue: .main
+            ) { [weak self] notification in
+                guard let self,
+                      let settings = notification.object as? AppSettings else {
+                    return
+                }
+                Task { @MainActor in
+                    self.applicationMenuController.applySettings(settings)
+                }
+            }
             desktopApplication.launch()
         }
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {
+        if let appSettingsObserver {
+            NotificationCenter.default.removeObserver(appSettingsObserver)
+            self.appSettingsObserver = nil
+        }
         guard Thread.isMainThread else { return }
         MainActor.assumeIsolated {
             desktopApplication?.shutdown()
@@ -104,6 +122,74 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
     }
 
+    @objc func performShortcutAction(_ sender: NSMenuItem) {
+        guard let shortcutAction = shortcutAction(for: sender) else { return }
+
+        Task { @MainActor in
+            switch shortcutAction {
+            case .openSettings:
+                desktopApplication?.presentSettings()
+
+            case .toggleCommandPalette:
+                desktopApplication?.toggleCommandPalette()
+
+            case .toggleSidebar:
+                NSApp.keyWindow?.firstResponder?.tryToPerform(
+                    #selector(NSSplitViewController.toggleSidebar(_:)),
+                    with: nil
+                )
+
+            case .toggleOverview:
+                desktopApplication?.toggleOverview()
+
+            case .openDiff:
+                desktopApplication?.openDiffWindow()
+
+            case .refreshSelectedWorkspace:
+                desktopApplication?.refreshSelectedWorkspace()
+
+            case .refreshAllRepositories:
+                desktopApplication?.refreshAllRepositories()
+
+            case .newTab:
+                desktopApplication?.createTabInSelectedWorkspace()
+
+            case .closeTab:
+                desktopApplication?.closeSelectedTab()
+
+            case .nextTab:
+                desktopApplication?.selectNextTab()
+
+            case .previousTab:
+                desktopApplication?.selectPreviousTab()
+
+            case .selectTabByNumber:
+                desktopApplication?.selectTab(number: sender.tag)
+
+            case .splitRight:
+                desktopApplication?.splitFocusedPane(axis: .vertical)
+
+            case .splitDown:
+                desktopApplication?.splitFocusedPane(axis: .horizontal)
+
+            case .duplicatePane:
+                desktopApplication?.duplicateFocusedPane()
+
+            case .togglePaneZoom:
+                desktopApplication?.toggleFocusedPaneZoom()
+
+            case .closePane:
+                desktopApplication?.closeFocusedPane()
+
+            case .closeWindow:
+                NSApp.keyWindow?.performClose(nil)
+
+            case .enterFullScreen:
+                NSApp.keyWindow?.toggleFullScreen(nil)
+            }
+        }
+    }
+
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         guard let desktopApplication else { return false }
 
@@ -114,9 +200,44 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             return desktopApplication.selectedWorkspaceTabCount > 1
         case #selector(selectTabNumber(_:)):
             return menuItem.tag >= 1 && menuItem.tag <= desktopApplication.selectedWorkspaceTabCount
+        case #selector(performShortcutAction(_:)):
+            guard let shortcutAction = shortcutAction(for: menuItem) else { return false }
+            switch shortcutAction {
+            case .openSettings,
+                 .toggleCommandPalette,
+                 .toggleSidebar,
+                 .toggleOverview,
+                 .openDiff:
+                return true
+            case .refreshSelectedWorkspace:
+                return desktopApplication.selectedWorkspaceSupportsRepositoryFeatures
+            case .refreshAllRepositories:
+                return desktopApplication.hasRepositoryWorkspaces
+            case .newTab:
+                return desktopApplication.hasSelectedWorkspace
+            case .closeTab:
+                return desktopApplication.canCloseSelectedTab
+            case .nextTab, .previousTab:
+                return desktopApplication.selectedWorkspaceTabCount > 1
+            case .selectTabByNumber:
+                return menuItem.tag >= 1 && menuItem.tag <= desktopApplication.selectedWorkspaceTabCount
+            case .splitRight,
+                 .splitDown,
+                 .duplicatePane,
+                 .togglePaneZoom,
+                 .closePane:
+                return desktopApplication.hasFocusedPane
+            case .closeWindow, .enterFullScreen:
+                return NSApp.keyWindow != nil
+            }
         default:
             return true
         }
+    }
+
+    private func shortcutAction(for menuItem: NSMenuItem) -> LineyShortcutAction? {
+        guard let rawValue = menuItem.representedObject as? String else { return nil }
+        return LineyShortcutAction(rawValue: rawValue)
     }
 
     @MainActor

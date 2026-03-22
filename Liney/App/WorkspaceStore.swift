@@ -9,6 +9,10 @@ import AppKit
 import Combine
 import Foundation
 
+extension Notification.Name {
+    static let lineyAppSettingsDidChange = Notification.Name("liney.appSettingsDidChange")
+}
+
 @MainActor
 final class WorkspaceStore: ObservableObject {
     private let activityLogLimit = 120
@@ -467,6 +471,7 @@ final class WorkspaceStore: ObservableObject {
 
         appSettings = appSettingsPersistence.load()
         appSettings.githubIntegrationEnabled = false
+        NotificationCenter.default.post(name: .lineyAppSettingsDidChange, object: appSettings)
         let state = normalizeLaunchState(persistence.load())
         workspaces = state.workspaces.map(WorkspaceModel.init(record:))
         globalCanvasState = state.globalCanvasState.pruned(to: validGlobalCanvasCardIDs(in: workspaces))
@@ -634,7 +639,8 @@ final class WorkspaceStore: ObservableObject {
             quickCommandPresets: settings.quickCommandPresets,
             quickCommandRecentIDs: settings.quickCommandRecentIDs,
             releaseChannel: settings.releaseChannel,
-            commandPaletteRecents: settings.commandPaletteRecents
+            commandPaletteRecents: settings.commandPaletteRecents,
+            keyboardShortcutOverrides: settings.keyboardShortcutOverrides
         )
         for workspace in workspaces {
             workspace.gitHubStatuses = [:]
@@ -1805,6 +1811,7 @@ final class WorkspaceStore: ObservableObject {
     private func persistAppSettings() {
         do {
             try appSettingsPersistence.save(appSettings)
+            NotificationCenter.default.post(name: .lineyAppSettingsDidChange, object: appSettings)
         } catch {
             presentedError = PresentedError(title: "Unable to Save Settings", message: error.localizedDescription)
         }

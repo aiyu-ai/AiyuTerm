@@ -113,8 +113,8 @@ enum QuickCommandCatalog {
         ),
         QuickCommandPreset(
             id: "codex-resume",
-            title: "codex --resume",
-            command: "codex --resume",
+            title: "codex resume",
+            command: "codex resume",
             category: .codex
         ),
         QuickCommandPreset(

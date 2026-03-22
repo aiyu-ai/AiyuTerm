@@ -61,6 +61,10 @@ public final class LineyDesktopApplication: NSObject {
         store.dispatch(.toggleCommandPalette)
     }
 
+    public func toggleOverview() {
+        store.dispatch(.toggleOverview)
+    }
+
     public func presentSettings() {
         store.presentSettings(for: store.selectedWorkspace)
     }
@@ -76,6 +80,15 @@ public final class LineyDesktopApplication: NSObject {
     public func createTabInSelectedWorkspace() {
         guard let workspace = store.selectedWorkspace else { return }
         store.createTab(in: workspace)
+    }
+
+    public func closeSelectedTab() {
+        guard let workspace = store.selectedWorkspace,
+              workspace.tabs.count > 1,
+              let activeTabID = workspace.activeTabID else {
+            return
+        }
+        store.closeTab(in: workspace, tabID: activeTabID)
     }
 
     public func selectTab(number: Int) {
@@ -94,11 +107,88 @@ public final class LineyDesktopApplication: NSObject {
         store.selectPreviousTab(in: workspace)
     }
 
+    func splitFocusedPane(axis: PaneSplitAxis) {
+        guard let workspace = store.selectedWorkspace,
+              workspace.sessionController.focusedPaneID != nil else {
+            return
+        }
+        store.splitFocusedPane(in: workspace, axis: axis)
+    }
+
+    func duplicateFocusedPane() {
+        guard let workspace = store.selectedWorkspace,
+              workspace.sessionController.focusedPaneID != nil else {
+            return
+        }
+        store.duplicateFocusedPane(in: workspace)
+    }
+
+    func toggleFocusedPaneZoom() {
+        guard let workspace = store.selectedWorkspace,
+              workspace.sessionController.focusedPaneID != nil else {
+            return
+        }
+        store.toggleZoom(in: workspace)
+    }
+
+    func closeFocusedPane() {
+        guard let workspace = store.selectedWorkspace,
+              let paneID = workspace.sessionController.focusedPaneID else {
+            return
+        }
+        store.closePane(in: workspace, paneID: paneID)
+    }
+
+    func refreshSelectedWorkspace() {
+        store.refreshSelectedWorkspace()
+    }
+
+    func refreshAllRepositories() {
+        store.dispatch(.refreshAllRepositories)
+    }
+
+    func openDiffWindow() {
+        let workspace = store.selectedWorkspace
+        let supportsDiff = workspace?.supportsRepositoryFeatures == true
+        DiffWindowManager.shared.show(
+            worktreePath: supportsDiff ? workspace?.activeWorktreePath : nil,
+            branchName: workspace?.activeWorktree?.branchLabel ?? workspace?.currentBranch ?? "",
+            emptyStateMessage: diffEmptyStateMessage(for: workspace, supportsDiff: supportsDiff)
+        )
+    }
+
     public var hasSelectedWorkspace: Bool {
         store.selectedWorkspace != nil
     }
 
+    var selectedWorkspaceSupportsRepositoryFeatures: Bool {
+        store.selectedWorkspace?.supportsRepositoryFeatures == true
+    }
+
+    var hasRepositoryWorkspaces: Bool {
+        store.workspaces.contains(where: \.supportsRepositoryFeatures)
+    }
+
     public var selectedWorkspaceTabCount: Int {
         store.selectedWorkspace?.tabs.count ?? 0
+    }
+
+    var canCloseSelectedTab: Bool {
+        guard let workspace = store.selectedWorkspace else { return false }
+        return workspace.tabs.count > 1 && workspace.activeTabID != nil
+    }
+
+    var hasFocusedPane: Bool {
+        store.selectedWorkspace?.sessionController.focusedPaneID != nil
+    }
+
+    private func diffEmptyStateMessage(for workspace: WorkspaceModel?, supportsDiff: Bool) -> String {
+        guard let workspace else {
+            return "Select a workspace to inspect changes."
+        }
+        if supportsDiff {
+            return "Working directory is clean."
+        }
+        return "\(workspace.name) does not have a git diff context."
     }
 }
