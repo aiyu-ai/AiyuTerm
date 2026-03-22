@@ -172,7 +172,7 @@ private struct OverviewSummaryCards: View {
         HStack(spacing: 14) {
             OverviewMetricCard(title: "Workspaces", value: "\(totalWorkspaces)", subtitle: "tracked desks", tone: .neutral)
             OverviewMetricCard(title: "Dirty", value: "\(dirtyRepositories)", subtitle: "repositories", tone: .warning)
-            OverviewMetricCard(title: "Failing", value: "\(failingPullRequests)", subtitle: "PRs need attention", tone: .danger)
+            OverviewMetricCard(title: "Failing", value: "\(failingPullRequests)", subtitle: "items need attention", tone: .danger)
             OverviewMetricCard(title: "Active", value: "\(activeSessions)", subtitle: "running sessions", tone: .success)
         }
     }
@@ -271,7 +271,7 @@ private struct OverviewTimelinePanel: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Task Timeline")
                         .font(.system(size: 13, weight: .semibold))
-                    Text("Recent workflow, command, agent, remote, and GitHub actions.")
+                    Text("Recent workflow, command, agent, and remote actions.")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(LineyTheme.mutedText)
                 }

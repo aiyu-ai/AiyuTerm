@@ -287,17 +287,6 @@ struct MainWindowView: View {
 
                 Button {
                     guard let workspace = store.selectedWorkspace else { return }
-                    store.createSession(in: workspace)
-                } label: {
-                    Image(systemName: "plus.square.on.square")
-                        .padding(4)
-                }
-                .disabled(!hasSelectedWorkspace)
-                .accessibilityLabel("New Session")
-                .help("New Session")
-
-                Button {
-                    guard let workspace = store.selectedWorkspace else { return }
                     store.splitFocusedPane(in: workspace, axis: .vertical)
                 } label: {
                     Image(systemName: "rectangle.split.2x1.fill")

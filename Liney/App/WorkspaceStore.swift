@@ -16,7 +16,7 @@ final class WorkspaceStore: ObservableObject {
     @Published var workspaces: [WorkspaceModel] = []
     @Published var selectedWorkspaceID: UUID?
     @Published var appSettings = AppSettings()
-    @Published var gitHubIntegrationState: GitHubIntegrationState = .unknown
+    @Published var gitHubIntegrationState: GitHubIntegrationState = .disabled
     @Published var statusMessage: WorkspaceStatusMessage?
     @Published var isOverviewPresented = false
     @Published var globalCanvasState = GlobalCanvasStateRecord()
@@ -40,9 +40,7 @@ final class WorkspaceStore: ObservableObject {
     private let persistence = WorkspaceStatePersistence()
     private let appSettingsPersistence = AppSettingsPersistence()
     private let gitRepositoryService = GitRepositoryService()
-    private let gitHubCLIService = GitHubCLIService()
     private let updaterController = AppUpdaterController()
-    private lazy var gitHubCoordinator = WorkspaceGitHubCoordinator(client: gitHubCLIService)
     private let remoteSessionCoordinator = RemoteSessionCoordinator()
     private let metadataWatchService = WorkspaceMetadataWatchService()
     private let sleepPreventionController = SleepPreventionController()
@@ -126,22 +124,6 @@ final class WorkspaceStore: ObservableObject {
         return "Prevent macOS sleep for \(sleepPreventionQuickActionOption.title)"
     }
 
-    private var mergeReadyPullRequestTargets: [WorkspaceGitHubTarget] {
-        gitHubTargets { _, _, status in
-            status.pullRequest?.mergeReadiness == .ready
-        }
-    }
-
-    private var behindPullRequestTargets: [WorkspaceGitHubTarget] {
-        gitHubTargets { _, _, status in
-            status.pullRequest?.mergeReadiness == .behind
-        }
-    }
-
-    private var releasablePullRequestTargets: [WorkspaceGitHubTarget] {
-        mergeReadyPullRequestTargets
-    }
-
     var commandPaletteItems: [CommandPaletteItem] {
         let query = commandPaletteQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         let recencyByID = appSettings.commandPaletteRecents
@@ -209,7 +191,7 @@ final class WorkspaceStore: ObservableObject {
             CommandPaletteItem(
                 id: "settings",
                 title: "Open Settings",
-                subtitle: gitHubIntegrationState.summary,
+                subtitle: nil,
                 group: .navigation,
                 keywords: ["preferences", "configuration"],
                 isGlobal: true,
@@ -245,21 +227,13 @@ final class WorkspaceStore: ObservableObject {
             CommandPaletteItem(
                 id: "open-latest-release",
                 title: "Open Latest Release",
-                subtitle: "GitHub release notes",
+                subtitle: "Release notes and download details",
                 group: .releases,
-                keywords: ["release", "notes", "github"],
+                keywords: ["release", "notes", "download"],
                 isGlobal: true,
                 kind: .command(.openLatestRelease)
             ),
         ]
-
-        items.append(
-            contentsOf: GitHubBatchCommandPaletteFactory.makeItems(
-                readyTargets: mergeReadyPullRequestTargets,
-                behindTargets: behindPullRequestTargets,
-                releasableTargets: releasablePullRequestTargets
-            )
-        )
 
         if let selectedWorkspace {
             items.append(
@@ -482,128 +456,6 @@ final class WorkspaceStore: ObservableObject {
                     )
                 )
             }
-            for worktree in workspace.worktrees {
-                let gitHubStatus = workspace.gitHubStatus(for: worktree.path)
-                if let pr = gitHubStatus?.pullRequest {
-                    items.append(
-                        CommandPaletteItem(
-                            id: "pr:\(workspace.id.uuidString):\(worktree.path)",
-                            title: "Open PR #\(pr.number) for \(worktree.displayName)",
-                            subtitle: pr.title,
-                            group: .github,
-                            keywords: ["pull request", "github", pr.mergeReadiness.label],
-                            isGlobal: false,
-                            kind: .command(.openPullRequest(workspace.id, worktree.path))
-                        )
-                    )
-                    if pr.isDraft {
-                        items.append(
-                            CommandPaletteItem(
-                                id: "pr-ready:\(workspace.id.uuidString):\(worktree.path)",
-                                title: "Mark PR #\(pr.number) Ready for Review",
-                                subtitle: worktree.displayName,
-                                group: .github,
-                                keywords: ["ready", "review", "github"],
-                                isGlobal: false,
-                                kind: .command(.markPullRequestReady(workspace.id, worktree.path))
-                            )
-                        )
-                    }
-                    items.append(
-                        CommandPaletteItem(
-                            id: "pr-update:\(workspace.id.uuidString):\(worktree.path)",
-                            title: "Rebase PR #\(pr.number) onto base",
-                            subtitle: worktree.displayName,
-                            group: .github,
-                            keywords: ["github", "update branch", "rebase", "sync"],
-                            isGlobal: false,
-                            kind: .command(.updatePullRequestBranch(workspace.id, worktree.path))
-                        )
-                    )
-                    items.append(
-                        CommandPaletteItem(
-                            id: "pr-queue:\(workspace.id.uuidString):\(worktree.path)",
-                            title: "Queue PR #\(pr.number) for merge",
-                            subtitle: pr.title,
-                            group: .github,
-                            keywords: ["github", "merge queue", "auto merge", "ship"],
-                            isGlobal: false,
-                            kind: .command(.queuePullRequest(workspace.id, worktree.path))
-                        )
-                    )
-                    items.append(
-                        CommandPaletteItem(
-                            id: "pr-notes:\(workspace.id.uuidString):\(worktree.path)",
-                            title: "Copy Release Notes for PR #\(pr.number)",
-                            subtitle: worktree.displayName,
-                            group: .github,
-                            keywords: ["github", "release notes", "changelog", "copy"],
-                            isGlobal: false,
-                            kind: .command(.copyPullRequestReleaseNotes(workspace.id, worktree.path))
-                        )
-                    )
-                    if let checksSummary = gitHubStatus?.checksSummary,
-                       checksSummary.failingCount > 0 {
-                        items.append(
-                            CommandPaletteItem(
-                                id: "pr-check:\(workspace.id.uuidString):\(worktree.path)",
-                                title: "Open Failing Check for \(worktree.displayName)",
-                                subtitle: checksSummary.failingChecks.first?.name,
-                                group: .github,
-                                keywords: ["ci", "check", "failure", "github actions"],
-                                isGlobal: false,
-                                kind: .command(.openFailingCheckDetails(workspace.id, worktree.path))
-                            )
-                        )
-                        items.append(
-                            CommandPaletteItem(
-                                id: "pr-check-copy:\(workspace.id.uuidString):\(worktree.path)",
-                                title: "Copy Failing Check URL for \(worktree.displayName)",
-                                subtitle: checksSummary.failingChecks.first?.name,
-                                group: .github,
-                                keywords: ["ci", "check", "copy", "url"],
-                                isGlobal: false,
-                                kind: .command(.copyFailingCheckURL(workspace.id, worktree.path))
-                            )
-                        )
-                    }
-                }
-                if gitHubStatus?.latestRun != nil {
-                    items.append(
-                        CommandPaletteItem(
-                            id: "run:\(workspace.id.uuidString):\(worktree.path)",
-                            title: "Open Latest CI Run for \(worktree.displayName)",
-                            subtitle: gitHubStatus?.latestRun?.statusLabel,
-                            group: .github,
-                            keywords: ["actions", "workflow", "ci", "run"],
-                            isGlobal: false,
-                            kind: .command(.openLatestRun(workspace.id, worktree.path))
-                        )
-                    )
-                    items.append(
-                        CommandPaletteItem(
-                            id: "run-rerun:\(workspace.id.uuidString):\(worktree.path)",
-                            title: "Rerun Failed Jobs for \(worktree.displayName)",
-                            subtitle: gitHubStatus?.latestRun?.title,
-                            group: .github,
-                            keywords: ["ci", "actions", "rerun"],
-                            isGlobal: false,
-                            kind: .command(.rerunLatestFailedJobs(workspace.id, worktree.path))
-                        )
-                    )
-                    items.append(
-                        CommandPaletteItem(
-                            id: "run-logs:\(workspace.id.uuidString):\(worktree.path)",
-                            title: "Copy Latest CI Logs for \(worktree.displayName)",
-                            subtitle: gitHubStatus?.latestRun?.title,
-                            group: .github,
-                            keywords: ["ci", "logs", "actions"],
-                            isGlobal: false,
-                            kind: .command(.copyLatestRunLogs(workspace.id, worktree.path))
-                        )
-                    )
-                }
-            }
         }
 
         return items
@@ -614,6 +466,7 @@ final class WorkspaceStore: ObservableObject {
         hasLoaded = true
 
         appSettings = appSettingsPersistence.load()
+        appSettings.githubIntegrationEnabled = false
         let state = normalizeLaunchState(persistence.load())
         workspaces = state.workspaces.map(WorkspaceModel.init(record:))
         globalCanvasState = state.globalCanvasState.pruned(to: validGlobalCanvasCardIDs(in: workspaces))
@@ -629,7 +482,6 @@ final class WorkspaceStore: ObservableObject {
             }
         }
 
-        await refreshGitHubIntegrationState()
         configureUpdater(checkInBackground: true)
         syncAutomationServices()
         persist()
@@ -668,7 +520,6 @@ final class WorkspaceStore: ObservableObject {
             )
             workspaces.append(workspace)
             selectedWorkspaceID = workspace.id
-            await refreshGitHubStatus(for: workspace)
             removeDefaultLocalWorkspaceIfNeeded()
             configureMetadataWatchers()
             persist()
@@ -768,7 +619,7 @@ final class WorkspaceStore: ObservableObject {
             autoRefreshIntervalSeconds: settings.autoRefreshIntervalSeconds,
             autoClosePaneOnProcessExit: settings.autoClosePaneOnProcessExit,
             fileWatcherEnabled: settings.fileWatcherEnabled,
-            githubIntegrationEnabled: settings.githubIntegrationEnabled,
+            githubIntegrationEnabled: false,
             autoCheckForUpdates: settings.autoCheckForUpdates,
             autoDownloadUpdates: settings.autoDownloadUpdates,
             systemNotificationsEnabled: settings.systemNotificationsEnabled,
@@ -785,15 +636,12 @@ final class WorkspaceStore: ObservableObject {
             releaseChannel: settings.releaseChannel,
             commandPaletteRecents: settings.commandPaletteRecents
         )
-        if !settings.githubIntegrationEnabled {
-            for workspace in workspaces {
-                workspace.gitHubStatuses = [:]
-            }
+        for workspace in workspaces {
+            workspace.gitHubStatuses = [:]
         }
         persistAppSettings()
         syncAutomationServices()
         Task { @MainActor in
-            await refreshGitHubIntegrationState()
             configureUpdater(checkInBackground: settings.autoCheckForUpdates && (!hasConfiguredUpdater || !wasAutoCheckEnabled))
             await refreshAllRepositories(persistAfterEachWorkspace: false)
             persist()
@@ -1029,7 +877,7 @@ final class WorkspaceStore: ObservableObject {
             workspace.apply(snapshot: snapshot)
             let statuses = try await gitRepositoryService.repositoryStatuses(for: workspace.worktrees.map(\.path))
             workspace.mergeWorktreeStatuses(statuses)
-            await refreshGitHubStatus(for: workspace)
+            workspace.gitHubStatuses = [:]
             workspace.bootstrapIfNeeded()
             configureMetadataWatchers()
             objectWillChange.send()
@@ -1702,8 +1550,8 @@ final class WorkspaceStore: ObservableObject {
             Task { @MainActor in
                 await refreshWorkspace(workspace)
             }
-        case .gitHubIntegrationStateUpdated(let state):
-            gitHubIntegrationState = state
+        case .gitHubIntegrationStateUpdated:
+            gitHubIntegrationState = .disabled
         case .statusMessage(let text, let tone, let deliverSystemNotification):
             statusMessageTask?.cancel()
             statusMessage = WorkspaceStatusMessage(text: text, tone: tone)
@@ -2052,12 +1900,7 @@ final class WorkspaceStore: ObservableObject {
     }
 
     private func refreshGitHubIntegrationState() async {
-        guard appSettings.githubIntegrationEnabled else {
-            receive(.gitHubIntegrationStateUpdated(.disabled))
-            return
-        }
-        let state = await gitHubCLIService.integrationState()
-        receive(.gitHubIntegrationStateUpdated(state))
+        receive(.gitHubIntegrationStateUpdated(.disabled))
     }
 
     private func configureUpdater(checkInBackground: Bool) {
@@ -2071,173 +1914,94 @@ final class WorkspaceStore: ObservableObject {
     }
 
     private func refreshGitHubStatus(for workspace: WorkspaceModel) async {
-        guard workspace.supportsRepositoryFeatures else { return }
-        guard appSettings.githubIntegrationEnabled else {
-            workspace.gitHubStatuses = [:]
-            return
-        }
-
-        if case .unknown = gitHubIntegrationState {
-            await refreshGitHubIntegrationState()
-        }
-        guard case .authorized = gitHubIntegrationState else {
-            return
-        }
-
-        let result = await gitHubCoordinator.refreshStatuses(
-            for: workspace,
-            integrationEnabled: appSettings.githubIntegrationEnabled,
-            currentIntegrationState: gitHubIntegrationState
-        )
-        workspace.gitHubStatuses = result.statuses
-        if let integrationStateOverride = result.integrationStateOverride {
-            receive(.gitHubIntegrationStateUpdated(integrationStateOverride))
-        }
-        applyStatusUpdate(result.statusUpdate)
+        workspace.gitHubStatuses = [:]
+        receive(.gitHubIntegrationStateUpdated(.disabled))
     }
 
     private func openPullRequest(workspaceID: UUID, worktreePath: String) async {
-        guard let workspace = workspace(for: workspaceID) else { return }
-        do {
-            let result = try await gitHubCoordinator.openPullRequest(workspace: workspace, worktreePath: worktreePath)
-            await applyGitHubCommandResult(result)
-        } catch {
-            presentError(title: "Unable to Open Pull Request", message: error.localizedDescription)
-        }
+        _ = workspaceID
+        _ = worktreePath
+        notifyGitHubFeatureRemoval("Opening pull requests")
     }
 
     private func markPullRequestReady(workspaceID: UUID, worktreePath: String) async {
-        guard let workspace = workspace(for: workspaceID) else { return }
-        do {
-            let result = try await gitHubCoordinator.markPullRequestReady(workspace: workspace, worktreePath: worktreePath)
-            await applyGitHubCommandResult(result)
-        } catch {
-            presentError(title: "Unable to Mark Pull Request Ready", message: error.localizedDescription)
-        }
+        _ = workspaceID
+        _ = worktreePath
+        notifyGitHubFeatureRemoval("Marking pull requests ready")
     }
 
     private func updatePullRequestBranch(workspaceID: UUID, worktreePath: String) async {
-        guard let workspace = workspace(for: workspaceID) else { return }
-        do {
-            let result = try await gitHubCoordinator.updatePullRequestBranch(workspace: workspace, worktreePath: worktreePath)
-            await applyGitHubCommandResult(result)
-        } catch {
-            presentError(title: "Unable to Update Pull Request Branch", message: error.localizedDescription)
-        }
+        _ = workspaceID
+        _ = worktreePath
+        notifyGitHubFeatureRemoval("Updating pull request branches")
     }
 
     private func queuePullRequest(workspaceID: UUID, worktreePath: String) async {
-        guard let workspace = workspace(for: workspaceID) else { return }
-        do {
-            let result = try await gitHubCoordinator.queuePullRequest(workspace: workspace, worktreePath: worktreePath)
-            await applyGitHubCommandResult(result)
-        } catch {
-            presentError(title: "Unable to Queue Pull Request", message: error.localizedDescription)
-        }
+        _ = workspaceID
+        _ = worktreePath
+        notifyGitHubFeatureRemoval("Queueing pull requests")
     }
 
     private func updatePullRequestBranches(_ targets: [WorkspaceGitHubTarget]) async {
-        do {
-            let result = try await gitHubCoordinator.executeBatch(.updateBranch, requests: gitHubBatchRequests(from: targets))
-            await applyGitHubCommandResult(result)
-        } catch {
-            presentError(title: "Unable to Update Pull Request Branches", message: error.localizedDescription)
-        }
+        _ = targets
+        notifyGitHubFeatureRemoval("Batch pull request updates")
     }
 
     private func queuePullRequests(_ targets: [WorkspaceGitHubTarget]) async {
-        do {
-            let result = try await gitHubCoordinator.executeBatch(.queueMerge, requests: gitHubBatchRequests(from: targets))
-            await applyGitHubCommandResult(result)
-        } catch {
-            presentError(title: "Unable to Queue Pull Requests", message: error.localizedDescription)
-        }
+        _ = targets
+        notifyGitHubFeatureRemoval("Batch pull request queueing")
     }
 
     private func copyPullRequestReleaseNotes(workspaceID: UUID, worktreePath: String) async {
-        guard let workspace = workspace(for: workspaceID) else { return }
-        do {
-            let result = try await gitHubCoordinator.copyPullRequestReleaseNotes(workspace: workspace, worktreePath: worktreePath)
-            await applyGitHubCommandResult(result)
-        } catch {
-            presentError(title: "Unable to Draft Release Notes", message: error.localizedDescription)
-        }
+        _ = workspaceID
+        _ = worktreePath
+        notifyGitHubFeatureRemoval("Release note drafting")
     }
 
     private func copyPullRequestReleaseNotesBatch(_ targets: [WorkspaceGitHubTarget]) async {
-        do {
-            let result = try await gitHubCoordinator.executeBatch(.copyReleaseContext, requests: gitHubBatchRequests(from: targets))
-            await applyGitHubCommandResult(result)
-        } catch {
-            presentError(title: "Unable to Draft Release Notes", message: error.localizedDescription)
-        }
+        _ = targets
+        notifyGitHubFeatureRemoval("Batch release note drafting")
     }
 
     private func openLatestRun(workspaceID: UUID, worktreePath: String) async {
-        guard let workspace = workspace(for: workspaceID) else { return }
-        do {
-            let result = try await gitHubCoordinator.openLatestRun(workspace: workspace, worktreePath: worktreePath)
-            await applyGitHubCommandResult(result)
-        } catch {
-            presentError(title: "Unable to Open CI Run", message: error.localizedDescription)
-        }
+        _ = workspaceID
+        _ = worktreePath
+        notifyGitHubFeatureRemoval("Opening CI runs")
     }
 
     private func openFailingCheckDetails(workspaceID: UUID, worktreePath: String) async {
-        guard let workspace = workspace(for: workspaceID) else { return }
-        let result = gitHubCoordinator.openFailingCheckDetails(workspace: workspace, worktreePath: worktreePath)
-        await applyGitHubCommandResult(result)
+        _ = workspaceID
+        _ = worktreePath
+        notifyGitHubFeatureRemoval("Opening failing checks")
     }
 
     private func copyFailingCheckURL(workspaceID: UUID, worktreePath: String) async {
-        guard let workspace = workspace(for: workspaceID) else { return }
-        let result = gitHubCoordinator.copyFailingCheckURL(workspace: workspace, worktreePath: worktreePath)
-        await applyGitHubCommandResult(result)
+        _ = workspaceID
+        _ = worktreePath
+        notifyGitHubFeatureRemoval("Copying failing check URLs")
     }
 
     private func rerunLatestFailedJobs(workspaceID: UUID, worktreePath: String) async {
-        guard let workspace = workspace(for: workspaceID) else { return }
-        do {
-            let result = try await gitHubCoordinator.rerunLatestFailedJobs(workspace: workspace, worktreePath: worktreePath)
-            await applyGitHubCommandResult(result)
-        } catch {
-            presentError(title: "Unable to Rerun Failed Jobs", message: error.localizedDescription)
-        }
+        _ = workspaceID
+        _ = worktreePath
+        notifyGitHubFeatureRemoval("Rerunning CI jobs")
     }
 
     private func copyLatestRunLogs(workspaceID: UUID, worktreePath: String) async {
-        guard let workspace = workspace(for: workspaceID) else { return }
-        do {
-            let result = try await gitHubCoordinator.copyLatestRunLogs(workspace: workspace, worktreePath: worktreePath)
-            await applyGitHubCommandResult(result)
-        } catch {
-            presentError(title: "Unable to Copy CI Logs", message: error.localizedDescription)
-        }
+        _ = workspaceID
+        _ = worktreePath
+        notifyGitHubFeatureRemoval("Copying CI logs")
     }
 
     private func openLatestRelease() {
         NSWorkspace.shared.open(AppUpdaterController.releasesURL)
-        receive(.statusMessage("Opened Liney release notes on GitHub.", .neutral, deliverSystemNotification: false))
+        receive(.statusMessage("Opened Liney release notes.", .neutral, deliverSystemNotification: false))
     }
 
     private func checkForUpdates() {
         configureUpdater(checkInBackground: false)
         updaterController.checkForUpdates()
         receive(.statusMessage("Checking for updates…", .neutral, deliverSystemNotification: false))
-    }
-
-    private func gitHubTargets(
-        matching predicate: (WorkspaceModel, WorktreeModel, GitHubWorktreeStatus) -> Bool
-    ) -> [WorkspaceGitHubTarget] {
-        workspaces.flatMap { workspace in
-            workspace.worktrees.compactMap { worktree in
-                guard let status = workspace.gitHubStatus(for: worktree.path),
-                      predicate(workspace, worktree, status) else {
-                    return nil
-                }
-                return WorkspaceGitHubTarget(workspaceID: workspace.id, worktreePath: worktree.path)
-            }
-        }
     }
 
     private func openRemoteTargetShell(workspaceID: UUID, targetID: UUID) {
@@ -2470,17 +2234,11 @@ final class WorkspaceStore: ObservableObject {
             )
             receive(.statusMessage("Replayed \(entry.title.lowercased()).", .success, deliverSystemNotification: false))
         case .openPullRequest:
-            Task { @MainActor in
-                await openPullRequest(workspaceID: workspace.id, worktreePath: action.worktreePath ?? workspace.activeWorktreePath)
-            }
+            notifyGitHubFeatureRemoval("Opening pull requests")
         case .markPullRequestReady:
-            Task { @MainActor in
-                await markPullRequestReady(workspaceID: workspace.id, worktreePath: action.worktreePath ?? workspace.activeWorktreePath)
-            }
+            notifyGitHubFeatureRemoval("Marking pull requests ready")
         case .openLatestRun:
-            Task { @MainActor in
-                await openLatestRun(workspaceID: workspace.id, worktreePath: action.worktreePath ?? workspace.activeWorktreePath)
-            }
+            notifyGitHubFeatureRemoval("Opening CI runs")
         }
     }
 
@@ -2537,25 +2295,14 @@ final class WorkspaceStore: ObservableObject {
         }
     }
 
-    private func gitHubBatchRequests(from targets: [WorkspaceGitHubTarget]) -> [WorkspaceGitHubBatchRequest] {
-        targets.compactMap { target in
-            guard let workspace = workspace(for: target.workspaceID) else { return nil }
-            return WorkspaceGitHubBatchRequest(workspace: workspace, worktreePath: target.worktreePath)
-        }
-    }
-
-    private func applyGitHubCommandResult(_ result: WorkspaceGitHubCommandResult) async {
-        applyCoordinatorEffects(result.sideEffects)
-        applyCoordinatorActivities(result.activities)
-        applyStatusUpdate(result.statusUpdate)
-        for workspaceID in result.workspaceIDsToRefresh {
-            if let workspace = workspace(for: workspaceID) {
-                await refreshGitHubStatus(for: workspace)
-            }
-        }
-        if result.shouldPersist {
-            persist()
-        }
+    private func notifyGitHubFeatureRemoval(_ action: String) {
+        receive(
+            .statusMessage(
+                "\(action) is no longer available because GitHub integration has been removed from Liney.",
+                .warning,
+                deliverSystemNotification: false
+            )
+        )
     }
 
     private func summarizeCommand(_ script: String) -> String {

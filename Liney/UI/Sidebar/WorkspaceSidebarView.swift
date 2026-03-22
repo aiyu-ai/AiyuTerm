@@ -196,9 +196,6 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
                 for wt in ws.worktrees {
                     let icon = ws.iconOverride(for: wt.path)
                     parts.append("  \(wt.path)|\(wt.branch ?? "-")|\(wt.isLocked)|\(icon?.symbolName ?? "-")|\(icon?.palette.rawValue ?? "-")|\(icon?.fillStyle.rawValue ?? "-")")
-                    if let gitHubStatus = ws.gitHubStatus(for: wt.path) {
-                        parts.append("  gh:\(gitHubStatus.pullRequest?.number ?? 0)|\(gitHubStatus.pullRequest?.mergeReadiness.label ?? "-")|\(gitHubStatus.checksSummary?.compactLabel ?? "-")|\(gitHubStatus.latestRun?.statusLabel ?? "-")")
-                    }
                 }
                 if let status = ws.worktreeStatuses.values.first {
                     parts.append("  s:\(status.hasUncommittedChanges)|\(status.changedFileCount)")
@@ -547,61 +544,6 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
                 action: #selector(customizeWorktreeIcon(_:)),
                 representedObject: SidebarActionWorktree(workspaceID: workspace.id, worktreePath: worktree.path)
             )
-
-            if let pullRequest = workspace.gitHubStatus(for: worktree.path)?.pullRequest {
-                menu.addItem(.separator())
-                addMenuItem(
-                    to: menu,
-                    title: "Open PR #\(pullRequest.number)",
-                    action: #selector(openPullRequest(_:)),
-                    representedObject: SidebarActionWorktree(workspaceID: workspace.id, worktreePath: worktree.path)
-                )
-                if pullRequest.isDraft {
-                    addMenuItem(
-                        to: menu,
-                        title: "Mark Ready For Review",
-                        action: #selector(markPullRequestReady(_:)),
-                        representedObject: SidebarActionWorktree(workspaceID: workspace.id, worktreePath: worktree.path)
-                    )
-                }
-            }
-
-            if let checksSummary = workspace.gitHubStatus(for: worktree.path)?.checksSummary,
-               checksSummary.failingCount > 0 {
-                addMenuItem(
-                    to: menu,
-                    title: "Open Failing Check",
-                    action: #selector(openFailingCheckDetails(_:)),
-                    representedObject: SidebarActionWorktree(workspaceID: workspace.id, worktreePath: worktree.path)
-                )
-                addMenuItem(
-                    to: menu,
-                    title: "Copy Failing Check URL",
-                    action: #selector(copyFailingCheckURL(_:)),
-                    representedObject: SidebarActionWorktree(workspaceID: workspace.id, worktreePath: worktree.path)
-                )
-            }
-
-            if workspace.gitHubStatus(for: worktree.path)?.latestRun != nil {
-                addMenuItem(
-                    to: menu,
-                    title: "Open Latest CI Run",
-                    action: #selector(openLatestRun(_:)),
-                    representedObject: SidebarActionWorktree(workspaceID: workspace.id, worktreePath: worktree.path)
-                )
-                addMenuItem(
-                    to: menu,
-                    title: "Rerun Failed Jobs",
-                    action: #selector(rerunLatestRun(_:)),
-                    representedObject: SidebarActionWorktree(workspaceID: workspace.id, worktreePath: worktree.path)
-                )
-                addMenuItem(
-                    to: menu,
-                    title: "Copy Latest CI Logs",
-                    action: #selector(copyLatestRunLogs(_:)),
-                    representedObject: SidebarActionWorktree(workspaceID: workspace.id, worktreePath: worktree.path)
-                )
-            }
 
             if workspace.supportsRepositoryFeatures, !worktree.isMainWorktree {
                 menu.addItem(.separator())
@@ -1430,26 +1372,6 @@ private struct WorktreeRowContent: View {
                     if let status = workspace.status(for: worktree.path),
                        status.hasUncommittedChanges {
                         SidebarInfoBadge(text: "\(status.changedFileCount)", tone: .warning)
-                    }
-
-                    if let pullRequest = workspace.gitHubStatus(for: worktree.path)?.pullRequest {
-                        SidebarInfoBadge(
-                            text: pullRequest.isDraft ? "PR #\(pullRequest.number) draft" : "PR #\(pullRequest.number)",
-                            tone: pullRequest.state.uppercased() == "OPEN" ? .accent : .neutral
-                        )
-                        SidebarInfoBadge(text: pullRequest.mergeReadiness.label, tone: pullRequest.mergeReadiness == .ready ? .success : .warning)
-                    }
-
-                    if let checks = workspace.gitHubStatus(for: worktree.path)?.checksSummary,
-                       let compactLabel = checks.compactLabel {
-                        SidebarInfoBadge(text: compactLabel, tone: checks.failingCount > 0 ? .warning : (checks.pendingCount > 0 ? .accent : .success))
-                    }
-
-                    if let latestRun = workspace.gitHubStatus(for: worktree.path)?.latestRun {
-                        SidebarInfoBadge(
-                            text: latestRun.statusLabel,
-                            tone: latestRun.isFailing ? .warning : (latestRun.isPending ? .accent : .success)
-                        )
                     }
                 }
             }

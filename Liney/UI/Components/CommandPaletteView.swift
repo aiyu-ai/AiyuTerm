@@ -24,7 +24,7 @@ struct CommandPaletteView: View {
                     Image(systemName: "command")
                         .foregroundStyle(LineyTheme.mutedText)
                     TextField(
-                        "Search commands, workspaces, scripts, workflows, PR actions",
+                        "Search commands, workspaces, scripts, workflows",
                         text: Binding(
                             get: { store.commandPaletteQuery },
                             set: { store.updateCommandPaletteQuery($0) }

@@ -141,13 +141,10 @@ final class DiffWindowState: ObservableObject {
                 DiffDiagnostics.error(
                     "Diff load failed for \(file.displayPath) after \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))): \(error.localizedDescription)"
                 )
-                document = DiffFileDocument(
+                document = Self.makePatchOnlyDocument(
                     file: file,
-                    oldContents: "",
-                    newContents: "",
                     unifiedPatch: error.localizedDescription.nonEmptyOrFallback("Unable to load diff."),
-                    renderedDiff: .empty(),
-                    isPatchOnly: true
+                    reason: nil
                 )
                 isLoadingDocument = false
             }
@@ -235,21 +232,18 @@ final class DiffWindowState: ObservableObject {
 
         let unifiedPatch = try await loadUnifiedPatch(for: file, worktreePath: worktreePath, oldContents: oldContents, newContents: newContents)
         let renderStart = DiffDiagnostics.now()
-        let renderedDiff = DiffRenderingEngine.render(old: oldContents, new: newContents, debugLabel: file.displayPath)
-        DiffDiagnostics.log(
-            "Rendered structured diff for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: renderStart))) [added=\(renderedDiff.addedLineCount), removed=\(renderedDiff.removedLineCount), fallbackLayout=\(renderedDiff.usesFallbackLayout)]"
-        )
+        let renderResult = DiffRenderingEngine.render(old: oldContents, new: newContents, debugLabel: file.displayPath)
         DiffDiagnostics.log(
             "Completed document assembly for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))) [old=\(DiffDiagnostics.describeText(oldContents)), new=\(DiffDiagnostics.describeText(newContents)), patch=\(unifiedPatch.utf8.count)B]"
         )
 
-        return DiffFileDocument(
+        return makeDocument(
             file: file,
             oldContents: oldContents,
             newContents: newContents,
             unifiedPatch: unifiedPatch,
-            renderedDiff: renderedDiff,
-            isPatchOnly: false
+            renderResult: renderResult,
+            renderElapsedMilliseconds: DiffDiagnostics.elapsedMilliseconds(since: renderStart)
         )
     }
 
@@ -332,23 +326,78 @@ final class DiffWindowState: ObservableObject {
             patch = rawPatch.nilIfEmpty ?? "No unified patch available for \(file.displayPath)."
         }
 
-        let annotatedPatch: String
-        if let reason, !reason.isEmpty {
-            annotatedPatch = "\(reason)\n\n\(patch)"
-        } else {
-            annotatedPatch = patch
-        }
-
         DiffDiagnostics.log(
             "Loaded patch-only fallback for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))) [\(patch.utf8.count)B]"
         )
+
+        return makePatchOnlyDocument(file: file, unifiedPatch: patch, reason: reason)
+    }
+
+    nonisolated static func makeDocument(
+        file: DiffChangedFile,
+        oldContents: String,
+        newContents: String,
+        unifiedPatch: String,
+        renderResult: DiffRenderingResult,
+        renderElapsedMilliseconds: Double
+    ) -> DiffFileDocument {
+        switch renderResult {
+        case .document(let renderedDiff):
+            DiffDiagnostics.log(
+                "Rendered structured diff for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(renderElapsedMilliseconds)) [added=\(renderedDiff.addedLineCount), removed=\(renderedDiff.removedLineCount)]"
+            )
+            return DiffFileDocument(
+                file: file,
+                oldContents: oldContents,
+                newContents: newContents,
+                unifiedPatch: unifiedPatch,
+                renderedDiff: renderedDiff,
+                isPatchOnly: false
+            )
+        case .requiresPatchFallback(let reason):
+            if let renderedDiff = DiffRenderingEngine.renderPatch(unifiedPatch, debugLabel: file.displayPath) {
+                DiffDiagnostics.log(
+                    "Structured diff switched to patch hunks for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(renderElapsedMilliseconds)): \(reason)"
+                )
+                return DiffFileDocument(
+                    file: file,
+                    oldContents: oldContents,
+                    newContents: newContents,
+                    unifiedPatch: unifiedPatch,
+                    renderedDiff: renderedDiff,
+                    isPatchOnly: false
+                )
+            } else {
+                DiffDiagnostics.log(
+                    "Structured diff switched to patch-only for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(renderElapsedMilliseconds)): \(reason)"
+                )
+                return makePatchOnlyDocument(
+                    file: file,
+                    unifiedPatch: unifiedPatch,
+                    reason: "\(reason) Showing raw patch."
+                )
+            }
+        }
+    }
+
+    nonisolated private static func makePatchOnlyDocument(
+        file: DiffChangedFile,
+        unifiedPatch: String,
+        reason: String?
+    ) -> DiffFileDocument {
+        let annotatedPatch: String
+        if let reason, !reason.isEmpty {
+            annotatedPatch = "\(reason)\n\n\(unifiedPatch)"
+        } else {
+            annotatedPatch = unifiedPatch
+        }
 
         return DiffFileDocument(
             file: file,
             oldContents: "",
             newContents: "",
             unifiedPatch: annotatedPatch,
-            renderedDiff: .empty(usesFallbackLayout: true),
+            renderedDiff: .empty(),
             isPatchOnly: true
         )
     }
@@ -412,9 +461,9 @@ final class DiffWindowState: ObservableObject {
     ) -> String {
         let lines = contents.split(separator: "\n", omittingEmptySubsequences: false)
         let body = lines.map { "\(prefix)\($0)" }.joined(separator: "\n")
-        let oldCount = max(oldPrefixCount, contents.isEmpty ? 0 : 1)
-        let newCount = max(newPrefixCount, contents.isEmpty ? 0 : 1)
-        return "@@ -1,\(oldCount) +1,\(newCount) @@\n\(body)"
+        let oldStart = oldPrefixCount == 0 ? 0 : 1
+        let newStart = newPrefixCount == 0 ? 0 : 1
+        return "@@ -\(oldStart),\(oldPrefixCount) +\(newStart),\(newPrefixCount) @@\n\(body)"
     }
 
     nonisolated private static func lineCount(in text: String) -> Int {

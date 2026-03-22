@@ -274,9 +274,6 @@ private struct DiffDocumentSummary: View {
             if document.isPatchOnly {
                 DiffSummaryBadge(label: "Patch Only", tint: LineyTheme.warning)
             }
-            if document.renderedDiff.usesFallbackLayout {
-                DiffSummaryBadge(label: "Fallback Layout", tint: LineyTheme.warning)
-            }
             Spacer()
         }
         .padding(.horizontal, 16)

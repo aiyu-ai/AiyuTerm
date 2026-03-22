@@ -46,17 +46,15 @@ struct StructuredDiffDocument: Hashable, Sendable {
     let splitRows: [DiffSplitRow]
     let addedLineCount: Int
     let removedLineCount: Int
-    let usesFallbackLayout: Bool
 }
 
 extension StructuredDiffDocument {
-    nonisolated static func empty(usesFallbackLayout: Bool = false) -> StructuredDiffDocument {
+    nonisolated static func empty() -> StructuredDiffDocument {
         StructuredDiffDocument(
             unifiedLines: [],
             splitRows: [],
             addedLineCount: 0,
-            removedLineCount: 0,
-            usesFallbackLayout: usesFallbackLayout
+            removedLineCount: 0
         )
     }
 
@@ -252,10 +250,15 @@ private enum DiffEditOperation {
     case delete(String)
 }
 
+enum DiffRenderingResult: Hashable, Sendable {
+    case document(StructuredDiffDocument)
+    case requiresPatchFallback(reason: String)
+}
+
 enum DiffRenderingEngine {
     nonisolated private static let maxDynamicProgrammingCells = 250_000
 
-    nonisolated static func render(old oldText: String, new newText: String, debugLabel: String? = nil) -> StructuredDiffDocument {
+    nonisolated static func render(old oldText: String, new newText: String, debugLabel: String? = nil) -> DiffRenderingResult {
         let start = DiffDiagnostics.now()
         let oldLines = normalizedLines(in: oldText)
         let newLines = normalizedLines(in: newText)
@@ -267,30 +270,219 @@ enum DiffRenderingEngine {
         )
 
         if oldText == "<<Binary file>>" || newText == "<<Binary file>>" {
-            DiffDiagnostics.log("Diff render using fallback layout for \(label) because file is binary")
-            return fallbackDocument(oldLines: oldLines, newLines: newLines)
+            let reason = "File is binary."
+            DiffDiagnostics.log("Diff render requires patch fallback for \(label) because file is binary")
+            return .requiresPatchFallback(reason: reason)
         }
 
         if dpCellCount > maxDynamicProgrammingCells {
+            let reason = "Structured diff exceeded supported limits."
             DiffDiagnostics.log(
-                "Diff render using fallback layout for \(label) because dpCells \(dpCellCount) exceed limit \(maxDynamicProgrammingCells)"
+                "Diff render requires patch fallback for \(label) because dpCells \(dpCellCount) exceed limit \(maxDynamicProgrammingCells)"
             )
-            return fallbackDocument(oldLines: oldLines, newLines: newLines)
+            return .requiresPatchFallback(reason: reason)
         }
 
         let operationsStart = DiffDiagnostics.now()
         let operations = operations(oldLines: oldLines, newLines: newLines)
-        let document = makeDocument(from: operations, usesFallbackLayout: false)
+        let document = makeDocument(from: operations)
         DiffDiagnostics.log(
             "Diff render finished for \(label) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))) [operations=\(operations.count), lcs=\(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: operationsStart))), unified=\(document.unifiedLines.count), split=\(document.splitRows.count)]"
+        )
+        return .document(document)
+    }
+
+    nonisolated static func renderPatch(_ patch: String, debugLabel: String? = nil) -> StructuredDiffDocument? {
+        let label = debugLabel ?? "<unknown>"
+        let start = DiffDiagnostics.now()
+        let lines = patch.components(separatedBy: "\n")
+
+        var unifiedLines: [DiffUnifiedLine] = []
+        var splitRows: [DiffSplitRow] = []
+        var pendingRemoved: [(lineNumber: Int, text: String)] = []
+        var pendingAdded: [(lineNumber: Int, text: String)] = []
+        var addedLineCount = 0
+        var removedLineCount = 0
+        var rowID = 0
+        var index = 0
+        var currentOldLine: Int?
+        var currentNewLine: Int?
+        var sawHunk = false
+
+        func flushPendingChanges() {
+            guard !pendingRemoved.isEmpty || !pendingAdded.isEmpty else { return }
+            let pairCount = max(pendingRemoved.count, pendingAdded.count)
+            for pairIndex in 0..<pairCount {
+                let removed = pairIndex < pendingRemoved.count ? pendingRemoved[pairIndex] : nil
+                let added = pairIndex < pendingAdded.count ? pendingAdded[pairIndex] : nil
+
+                if let removed {
+                    unifiedLines.append(
+                        DiffUnifiedLine(
+                            id: "u-\(rowID)-old",
+                            kind: .removed,
+                            oldLineNumber: removed.lineNumber,
+                            newLineNumber: nil,
+                            text: removed.text
+                        )
+                    )
+                    removedLineCount += 1
+                }
+
+                if let added {
+                    unifiedLines.append(
+                        DiffUnifiedLine(
+                            id: "u-\(rowID)-new",
+                            kind: .added,
+                            oldLineNumber: nil,
+                            newLineNumber: added.lineNumber,
+                            text: added.text
+                        )
+                    )
+                    addedLineCount += 1
+                }
+
+                splitRows.append(
+                    DiffSplitRow(
+                        id: "s-\(rowID)",
+                        left: removed.map {
+                            DiffSplitCell(
+                                lineNumber: $0.lineNumber,
+                                text: $0.text,
+                                kind: added == nil ? .removed : .changedRemoved
+                            )
+                        },
+                        right: added.map {
+                            DiffSplitCell(
+                                lineNumber: $0.lineNumber,
+                                text: $0.text,
+                                kind: removed == nil ? .added : .changedAdded
+                            )
+                        }
+                    )
+                )
+                rowID += 1
+            }
+
+            pendingRemoved.removeAll(keepingCapacity: true)
+            pendingAdded.removeAll(keepingCapacity: true)
+        }
+
+        func appendContextLine(text: String, oldLineNumber: Int, newLineNumber: Int) {
+            flushPendingChanges()
+            unifiedLines.append(
+                DiffUnifiedLine(
+                    id: "u-\(rowID)",
+                    kind: .context,
+                    oldLineNumber: oldLineNumber,
+                    newLineNumber: newLineNumber,
+                    text: text
+                )
+            )
+            splitRows.append(
+                DiffSplitRow(
+                    id: "s-\(rowID)",
+                    left: DiffSplitCell(lineNumber: oldLineNumber, text: text, kind: .context),
+                    right: DiffSplitCell(lineNumber: newLineNumber, text: text, kind: .context)
+                )
+            )
+            rowID += 1
+        }
+
+        func appendOmittedMarker(count: Int) {
+            guard count > 0 else { return }
+            flushPendingChanges()
+            let text = "… \(count) unchanged line\(count == 1 ? "" : "s")"
+            let marker = DiffSplitCell(lineNumber: nil, text: text, kind: .context)
+            unifiedLines.append(
+                DiffUnifiedLine(
+                    id: "u-collapse-\(rowID)-\(count)",
+                    kind: .context,
+                    oldLineNumber: nil,
+                    newLineNumber: nil,
+                    text: text
+                )
+            )
+            splitRows.append(
+                DiffSplitRow(
+                    id: "s-collapse-\(rowID)-\(count)",
+                    left: marker,
+                    right: marker
+                )
+            )
+            rowID += 1
+        }
+
+        while index < lines.count {
+            guard let hunk = parseHunkHeader(lines[index]) else {
+                index += 1
+                continue
+            }
+
+            sawHunk = true
+            if let previousOldLine = currentOldLine, let previousNewLine = currentNewLine {
+                let omittedCount = max(hunk.oldStart - previousOldLine, hunk.newStart - previousNewLine)
+                appendOmittedMarker(count: omittedCount)
+            }
+
+            currentOldLine = hunk.oldStart
+            currentNewLine = hunk.newStart
+            index += 1
+
+            while index < lines.count, parseHunkHeader(lines[index]) == nil {
+                let line = lines[index]
+                guard let prefix = line.first else {
+                    index += 1
+                    continue
+                }
+                let text = String(line.dropFirst())
+
+                switch prefix {
+                case " ":
+                    guard let oldLineNumber = currentOldLine, let newLineNumber = currentNewLine else {
+                        return nil
+                    }
+                    appendContextLine(text: text, oldLineNumber: oldLineNumber, newLineNumber: newLineNumber)
+                    currentOldLine = oldLineNumber + 1
+                    currentNewLine = newLineNumber + 1
+                case "-":
+                    guard let oldLineNumber = currentOldLine else { return nil }
+                    pendingRemoved.append((lineNumber: oldLineNumber, text: text))
+                    currentOldLine = oldLineNumber + 1
+                case "+":
+                    guard let newLineNumber = currentNewLine else { return nil }
+                    pendingAdded.append((lineNumber: newLineNumber, text: text))
+                    currentNewLine = newLineNumber + 1
+                case "\\":
+                    break
+                default:
+                    break
+                }
+
+                index += 1
+            }
+
+            flushPendingChanges()
+        }
+
+        guard sawHunk else {
+            DiffDiagnostics.log("Patch render unavailable for \(label) because no hunks were found")
+            return nil
+        }
+
+        let document = StructuredDiffDocument(
+            unifiedLines: unifiedLines,
+            splitRows: splitRows,
+            addedLineCount: addedLineCount,
+            removedLineCount: removedLineCount
+        )
+        DiffDiagnostics.log(
+            "Patch render finished for \(label) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))) [unified=\(document.unifiedLines.count), split=\(document.splitRows.count)]"
         )
         return document
     }
 
-    private nonisolated static func makeDocument(
-        from operations: [DiffEditOperation],
-        usesFallbackLayout: Bool
-    ) -> StructuredDiffDocument {
+    private nonisolated static func makeDocument(from operations: [DiffEditOperation]) -> StructuredDiffDocument {
         var unifiedLines: [DiffUnifiedLine] = []
         var splitRows: [DiffSplitRow] = []
         var oldLineNumber = 1
@@ -409,17 +601,8 @@ enum DiffRenderingEngine {
             unifiedLines: unifiedLines,
             splitRows: splitRows,
             addedLineCount: addedLineCount,
-            removedLineCount: removedLineCount,
-            usesFallbackLayout: usesFallbackLayout
+            removedLineCount: removedLineCount
         )
-    }
-
-    private nonisolated static func fallbackDocument(
-        oldLines: [String],
-        newLines: [String]
-    ) -> StructuredDiffDocument {
-        let operations = oldLines.map(DiffEditOperation.delete) + newLines.map(DiffEditOperation.insert)
-        return makeDocument(from: operations, usesFallbackLayout: true)
     }
 
     private nonisolated static func operations(oldLines: [String], newLines: [String]) -> [DiffEditOperation] {
@@ -473,5 +656,27 @@ enum DiffRenderingEngine {
             lines.removeLast()
         }
         return lines
+    }
+
+    private nonisolated static func parseHunkHeader(_ line: String) -> (oldStart: Int, newStart: Int)? {
+        guard line.hasPrefix("@@") else { return nil }
+
+        let body = line.dropFirst(2)
+        guard let closingRange = body.range(of: "@@") else { return nil }
+        let header = body[..<closingRange.lowerBound].trimmingCharacters(in: .whitespaces)
+        let parts = header.split(separator: " ")
+        guard parts.count >= 2 else { return nil }
+        guard let oldStart = parseHunkRange(parts[0], prefix: "-"),
+              let newStart = parseHunkRange(parts[1], prefix: "+") else {
+            return nil
+        }
+        return (oldStart: oldStart, newStart: newStart)
+    }
+
+    private nonisolated static func parseHunkRange<S: StringProtocol>(_ value: S, prefix: Character) -> Int? {
+        guard value.first == prefix else { return nil }
+        let numbers = value.dropFirst().split(separator: ",", maxSplits: 1, omittingEmptySubsequences: false)
+        guard let start = numbers.first.flatMap({ Int($0) }) else { return nil }
+        return start
     }
 }
