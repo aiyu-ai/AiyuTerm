@@ -17,7 +17,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         
-        
         SentrySDK.start { options in
             options.dsn = "https://d2856035f52ef60d4ae74f88e0194793@o4510180697636864.ingest.us.sentry.io/4511085450297344"
             options.debug = true // Enabling debug when first installing is always helpful
@@ -25,6 +24,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             // Adds IP for users.
             // For more information, visit: https://docs.sentry.io/platforms/apple/data-management/data-collected/
             options.sendDefaultPii = true
+            options.enableAutoSessionTracking = true
+            options.releaseName = "liney"
         }
         
         Task { @MainActor in

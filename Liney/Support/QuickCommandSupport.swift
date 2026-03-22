@@ -76,6 +76,23 @@ nonisolated struct QuickCommandPreset: Codable, Hashable, Identifiable {
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .nilIfEmpty ?? category.title
     }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case command
+        case category
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            id: try container.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString,
+            title: try container.decodeIfPresent(String.self, forKey: .title) ?? "",
+            command: try container.decodeIfPresent(String.self, forKey: .command) ?? "",
+            category: try container.decodeIfPresent(QuickCommandCategory.self, forKey: .category) ?? .codex
+        )
+    }
 }
 
 enum QuickCommandCatalog {

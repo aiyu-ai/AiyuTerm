@@ -51,17 +51,6 @@ struct MainWindowView: View {
         store.sleepPreventionSession == nil ? "moon.zzz" : "moon.zzz.fill"
     }
 
-    private var sleepPreventionTextColor: Color {
-        store.sleepPreventionSession == nil ? LineyTheme.tertiaryText : LineyTheme.warning
-    }
-
-    private var sleepPreventionToolbarText: String {
-        if store.sleepPreventionSession != nil {
-            return "On"
-        }
-        return store.sleepPreventionQuickActionOption.compactTitle
-    }
-
     private var sleepPreventionSplitButtonBackground: Color {
         if store.sleepPreventionSession == nil {
             return LineyTheme.chromeBackground.opacity(0.96)
@@ -238,21 +227,10 @@ struct MainWindowView: View {
                         trailingAccessibilityLabel: store.sleepPreventionStatusText,
                         trailingHelp: store.sleepPreventionStatusText,
                         leadingContent: {
-                            HStack(spacing: 6) {
-                                ToolbarFeatureIcon(
-                                    systemName: sleepPreventionIconName,
-                                    tint: store.sleepPreventionSession == nil ? LineyTheme.secondaryText : LineyTheme.warning
-                                )
-                                if store.sleepPreventionSession != nil {
-                                    Circle()
-                                        .fill(LineyTheme.warning)
-                                        .frame(width: 5, height: 5)
-                                }
-                                Text(sleepPreventionToolbarText)
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(sleepPreventionTextColor)
-                                    .lineLimit(1)
-                            }
+                            ToolbarFeatureIcon(
+                                systemName: sleepPreventionIconName,
+                                tint: store.sleepPreventionSession == nil ? LineyTheme.secondaryText : LineyTheme.warning
+                            )
                         },
                         trailingContent: {
                             Image(systemName: "chevron.down")

@@ -164,6 +164,7 @@ private struct QuickCommandEditorCard: View {
                             .stroke(LineyTheme.border, lineWidth: 1)
                     )
             }
+
         }
         .padding(14)
         .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))

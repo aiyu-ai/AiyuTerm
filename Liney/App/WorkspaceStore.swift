@@ -994,7 +994,13 @@ final class WorkspaceStore: ObservableObject {
         workspace.sessionController.focus(targetPaneID)
         session.insertText(preset.command)
         recordQuickCommandUse(preset.id)
-        receive(.statusMessage("Inserted \(preset.normalizedTitle). Press Return to run it.", .neutral, deliverSystemNotification: false))
+        receive(
+            .statusMessage(
+                "Inserted \(preset.normalizedTitle). Press Return to run it.",
+                .neutral,
+                deliverSystemNotification: false
+            )
+        )
     }
 
     func refresh(_ workspace: WorkspaceModel) {

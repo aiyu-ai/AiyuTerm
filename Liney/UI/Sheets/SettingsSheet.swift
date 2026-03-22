@@ -168,9 +168,6 @@ struct SettingsSheet: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    Text("GitHub CLI status: \(store.gitHubIntegrationState.summary)")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
                 }
                 .padding(.top, 8)
             }
