@@ -13,13 +13,18 @@ final class ApplicationMenuController: NSObject {
     private let feedbackURL = URL(string: "https://github.com/wuwenrui/liney/issues/new")!
     private let repositoryURL = URL(string: "https://github.com/wuwenrui/liney")!
 
-    func installMainMenu(appName: String, target: AnyObject) {
+    private var shortcutItemsByAction: [LineyShortcutAction: [NSMenuItem]] = [:]
+
+    func installMainMenu(appName: String, target: AnyObject, settings: AppSettings) {
+        shortcutItemsByAction = [:]
+
         let mainMenu = NSMenu(title: "")
 
         let appMenuItem = NSMenuItem(title: appName, action: nil, keyEquivalent: "")
         let fileMenuItem = NSMenuItem(title: "File", action: nil, keyEquivalent: "")
         let editMenuItem = NSMenuItem(title: "Edit", action: nil, keyEquivalent: "")
         let viewMenuItem = NSMenuItem(title: "View", action: nil, keyEquivalent: "")
+        let workspaceMenuItem = NSMenuItem(title: "Workspace", action: nil, keyEquivalent: "")
         let windowMenuItem = NSMenuItem(title: "Window", action: nil, keyEquivalent: "")
         let helpMenuItem = NSMenuItem(title: "Help", action: nil, keyEquivalent: "")
 
@@ -28,6 +33,7 @@ final class ApplicationMenuController: NSObject {
             fileMenuItem,
             editMenuItem,
             viewMenuItem,
+            workspaceMenuItem,
             windowMenuItem,
             helpMenuItem,
         ]
@@ -59,17 +65,20 @@ final class ApplicationMenuController: NSObject {
 
         addItem(title: "Show All", action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: "", to: appMenu)
         appMenu.addItem(.separator())
-        let settingsItem = addItem(title: "Settings...", action: #selector(AppDelegate.openSettings(_:)), keyEquivalent: ",", to: appMenu)
-        settingsItem.target = target
+        addShortcutItem(title: "Settings...", shortcutAction: .openSettings, to: appMenu, target: target)
         appMenu.addItem(.separator())
         addItem(title: "Quit \(appName)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q", to: appMenu)
 
         let fileMenu = NSMenu(title: "File")
         fileMenuItem.submenu = fileMenu
-        let newTabItem = addItem(title: "New Tab", action: #selector(AppDelegate.newTab(_:)), keyEquivalent: "t", to: fileMenu)
-        newTabItem.target = target
+        addShortcutItem(title: "New Tab", shortcutAction: .newTab, to: fileMenu, target: target)
         fileMenu.addItem(.separator())
-        addItem(title: "Close Window", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w", to: fileMenu)
+        addShortcutItem(title: "Split Right", shortcutAction: .splitRight, to: fileMenu, target: target)
+        addShortcutItem(title: "Split Down", shortcutAction: .splitDown, to: fileMenu, target: target)
+        addShortcutItem(title: "Duplicate Pane", shortcutAction: .duplicatePane, to: fileMenu, target: target)
+        fileMenu.addItem(.separator())
+        addShortcutItem(title: "Close Tab", shortcutAction: .closeTab, to: fileMenu, target: target)
+        addShortcutItem(title: "Close Pane", shortcutAction: .closePane, to: fileMenu, target: target)
 
         let editMenu = NSMenu(title: "Edit")
         editMenuItem.submenu = editMenu
@@ -94,31 +103,35 @@ final class ApplicationMenuController: NSObject {
 
         let viewMenu = NSMenu(title: "View")
         viewMenuItem.submenu = viewMenu
-        let commandPaletteItem = addItem(title: "Command Palette", action: #selector(AppDelegate.toggleCommandPalette(_:)), keyEquivalent: "p", to: viewMenu)
-        commandPaletteItem.target = target
-        let nextTabItem = addItem(title: "Next Tab", action: #selector(AppDelegate.selectNextTab(_:)), keyEquivalent: "]", to: viewMenu)
-        nextTabItem.target = target
-        let previousTabItem = addItem(title: "Previous Tab", action: #selector(AppDelegate.selectPreviousTab(_:)), keyEquivalent: "[", to: viewMenu)
-        previousTabItem.target = target
+        addShortcutItem(title: "Toggle Sidebar", shortcutAction: .toggleSidebar, to: viewMenu, target: target)
+        addShortcutItem(title: "Command Palette", shortcutAction: .toggleCommandPalette, to: viewMenu, target: target)
+        addShortcutItem(title: "Workspace Overview", shortcutAction: .toggleOverview, to: viewMenu, target: target)
+        addShortcutItem(title: "Open Diff", shortcutAction: .openDiff, to: viewMenu, target: target)
         viewMenu.addItem(.separator())
+        addShortcutItem(title: "Next Tab", shortcutAction: .nextTab, to: viewMenu, target: target)
+        addShortcutItem(title: "Previous Tab", shortcutAction: .previousTab, to: viewMenu, target: target)
         for index in 1...9 {
-            let item = addItem(
+            let item = addShortcutItem(
                 title: "Select Tab \(index)",
-                action: #selector(AppDelegate.selectTabNumber(_:)),
-                keyEquivalent: "\(index)",
-                to: viewMenu
+                shortcutAction: .selectTabByNumber,
+                to: viewMenu,
+                target: target
             )
-            item.target = target
             item.tag = index
         }
         viewMenu.addItem(.separator())
-        let fullScreenItem = addItem(title: "Enter Full Screen", action: #selector(NSWindow.toggleFullScreen(_:)), keyEquivalent: "f", to: viewMenu)
-        fullScreenItem.keyEquivalentModifierMask = [.command, .control]
+        addShortcutItem(title: "Enter Full Screen", shortcutAction: .enterFullScreen, to: viewMenu, target: target)
+
+        let workspaceMenu = NSMenu(title: "Workspace")
+        workspaceMenuItem.submenu = workspaceMenu
+        addShortcutItem(title: "Refresh Selected Workspace", shortcutAction: .refreshSelectedWorkspace, to: workspaceMenu, target: target)
+        addShortcutItem(title: "Refresh All Repositories", shortcutAction: .refreshAllRepositories, to: workspaceMenu, target: target)
 
         let windowMenu = NSMenu(title: "Window")
         windowMenuItem.submenu = windowMenu
         addItem(title: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m", to: windowMenu)
         addItem(title: "Zoom", action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "", to: windowMenu)
+        addShortcutItem(title: "Close Window", shortcutAction: .closeWindow, to: windowMenu, target: target)
         windowMenu.addItem(.separator())
         addItem(title: "Bring All to Front", action: #selector(NSApplication.arrangeInFront(_:)), keyEquivalent: "", to: windowMenu)
         NSApp.windowsMenu = windowMenu
@@ -131,6 +144,34 @@ final class ApplicationMenuController: NSObject {
         NSApp.helpMenu = helpMenu
 
         NSApp.mainMenu = mainMenu
+        applySettings(settings)
+    }
+
+    func applySettings(_ settings: AppSettings) {
+        for action in LineyShortcutAction.allCases {
+            guard let items = shortcutItemsByAction[action] else { continue }
+
+            if action == .selectTabByNumber {
+                let shortcut = LineyKeyboardShortcuts.effectiveShortcut(for: action, in: settings)
+                for item in items {
+                    guard let shortcut else {
+                        clearShortcut(on: item)
+                        continue
+                    }
+                    applyShortcut(shortcut.withKey("\(item.tag)"), to: item)
+                }
+                continue
+            }
+
+            let shortcut = LineyKeyboardShortcuts.effectiveShortcut(for: action, in: settings)
+            for item in items {
+                guard let shortcut else {
+                    clearShortcut(on: item)
+                    continue
+                }
+                applyShortcut(shortcut, to: item)
+            }
+        }
     }
 
     @objc private func openWebsite(_ sender: Any?) {
@@ -153,5 +194,34 @@ final class ApplicationMenuController: NSObject {
         }
         menu.addItem(item)
         return item
+    }
+
+    @discardableResult
+    private func addShortcutItem(
+        title: String,
+        shortcutAction: LineyShortcutAction,
+        to menu: NSMenu,
+        target: AnyObject
+    ) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: #selector(AppDelegate.performShortcutAction(_:)), keyEquivalent: "")
+        item.target = target
+        item.representedObject = shortcutAction.rawValue
+        menu.addItem(item)
+        shortcutItemsByAction[shortcutAction, default: []].append(item)
+        return item
+    }
+
+    private func applyShortcut(_ shortcut: StoredShortcut, to item: NSMenuItem) {
+        guard let keyEquivalent = shortcut.menuItemKeyEquivalent else {
+            clearShortcut(on: item)
+            return
+        }
+        item.keyEquivalent = keyEquivalent
+        item.keyEquivalentModifierMask = shortcut.modifierFlags
+    }
+
+    private func clearShortcut(on item: NSMenuItem) {
+        item.keyEquivalent = ""
+        item.keyEquivalentModifierMask = []
     }
 }

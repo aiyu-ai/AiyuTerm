@@ -10,6 +10,7 @@ import SwiftUI
 private enum SettingsSheetSection: String, CaseIterable, Identifiable {
     case general
     case sidebar
+    case shortcuts
     case updates
     case workspace
 
@@ -21,6 +22,8 @@ private enum SettingsSheetSection: String, CaseIterable, Identifiable {
             return "General"
         case .sidebar:
             return "Sidebar"
+        case .shortcuts:
+            return "Shortcuts"
         case .updates:
             return "Updates"
         case .workspace:
@@ -34,6 +37,8 @@ private enum SettingsSheetSection: String, CaseIterable, Identifiable {
             return "App behavior and integrations"
         case .sidebar:
             return "Navigation density and default icons"
+        case .shortcuts:
+            return "Customize Liney app shortcuts"
         case .updates:
             return "Automatic update checks"
         case .workspace:
@@ -47,6 +52,8 @@ private enum SettingsSheetSection: String, CaseIterable, Identifiable {
             return "gearshape"
         case .sidebar:
             return "sidebar.leading"
+        case .shortcuts:
+            return "command"
         case .updates:
             return "arrow.down.circle"
         case .workspace:
@@ -139,6 +146,8 @@ struct SettingsSheet: View {
             generalSettingsView
         case .sidebar:
             sidebarSettingsView
+        case .shortcuts:
+            shortcutsSettingsView
         case .updates:
             updatesSettingsView
         case .workspace:
@@ -271,6 +280,52 @@ struct SettingsSheet: View {
                 }
             }
             .padding(.top, 8)
+        }
+    }
+
+    private var shortcutsSettingsView: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            GroupBox {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Liney shortcuts are routed through the app menu so they continue to work while a terminal pane has focus.")
+                        .font(.system(size: 12, weight: .medium))
+                    Text("When you assign a shortcut to a new action, Liney automatically clears it from the previous action to avoid collisions.")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+
+                    HStack {
+                        Spacer()
+                        Button("Reset All to Defaults") {
+                            LineyKeyboardShortcuts.resetAll(in: &appSettings)
+                        }
+                        .disabled(appSettings.keyboardShortcutOverrides.isEmpty)
+                    }
+                }
+                .padding(.top, 8)
+            }
+
+            ForEach(LineyShortcutCategory.allCases) { category in
+                GroupBox(category.title) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        ForEach(LineyShortcutAction.allCases.filter { $0.category == category }) { action in
+                            ShortcutSettingsRow(
+                                action: action,
+                                shortcut: shortcutBinding(for: action),
+                                state: LineyKeyboardShortcuts.state(for: action, in: appSettings),
+                                onReset: { LineyKeyboardShortcuts.resetShortcut(for: action, in: &appSettings) },
+                                onDisable: {
+                                    if action.defaultShortcut == nil {
+                                        LineyKeyboardShortcuts.resetShortcut(for: action, in: &appSettings)
+                                    } else {
+                                        LineyKeyboardShortcuts.disableShortcut(for: action, in: &appSettings)
+                                    }
+                                }
+                            )
+                        }
+                    }
+                    .padding(.top, 8)
+                }
+            }
         }
     }
 
@@ -577,12 +632,30 @@ struct SettingsSheet: View {
 
     private func save() {
         appSettings.autoRefreshIntervalSeconds = max(10, appSettings.autoRefreshIntervalSeconds)
+        appSettings.keyboardShortcutOverrides = LineyKeyboardShortcuts.normalizedOverrides(appSettings.keyboardShortcutOverrides)
         store.updateAppSettings(appSettings)
 
         if let selectedWorkspaceID {
             store.updateWorkspaceSettings(workspaceID: selectedWorkspaceID, settings: workspaceSettings)
         }
         dismiss()
+    }
+
+    private func shortcutBinding(for action: LineyShortcutAction) -> Binding<StoredShortcut?> {
+        Binding(
+            get: { LineyKeyboardShortcuts.effectiveShortcut(for: action, in: appSettings) },
+            set: { newShortcut in
+                guard let newShortcut else {
+                    if action.defaultShortcut == nil {
+                        LineyKeyboardShortcuts.resetShortcut(for: action, in: &appSettings)
+                    } else {
+                        LineyKeyboardShortcuts.disableShortcut(for: action, in: &appSettings)
+                    }
+                    return
+                }
+                LineyKeyboardShortcuts.setShortcut(newShortcut, for: action, in: &appSettings)
+            }
+        )
     }
 }
 
@@ -754,6 +827,207 @@ private struct SidebarIconEditorCard: View {
         }
         .padding(12)
         .background(Color.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+}
+
+private struct ShortcutSettingsRow: View {
+    let action: LineyShortcutAction
+    @Binding var shortcut: StoredShortcut?
+    let state: LineyKeyboardShortcutState
+    let onReset: () -> Void
+    let onDisable: () -> Void
+
+    private var stateLabel: String {
+        switch state {
+        case .default:
+            return action.defaultShortcut == nil ? "Unset" : "Default"
+        case .custom:
+            return "Custom"
+        case .disabled:
+            return "Disabled"
+        }
+    }
+
+    private var disableButtonTitle: String {
+        action.defaultShortcut == nil ? "Clear" : "Disable"
+    }
+
+    private var canDisable: Bool {
+        if action.defaultShortcut == nil {
+            return shortcut != nil
+        }
+        return state != .disabled
+    }
+
+    private var canReset: Bool {
+        state != .default
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Text(action.title)
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(stateLabel)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Color.white.opacity(0.06), in: Capsule())
+                }
+
+                Text(action.subtitle)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 12)
+
+            ShortcutRecorderField(
+                shortcut: $shortcut,
+                fallbackShortcut: action.defaultShortcut ?? StoredShortcut(key: "k", command: true, shift: false, option: false, control: false),
+                emptyTitle: "Not Set",
+                displayString: { action.displayedShortcutString(for: $0) },
+                transformRecordedShortcut: action.normalizedRecordedShortcut
+            )
+            .frame(width: 132)
+
+            Button(disableButtonTitle, action: onDisable)
+                .disabled(!canDisable)
+
+            Button("Reset", action: onReset)
+                .disabled(!canReset)
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+private struct ShortcutRecorderField: NSViewRepresentable {
+    @Binding var shortcut: StoredShortcut?
+    let fallbackShortcut: StoredShortcut
+    let emptyTitle: String
+    let displayString: (StoredShortcut) -> String
+    let transformRecordedShortcut: (StoredShortcut) -> StoredShortcut?
+
+    func makeNSView(context: Context) -> ShortcutRecorderNSButton {
+        let button = ShortcutRecorderNSButton()
+        button.shortcut = shortcut
+        button.fallbackShortcut = fallbackShortcut
+        button.emptyTitle = emptyTitle
+        button.displayString = displayString
+        button.transformRecordedShortcut = transformRecordedShortcut
+        button.onShortcutRecorded = { newShortcut in
+            shortcut = newShortcut
+        }
+        return button
+    }
+
+    func updateNSView(_ nsView: ShortcutRecorderNSButton, context: Context) {
+        nsView.shortcut = shortcut
+        nsView.fallbackShortcut = fallbackShortcut
+        nsView.emptyTitle = emptyTitle
+        nsView.displayString = displayString
+        nsView.transformRecordedShortcut = transformRecordedShortcut
+        nsView.updateTitle()
+    }
+}
+
+private final class ShortcutRecorderNSButton: NSButton {
+    var shortcut: StoredShortcut?
+    var fallbackShortcut = StoredShortcut(key: "k", command: true, shift: false, option: false, control: false)
+    var emptyTitle = "Not Set"
+    var displayString: (StoredShortcut) -> String = { $0.displayString }
+    var transformRecordedShortcut: (StoredShortcut) -> StoredShortcut? = { $0 }
+    var onShortcutRecorded: ((StoredShortcut) -> Void)?
+
+    private var isRecording = false
+    private var eventMonitor: Any?
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        setup()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setup()
+    }
+
+    private func setup() {
+        bezelStyle = .rounded
+        setButtonType(.momentaryPushIn)
+        target = self
+        action = #selector(buttonClicked)
+        updateTitle()
+    }
+
+    func updateTitle() {
+        if isRecording {
+            title = "Press shortcut…"
+        } else if let shortcut {
+            title = displayString(shortcut)
+        } else {
+            title = emptyTitle
+        }
+    }
+
+    @objc private func buttonClicked() {
+        isRecording ? stopRecording() : startRecording()
+    }
+
+    private func startRecording() {
+        isRecording = true
+        updateTitle()
+
+        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self else { return event }
+
+            if event.keyCode == 53 {
+                self.stopRecording()
+                return nil
+            }
+
+            if let newShortcut = StoredShortcut.from(event: event) {
+                guard let transformedShortcut = self.transformRecordedShortcut(newShortcut) else {
+                    NSSound.beep()
+                    return nil
+                }
+                self.shortcut = transformedShortcut
+                self.onShortcutRecorded?(transformedShortcut)
+                self.stopRecording()
+                return nil
+            }
+
+            return nil
+        }
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowResigned),
+            name: NSWindow.didResignKeyNotification,
+            object: window
+        )
+    }
+
+    private func stopRecording() {
+        isRecording = false
+        updateTitle()
+
+        if let eventMonitor {
+            NSEvent.removeMonitor(eventMonitor)
+            self.eventMonitor = nil
+        }
+
+        NotificationCenter.default.removeObserver(self, name: NSWindow.didResignKeyNotification, object: window)
+    }
+
+    @objc private func windowResigned() {
+        stopRecording()
+    }
+
+    deinit {
+        stopRecording()
     }
 }
 
