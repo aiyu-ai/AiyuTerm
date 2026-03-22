@@ -736,6 +736,7 @@ private final class LineyGhosttySurfaceView: NSView {
 
         let textModifiers = event.modifierFlags.intersection([.command, .control])
         if textModifiers.isEmpty {
+            let hadMarkedTextBeforeInterpretation = hasMarkedText()
             keyTextAccumulator = []
             handledTextInputCommand = false
             interpretKeyEvents([translationEvent])
@@ -752,9 +753,22 @@ private final class LineyGhosttySurfaceView: NSView {
                 )
                 return
             }
-            if handledTextInputCommand || hasMarkedText() {
+
+            if handledTextInputCommand {
                 return
             }
+
+            sendRawKeyEvent(
+                event,
+                on: surface,
+                translationEvent: translationEvent,
+                translationMods: translationMods,
+                composing: LineyGhosttyTextInputRouting.shouldMarkRawKeyEventAsComposing(
+                    hadMarkedTextBeforeInterpretation: hadMarkedTextBeforeInterpretation,
+                    hasMarkedTextAfterInterpretation: hasMarkedText()
+                )
+            )
+            return
         }
 
         sendRawKeyEvent(
@@ -1033,7 +1047,8 @@ private final class LineyGhosttySurfaceView: NSView {
         _ event: NSEvent,
         on surface: ghostty_surface_t,
         translationEvent: NSEvent? = nil,
-        translationMods: NSEvent.ModifierFlags? = nil
+        translationMods: NSEvent.ModifierFlags? = nil,
+        composing: Bool = false
     ) {
         let action = event.isARepeat ? GHOSTTY_ACTION_REPEAT : GHOSTTY_ACTION_PRESS
         let resolvedEvent: NSEvent
@@ -1046,7 +1061,11 @@ private final class LineyGhosttySurfaceView: NSView {
             resolvedMods = event.modifierFlags
         }
 
-        var keyEvent = resolvedEvent.ghosttyKeyEvent(action, translationMods: resolvedMods)
+        var keyEvent = resolvedEvent.ghosttyKeyEvent(
+            action,
+            translationMods: resolvedMods,
+            composing: composing
+        )
         if let text = textForGhosttyKeyEvent(resolvedEvent), shouldSendGhosttyText(text) {
             text.withCString { textPointer in
                 keyEvent.text = textPointer
@@ -1063,10 +1082,15 @@ private final class LineyGhosttySurfaceView: NSView {
         on surface: ghostty_surface_t,
         translationEvent: NSEvent,
         translationMods: NSEvent.ModifierFlags,
-        text: String
+        text: String,
+        composing: Bool = false
     ) {
         let action = event.isARepeat ? GHOSTTY_ACTION_REPEAT : GHOSTTY_ACTION_PRESS
-        var keyEvent = translationEvent.ghosttyKeyEvent(action, translationMods: translationMods)
+        var keyEvent = translationEvent.ghosttyKeyEvent(
+            action,
+            translationMods: translationMods,
+            composing: composing
+        )
         if shouldSendGhosttyText(text) {
             text.withCString { textPointer in
                 keyEvent.text = textPointer

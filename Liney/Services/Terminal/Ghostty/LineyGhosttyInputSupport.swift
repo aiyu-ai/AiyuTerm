@@ -16,6 +16,13 @@ enum LineyGhosttyTextInputRouting {
         }
         return modifierFlags.intersection([.option, .command, .control]).isEmpty == false
     }
+
+    static func shouldMarkRawKeyEventAsComposing(
+        hadMarkedTextBeforeInterpretation: Bool,
+        hasMarkedTextAfterInterpretation: Bool
+    ) -> Bool {
+        hadMarkedTextBeforeInterpretation || hasMarkedTextAfterInterpretation
+    }
 }
 
 struct LineyGhosttyMarkedTextState: Equatable {
@@ -206,13 +213,14 @@ func resolveGhosttyEquivalentKey(
 extension NSEvent {
     func ghosttyKeyEvent(
         _ action: ghostty_input_action_e,
-        translationMods: NSEvent.ModifierFlags? = nil
+        translationMods: NSEvent.ModifierFlags? = nil,
+        composing: Bool = false
     ) -> ghostty_input_key_s {
         var event = ghostty_input_key_s()
         event.action = action
         event.keycode = UInt32(keyCode)
         event.text = nil
-        event.composing = false
+        event.composing = composing
         event.mods = ghosttyMods(modifierFlags)
         event.consumed_mods = ghosttyMods((translationMods ?? modifierFlags).subtracting([.control, .command]))
         event.unshifted_codepoint = 0

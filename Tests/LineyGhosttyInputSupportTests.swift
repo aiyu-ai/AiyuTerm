@@ -60,6 +60,33 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
         )
     }
 
+    func testRawKeyDispatchStaysComposingWhileMarkedTextIsActive() {
+        XCTAssertTrue(
+            LineyGhosttyTextInputRouting.shouldMarkRawKeyEventAsComposing(
+                hadMarkedTextBeforeInterpretation: false,
+                hasMarkedTextAfterInterpretation: true
+            )
+        )
+    }
+
+    func testRawKeyDispatchStaysComposingWhenMarkedTextWasJustCleared() {
+        XCTAssertTrue(
+            LineyGhosttyTextInputRouting.shouldMarkRawKeyEventAsComposing(
+                hadMarkedTextBeforeInterpretation: true,
+                hasMarkedTextAfterInterpretation: false
+            )
+        )
+    }
+
+    func testRawKeyDispatchIsPlainOutsideComposition() {
+        XCTAssertFalse(
+            LineyGhosttyTextInputRouting.shouldMarkRawKeyEventAsComposing(
+                hadMarkedTextBeforeInterpretation: false,
+                hasMarkedTextAfterInterpretation: false
+            )
+        )
+    }
+
     func testReturnIsNotSentAsLiteralText() {
         XCTAssertFalse(shouldSendGhosttyText("\r"))
         XCTAssertFalse(shouldSendGhosttyText("\n"))
