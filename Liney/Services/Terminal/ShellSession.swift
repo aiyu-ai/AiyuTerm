@@ -235,6 +235,10 @@ final class ShellSession: ObservableObject, Identifiable {
         surfaceController.toggleReadOnly()
     }
 
+    func insertText(_ text: String) {
+        surfaceController.sendText(text)
+    }
+
     func sendShellCommand(_ command: String) {
         surfaceController.sendText(command + "\n")
     }

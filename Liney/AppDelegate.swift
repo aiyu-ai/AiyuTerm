@@ -6,6 +6,7 @@
 //
 
 import Cocoa
+import Sentry
 
 class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private let websiteURL = URL(string: "https://liney.dev")!
@@ -15,6 +16,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     @MainActor private let applicationMenuController = ApplicationMenuController()
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
+        
+        
+        SentrySDK.start { options in
+            options.dsn = "https://d2856035f52ef60d4ae74f88e0194793@o4510180697636864.ingest.us.sentry.io/4511085450297344"
+            options.debug = true // Enabling debug when first installing is always helpful
+
+            // Adds IP for users.
+            // For more information, visit: https://docs.sentry.io/platforms/apple/data-management/data-collected/
+            options.sendDefaultPii = true
+        }
+        
         Task { @MainActor in
             applicationMenuController.installMainMenu(appName: applicationName(), target: self)
             let desktopApplication = LineyDesktopApplication()
@@ -24,6 +36,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {
+        guard Thread.isMainThread else { return }
+        MainActor.assumeIsolated {
+            desktopApplication?.shutdown()
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

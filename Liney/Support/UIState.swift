@@ -35,6 +35,10 @@ struct WorkspaceSettingsRequest: Identifiable {
     let workspaceID: UUID?
 }
 
+struct QuickCommandEditorRequest: Identifiable {
+    let id = UUID()
+}
+
 enum SidebarIconCustomizationTarget: Hashable {
     case workspace(UUID)
     case worktree(workspaceID: UUID, worktreePath: String)

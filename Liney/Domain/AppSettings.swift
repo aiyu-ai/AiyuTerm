@@ -189,6 +189,43 @@ extension SidebarItemIcon {
     )
 }
 
+nonisolated enum ExternalEditor: String, Codable, Hashable, CaseIterable, Identifiable {
+    case cursor
+    case zed
+    case visualStudioCode
+    case visualStudioCodeInsiders
+    case windsurf
+    case fleet
+    case xcode
+    case nova
+    case sublimeText
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .cursor:
+            return "Cursor"
+        case .zed:
+            return "Zed"
+        case .visualStudioCode:
+            return "VS Code"
+        case .visualStudioCodeInsiders:
+            return "VS Code Insiders"
+        case .windsurf:
+            return "Windsurf"
+        case .fleet:
+            return "Fleet"
+        case .xcode:
+            return "Xcode"
+        case .nova:
+            return "Nova"
+        case .sublimeText:
+            return "Sublime Text"
+        }
+    }
+}
+
 struct AppSettings: Codable, Hashable {
     var autoRefreshEnabled: Bool
     var autoRefreshIntervalSeconds: Int
@@ -206,6 +243,9 @@ struct AppSettings: Codable, Hashable {
     var defaultRepositoryIcon: SidebarItemIcon
     var defaultLocalTerminalIcon: SidebarItemIcon
     var defaultWorktreeIcon: SidebarItemIcon
+    var preferredExternalEditor: ExternalEditor
+    var quickCommandPresets: [QuickCommandPreset]
+    var quickCommandRecentIDs: [String]
     var releaseChannel: ReleaseChannel
     var commandPaletteRecents: [String: TimeInterval]
 
@@ -226,6 +266,9 @@ struct AppSettings: Codable, Hashable {
         defaultRepositoryIcon: SidebarItemIcon = .repositoryDefault,
         defaultLocalTerminalIcon: SidebarItemIcon = .localTerminalDefault,
         defaultWorktreeIcon: SidebarItemIcon = .worktreeDefault,
+        preferredExternalEditor: ExternalEditor = .cursor,
+        quickCommandPresets: [QuickCommandPreset] = QuickCommandCatalog.defaultCommands,
+        quickCommandRecentIDs: [String] = [],
         releaseChannel: ReleaseChannel = .stable,
         commandPaletteRecents: [String: TimeInterval] = [:]
     ) {
@@ -245,6 +288,12 @@ struct AppSettings: Codable, Hashable {
         self.defaultRepositoryIcon = defaultRepositoryIcon
         self.defaultLocalTerminalIcon = defaultLocalTerminalIcon
         self.defaultWorktreeIcon = defaultWorktreeIcon
+        self.preferredExternalEditor = preferredExternalEditor
+        self.quickCommandPresets = QuickCommandCatalog.normalizedCommands(quickCommandPresets)
+        self.quickCommandRecentIDs = QuickCommandCatalog.normalizedRecentCommandIDs(
+            quickCommandRecentIDs,
+            availableCommands: self.quickCommandPresets
+        )
         self.releaseChannel = releaseChannel
         self.commandPaletteRecents = commandPaletteRecents
     }
@@ -268,12 +317,22 @@ extension AppSettings {
         case defaultRepositoryIcon
         case defaultLocalTerminalIcon
         case defaultWorktreeIcon
+        case preferredExternalEditor
+        case quickCommandPresets
+        case quickCommandRecentIDs
         case releaseChannel
         case commandPaletteRecents
     }
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        let preferredExternalEditor: ExternalEditor
+        if let rawValue = try container.decodeIfPresent(String.self, forKey: .preferredExternalEditor),
+           let decoded = ExternalEditor(rawValue: rawValue) {
+            preferredExternalEditor = decoded
+        } else {
+            preferredExternalEditor = .cursor
+        }
         self.init(
             autoRefreshEnabled: try container.decodeIfPresent(Bool.self, forKey: .autoRefreshEnabled) ?? true,
             autoRefreshIntervalSeconds: try container.decodeIfPresent(Int.self, forKey: .autoRefreshIntervalSeconds) ?? 30,
@@ -291,6 +350,9 @@ extension AppSettings {
             defaultRepositoryIcon: try container.decodeIfPresent(SidebarItemIcon.self, forKey: .defaultRepositoryIcon) ?? .repositoryDefault,
             defaultLocalTerminalIcon: try container.decodeIfPresent(SidebarItemIcon.self, forKey: .defaultLocalTerminalIcon) ?? .localTerminalDefault,
             defaultWorktreeIcon: try container.decodeIfPresent(SidebarItemIcon.self, forKey: .defaultWorktreeIcon) ?? .worktreeDefault,
+            preferredExternalEditor: preferredExternalEditor,
+            quickCommandPresets: try container.decodeIfPresent([QuickCommandPreset].self, forKey: .quickCommandPresets) ?? QuickCommandCatalog.defaultCommands,
+            quickCommandRecentIDs: try container.decodeIfPresent([String].self, forKey: .quickCommandRecentIDs) ?? [],
             releaseChannel: try container.decodeIfPresent(ReleaseChannel.self, forKey: .releaseChannel) ?? .stable,
             commandPaletteRecents: try container.decodeIfPresent([String: TimeInterval].self, forKey: .commandPaletteRecents) ?? [:]
         )

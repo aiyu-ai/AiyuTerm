@@ -24,6 +24,7 @@ final class WorkspaceStore: ObservableObject {
     @Published var commandPaletteQuery = ""
     @Published var selectedCommandPaletteItemID: String?
     @Published var settingsRequest: WorkspaceSettingsRequest?
+    @Published var quickCommandEditorRequest: QuickCommandEditorRequest?
     @Published var sidebarIconCustomizationRequest: SidebarIconCustomizationRequest?
     @Published var presentedError: PresentedError?
     @Published var renameWorkspaceRequest: RenameWorkspaceRequest?
@@ -32,6 +33,9 @@ final class WorkspaceStore: ObservableObject {
     @Published var createAgentSessionRequest: CreateAgentSessionRequest?
     @Published var pendingWorktreeSwitch: PendingWorktreeSwitch?
     @Published var pendingWorktreeRemoval: PendingWorktreeRemoval?
+    @Published var sleepPreventionSession: SleepPreventionSession?
+    @Published private(set) var sleepPreventionQuickActionOption: SleepPreventionDurationOption = .oneHour
+    @Published private(set) var sleepPreventionReferenceDate = Date()
 
     private let persistence = WorkspaceStatePersistence()
     private let appSettingsPersistence = AppSettingsPersistence()
@@ -41,10 +45,18 @@ final class WorkspaceStore: ObservableObject {
     private lazy var gitHubCoordinator = WorkspaceGitHubCoordinator(client: gitHubCLIService)
     private let remoteSessionCoordinator = RemoteSessionCoordinator()
     private let metadataWatchService = WorkspaceMetadataWatchService()
+    private let sleepPreventionController = SleepPreventionController()
     private var hasLoaded = false
     private var hasConfiguredUpdater = false
     private var autoRefreshTask: Task<Void, Never>?
     private var statusMessageTask: Task<Void, Never>?
+    private var sleepPreventionTickerTask: Task<Void, Never>?
+
+    init() {
+        sleepPreventionController.onEvent = { [weak self] event in
+            self?.handleSleepPreventionEvent(event)
+        }
+    }
 
     var currentReleaseVersion: String {
         let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
@@ -70,6 +82,48 @@ final class WorkspaceStore: ObservableObject {
             }
             return lhs.offset < rhs.offset
         }.map(\.element)
+    }
+
+    var availableExternalEditors: [ExternalEditorDescriptor] {
+        ExternalEditorCatalog.availableEditors()
+    }
+
+    var effectiveExternalEditor: ExternalEditorDescriptor? {
+        ExternalEditorCatalog.effectiveEditor(
+            preferred: appSettings.preferredExternalEditor,
+            among: availableExternalEditors
+        )
+    }
+
+    var quickCommandPresets: [QuickCommandPreset] {
+        appSettings.quickCommandPresets
+    }
+
+    var recentQuickCommandPresets: [QuickCommandPreset] {
+        let commandsByID = Dictionary(uniqueKeysWithValues: quickCommandPresets.map { ($0.id, $0) })
+        return appSettings.quickCommandRecentIDs.compactMap { commandsByID[$0] }
+    }
+
+    var sleepPreventionOptions: [SleepPreventionDurationOption] {
+        SleepPreventionDurationOption.allCases
+    }
+
+    var sleepPreventionStatusText: String {
+        guard let sleepPreventionSession else {
+            return "Do Not Sleep"
+        }
+        return "Do Not Sleep: \(sleepPreventionSession.remainingDescription(relativeTo: sleepPreventionReferenceDate))"
+    }
+
+    var sleepPreventionPrimaryActionLabel: String {
+        sleepPreventionSession == nil ? "Start Do Not Sleep" : "Stop Do Not Sleep"
+    }
+
+    var sleepPreventionPrimaryActionHelpText: String {
+        if let sleepPreventionSession {
+            return "Stop macOS sleep prevention (\(sleepPreventionSession.remainingDescription(relativeTo: sleepPreventionReferenceDate)))"
+        }
+        return "Prevent macOS sleep for \(sleepPreventionQuickActionOption.title)"
     }
 
     private var mergeReadyPullRequestTargets: [WorkspaceGitHubTarget] {
@@ -689,6 +743,10 @@ final class WorkspaceStore: ObservableObject {
         settingsRequest = WorkspaceSettingsRequest(workspaceID: workspace?.id)
     }
 
+    func presentQuickCommandEditor() {
+        quickCommandEditorRequest = QuickCommandEditorRequest()
+    }
+
     func presentSidebarIconCustomization(for workspace: WorkspaceModel) {
         sidebarIconCustomizationRequest = SidebarIconCustomizationRequest(target: .workspace(workspace.id))
     }
@@ -705,7 +763,29 @@ final class WorkspaceStore: ObservableObject {
 
     func updateAppSettings(_ settings: AppSettings) {
         let wasAutoCheckEnabled = appSettings.autoCheckForUpdates
-        appSettings = settings
+        appSettings = AppSettings(
+            autoRefreshEnabled: settings.autoRefreshEnabled,
+            autoRefreshIntervalSeconds: settings.autoRefreshIntervalSeconds,
+            autoClosePaneOnProcessExit: settings.autoClosePaneOnProcessExit,
+            fileWatcherEnabled: settings.fileWatcherEnabled,
+            githubIntegrationEnabled: settings.githubIntegrationEnabled,
+            autoCheckForUpdates: settings.autoCheckForUpdates,
+            autoDownloadUpdates: settings.autoDownloadUpdates,
+            showRemoteBranchesInCreateWorktree: settings.showRemoteBranchesInCreateWorktree,
+            systemNotificationsEnabled: settings.systemNotificationsEnabled,
+            showArchivedWorkspaces: settings.showArchivedWorkspaces,
+            sidebarShowsSecondaryLabels: settings.sidebarShowsSecondaryLabels,
+            sidebarShowsWorkspaceBadges: settings.sidebarShowsWorkspaceBadges,
+            sidebarShowsWorktreeBadges: settings.sidebarShowsWorktreeBadges,
+            defaultRepositoryIcon: settings.defaultRepositoryIcon,
+            defaultLocalTerminalIcon: settings.defaultLocalTerminalIcon,
+            defaultWorktreeIcon: settings.defaultWorktreeIcon,
+            preferredExternalEditor: settings.preferredExternalEditor,
+            quickCommandPresets: settings.quickCommandPresets,
+            quickCommandRecentIDs: settings.quickCommandRecentIDs,
+            releaseChannel: settings.releaseChannel,
+            commandPaletteRecents: settings.commandPaletteRecents
+        )
         if !settings.githubIntegrationEnabled {
             for workspace in workspaces {
                 workspace.gitHubStatuses = [:]
@@ -843,6 +923,78 @@ final class WorkspaceStore: ObservableObject {
     func refreshSelectedWorkspace() {
         guard let workspace = selectedWorkspace else { return }
         refresh(workspace)
+    }
+
+    func activateSleepPrevention(_ option: SleepPreventionDurationOption) {
+        do {
+            try sleepPreventionController.start(option)
+            sleepPreventionQuickActionOption = option
+        } catch {
+            receive(
+                .statusMessage(
+                    "Unable to start macOS sleep prevention: \(error.localizedDescription)",
+                    .warning,
+                    deliverSystemNotification: false
+                )
+            )
+        }
+    }
+
+    func stopSleepPrevention() {
+        sleepPreventionController.stop()
+    }
+
+    func performPrimarySleepPreventionAction() {
+        if sleepPreventionSession == nil {
+            activateSleepPrevention(sleepPreventionQuickActionOption)
+        } else {
+            stopSleepPrevention()
+        }
+    }
+
+    func openSelectedWorkspaceInPreferredExternalEditor() {
+        guard let workspace = selectedWorkspace else { return }
+        openWorkspace(workspace, in: appSettings.preferredExternalEditor)
+    }
+
+    func openSelectedWorkspaceInExternalEditor(_ editor: ExternalEditor) {
+        guard let workspace = selectedWorkspace else { return }
+        setPreferredExternalEditor(editor)
+        openWorkspace(workspace, in: editor)
+    }
+
+    func updateQuickCommandPresets(_ commands: [QuickCommandPreset]) {
+        var settings = appSettings
+        settings.quickCommandPresets = QuickCommandCatalog.normalizedCommands(commands)
+        settings.quickCommandRecentIDs = QuickCommandCatalog.normalizedRecentCommandIDs(
+            settings.quickCommandRecentIDs,
+            availableCommands: settings.quickCommandPresets
+        )
+        appSettings = settings
+        persistAppSettings()
+    }
+
+    func resetQuickCommandPresetsToDefaults() {
+        updateQuickCommandPresets(QuickCommandCatalog.defaultCommands)
+    }
+
+    func insertQuickCommand(_ preset: QuickCommandPreset) {
+        guard let workspace = selectedWorkspace else {
+            receive(.statusMessage("Select a workspace before inserting a quick command.", .warning, deliverSystemNotification: false))
+            return
+        }
+
+        let targetPaneID = workspace.sessionController.focusedPaneID ?? workspace.paneOrder.first
+        guard let targetPaneID,
+              let session = workspace.sessionController.session(for: targetPaneID) else {
+            receive(.statusMessage("Focus a terminal pane before inserting a quick command.", .warning, deliverSystemNotification: false))
+            return
+        }
+
+        workspace.sessionController.focus(targetPaneID)
+        session.insertText(preset.command)
+        recordQuickCommandUse(preset.id)
+        receive(.statusMessage("Inserted \(preset.normalizedTitle). Press Return to run it.", .neutral, deliverSystemNotification: false))
     }
 
     func refresh(_ workspace: WorkspaceModel) {
@@ -1654,6 +1806,118 @@ final class WorkspaceStore: ObservableObject {
     private func recordCommandPaletteActivation(itemID: String) {
         appSettings.commandPaletteRecents[itemID] = Date().timeIntervalSince1970
         persistAppSettings()
+    }
+
+    private func handleSleepPreventionEvent(_ event: SleepPreventionControllerEvent) {
+        switch event {
+        case .started(let session):
+            sleepPreventionSession = session
+            sleepPreventionReferenceDate = Date()
+            startSleepPreventionTicker()
+            receive(
+                .statusMessage(
+                    session.option == .forever
+                        ? "macOS sleep prevention is active until you stop it."
+                        : "macOS sleep prevention is active for \(session.option.title.lowercased()).",
+                    .success,
+                    deliverSystemNotification: false
+                )
+            )
+
+        case .stopped(let reason):
+            let previousSession = sleepPreventionSession
+            sleepPreventionSession = nil
+            sleepPreventionReferenceDate = Date()
+            stopSleepPreventionTicker()
+
+            switch reason {
+            case .userInitiated:
+                receive(.statusMessage("macOS sleep prevention stopped.", .neutral, deliverSystemNotification: false))
+            case .completed:
+                guard previousSession != nil else { return }
+                receive(.statusMessage("macOS sleep prevention finished.", .neutral, deliverSystemNotification: false))
+            case .failed(let message):
+                receive(.statusMessage(message, .warning, deliverSystemNotification: false))
+            }
+        }
+    }
+
+    private func startSleepPreventionTicker() {
+        sleepPreventionTickerTask?.cancel()
+        sleepPreventionTickerTask = Task { @MainActor in
+            while !Task.isCancelled {
+                sleepPreventionReferenceDate = Date()
+                try? await Task.sleep(nanoseconds: 30_000_000_000)
+            }
+        }
+    }
+
+    private func stopSleepPreventionTicker() {
+        sleepPreventionTickerTask?.cancel()
+        sleepPreventionTickerTask = nil
+    }
+
+    private func setPreferredExternalEditor(_ editor: ExternalEditor) {
+        guard appSettings.preferredExternalEditor != editor else { return }
+        var settings = appSettings
+        settings.preferredExternalEditor = editor
+        appSettings = settings
+        persistAppSettings()
+    }
+
+    private func recordQuickCommandUse(_ id: String) {
+        var recentIDs = appSettings.quickCommandRecentIDs
+        recentIDs.removeAll { $0 == id }
+        recentIDs.insert(id, at: 0)
+
+        var settings = appSettings
+        settings.quickCommandRecentIDs = QuickCommandCatalog.normalizedRecentCommandIDs(
+            recentIDs,
+            availableCommands: settings.quickCommandPresets
+        )
+        appSettings = settings
+        persistAppSettings()
+    }
+
+    private func openWorkspace(_ workspace: WorkspaceModel, in preferredEditor: ExternalEditor) {
+        let availableEditors = availableExternalEditors
+        guard let editor = ExternalEditorCatalog.effectiveEditor(
+            preferred: preferredEditor,
+            among: availableEditors
+        ) else {
+            receive(
+                .statusMessage(
+                    "Install Cursor, Zed, VS Code, Windsurf, Xcode, Fleet, Nova, or Sublime Text to open workspaces from the toolbar.",
+                    .warning,
+                    deliverSystemNotification: false
+                )
+            )
+            return
+        }
+
+        if editor.editor != preferredEditor {
+            receive(
+                .statusMessage(
+                    "\(preferredEditor.displayName) is not installed. Opening in \(editor.editor.displayName) instead.",
+                    .warning,
+                    deliverSystemNotification: false
+                )
+            )
+        }
+
+        let workspaceName = workspace.name
+        let directoryURL = URL(fileURLWithPath: workspace.activeWorktreePath, isDirectory: true)
+        ExternalEditorCatalog.open(directoryURL, in: editor) { [weak self] result in
+            guard let self else { return }
+            guard case .failure(let error) = result else { return }
+            self.receive(
+                .statusMessage(
+                    "Unable to open \(workspaceName) in \(editor.editor.displayName): \(error.localizedDescription)",
+                    .warning,
+                    deliverSystemNotification: false
+                )
+            )
+        }
     }
 
     private func activateWorktree(

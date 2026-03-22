@@ -69,6 +69,10 @@ public final class LineyDesktopApplication: NSObject {
         store.dispatch(.checkForUpdates)
     }
 
+    public func shutdown() {
+        store.stopSleepPrevention()
+    }
+
     public func createTabInSelectedWorkspace() {
         guard let workspace = store.selectedWorkspace else { return }
         store.createTab(in: workspace)

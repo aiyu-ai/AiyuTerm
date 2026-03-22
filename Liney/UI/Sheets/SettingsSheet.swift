@@ -66,6 +66,17 @@ struct SettingsSheet: View {
     @State private var selectedWorkspaceID: UUID?
     @State private var workspaceSettings = WorkspaceSettings()
 
+    private var availableExternalEditors: [ExternalEditorDescriptor] {
+        store.availableExternalEditors
+    }
+
+    private var resolvedExternalEditor: ExternalEditorDescriptor? {
+        ExternalEditorCatalog.effectiveEditor(
+            preferred: appSettings.preferredExternalEditor,
+            among: availableExternalEditors
+        )
+    }
+
     var body: some View {
         HStack(spacing: 0) {
             List(SettingsSheetSection.allCases, selection: $selection) { section in
@@ -136,31 +147,75 @@ struct SettingsSheet: View {
     }
 
     private var generalSettingsView: some View {
-        GroupBox("Behavior") {
-            VStack(alignment: .leading, spacing: 12) {
-                Toggle("Enable automatic refresh", isOn: $appSettings.autoRefreshEnabled)
-                Toggle("Close terminal panes automatically after process exit", isOn: $appSettings.autoClosePaneOnProcessExit)
-                Toggle("Enable file watchers", isOn: $appSettings.fileWatcherEnabled)
-                Toggle("Enable GitHub integration", isOn: $appSettings.githubIntegrationEnabled)
-                Toggle("Allow system notifications", isOn: $appSettings.systemNotificationsEnabled)
-                Toggle("Show archived workspaces in sidebar", isOn: $appSettings.showArchivedWorkspaces)
-                Toggle("Show remote branches in Create Worktree", isOn: $appSettings.showRemoteBranchesInCreateWorktree)
+        VStack(alignment: .leading, spacing: 18) {
+            GroupBox("Behavior") {
+                VStack(alignment: .leading, spacing: 12) {
+                    Toggle("Enable automatic refresh", isOn: $appSettings.autoRefreshEnabled)
+                    Toggle("Close terminal panes automatically after process exit", isOn: $appSettings.autoClosePaneOnProcessExit)
+                    Toggle("Enable file watchers", isOn: $appSettings.fileWatcherEnabled)
+                    Toggle("Enable GitHub integration", isOn: $appSettings.githubIntegrationEnabled)
+                    Toggle("Allow system notifications", isOn: $appSettings.systemNotificationsEnabled)
+                    Toggle("Show archived workspaces in sidebar", isOn: $appSettings.showArchivedWorkspaces)
+                    Toggle("Show remote branches in Create Worktree", isOn: $appSettings.showRemoteBranchesInCreateWorktree)
 
-                HStack {
-                    Text("Refresh interval")
-                    Spacer()
-                    TextField("30", value: $appSettings.autoRefreshIntervalSeconds, format: .number)
-                        .frame(width: 72)
-                        .textFieldStyle(.roundedBorder)
-                    Text("seconds")
+                    HStack {
+                        Text("Refresh interval")
+                        Spacer()
+                        TextField("30", value: $appSettings.autoRefreshIntervalSeconds, format: .number)
+                            .frame(width: 72)
+                            .textFieldStyle(.roundedBorder)
+                        Text("seconds")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Text("GitHub CLI status: \(store.gitHubIntegrationState.summary)")
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
                 }
-
-                Text("GitHub CLI status: \(store.gitHubIntegrationState.summary)")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.secondary)
+                .padding(.top, 8)
             }
-            .padding(.top, 8)
+
+            GroupBox("External Editor") {
+                VStack(alignment: .leading, spacing: 12) {
+                    if availableExternalEditors.isEmpty {
+                        Text("Install Cursor, Zed, VS Code, Windsurf, Xcode, Fleet, Nova, or Sublime Text to enable one-click open from the toolbar.")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Picker("Default editor", selection: $appSettings.preferredExternalEditor) {
+                            ForEach(availableExternalEditors) { editor in
+                                Text(editor.editor.displayName)
+                                    .tag(editor.editor)
+                            }
+                        }
+
+                        if let resolvedExternalEditor,
+                           resolvedExternalEditor.editor != appSettings.preferredExternalEditor {
+                            Text("\(appSettings.preferredExternalEditor.displayName) is not installed. Toolbar actions will fall back to \(resolvedExternalEditor.editor.displayName).")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text("The toolbar split button uses this editor for one-click open and remembers your choice across launches.")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .padding(.top, 8)
+            }
+
+            GroupBox("Quick Commands") {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Toolbar shortcuts insert reusable command snippets into the focused terminal without running them.")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+
+                    Text("\(appSettings.quickCommandPresets.count) commands configured, \(appSettings.quickCommandRecentIDs.count) recent shortcuts remembered.")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.top, 8)
+            }
         }
     }
 
