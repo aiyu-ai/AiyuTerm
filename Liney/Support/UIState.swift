@@ -63,8 +63,6 @@ struct CreateWorktreeSheetRequest: Identifiable {
     let workspaceID: UUID
     let workspaceName: String
     let repositoryRoot: String
-    let localBranches: [String]
-    let remoteBranches: [String]
 }
 
 struct CreateSSHSessionRequest: Identifiable {
@@ -160,7 +158,6 @@ struct CreateWorktreeDraft {
     var directoryPath: String = ""
     var branchName: String = ""
     var createNewBranch: Bool = true
-    var createFromRemoteBranch: Bool = false
 
     var normalizedBranchName: String {
         branchName.trimmingCharacters(in: .whitespacesAndNewlines)

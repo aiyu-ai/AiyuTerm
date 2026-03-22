@@ -25,7 +25,6 @@ struct CreateWorktreeRequest {
     var directoryPath: String
     var branchName: String
     var createNewBranch: Bool
-    var createFromRemoteBranch: Bool
 }
 
 actor GitRepositoryService {
@@ -245,15 +244,14 @@ actor GitRepositoryService {
 
     func createWorktree(rootPath: String, request: CreateWorktreeRequest) async throws {
         var arguments = ["worktree", "add"]
-        let branchRef = request.createFromRemoteBranch ? "origin/\(request.branchName)" : request.branchName
 
         if request.createNewBranch {
             arguments.append(contentsOf: ["-b", request.branchName])
             arguments.append(request.directoryPath)
-            arguments.append(request.createFromRemoteBranch ? branchRef : "HEAD")
+            arguments.append("HEAD")
         } else {
             arguments.append(request.directoryPath)
-            arguments.append(branchRef)
+            arguments.append(request.branchName)
         }
 
         let result = try await git(arguments: arguments, currentDirectory: rootPath)

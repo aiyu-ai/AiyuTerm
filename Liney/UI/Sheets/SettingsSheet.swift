@@ -156,7 +156,6 @@ struct SettingsSheet: View {
                     Toggle("Enable GitHub integration", isOn: $appSettings.githubIntegrationEnabled)
                     Toggle("Allow system notifications", isOn: $appSettings.systemNotificationsEnabled)
                     Toggle("Show archived workspaces in sidebar", isOn: $appSettings.showArchivedWorkspaces)
-                    Toggle("Show remote branches in Create Worktree", isOn: $appSettings.showRemoteBranchesInCreateWorktree)
 
                     HStack {
                         Text("Refresh interval")

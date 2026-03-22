@@ -28,7 +28,7 @@ require_cmd() {
   fi
 }
 
-for cmd in xcodebuild xcrun /usr/bin/lipo /usr/bin/hdiutil /bin/cp /bin/mkdir; do
+for cmd in xcodebuild xcrun /usr/bin/ditto /usr/bin/lipo /usr/bin/hdiutil /bin/mkdir; do
   require_cmd "$cmd"
 done
 
@@ -137,7 +137,7 @@ if [[ ! -d "$BUILT_APP_PATH" ]]; then
   exit 1
 fi
 
-cp -R "$BUILT_APP_PATH" "$APP_BUNDLE_PATH"
+/usr/bin/ditto "$BUILT_APP_PATH" "$APP_BUNDLE_PATH"
 
 if [[ -n "$SIGNING_IDENTITY" ]]; then
   /usr/bin/codesign --remove-signature "$APP_BUNDLE_PATH" >/dev/null 2>&1 || true
@@ -147,7 +147,7 @@ fi
 
 if [[ "$CREATE_DMG" == "1" ]]; then
   mkdir -p "$STAGING_DIR"
-  cp -R "$APP_BUNDLE_PATH" "$STAGING_DIR/"
+  /usr/bin/ditto "$APP_BUNDLE_PATH" "$STAGING_DIR/$APP_NAME.app"
   ln -s /Applications "$STAGING_DIR/Applications"
   /usr/bin/hdiutil create \
     -volname "$APP_NAME" \

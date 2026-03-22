@@ -12,10 +12,8 @@ struct CreateWorktreeSheet: View {
     let request: CreateWorktreeSheetRequest
     let onSubmit: (CreateWorktreeDraft) -> Bool
 
-    @EnvironmentObject private var store: WorkspaceStore
     @Environment(\.dismiss) private var dismiss
     @State private var draft: CreateWorktreeDraft
-    @State private var selectedQuickBranch: String?
     @State private var parentDirectoryPath: String
     @FocusState private var isBranchFieldFocused: Bool
 
@@ -55,10 +53,6 @@ struct CreateWorktreeSheet: View {
             return "This path already exists. Please keep adding to the branch name."
         }
         return nil
-    }
-
-    private var showsRemoteBranches: Bool {
-        store.appSettings.showRemoteBranchesInCreateWorktree
     }
 
     var body: some View {
@@ -134,34 +128,12 @@ struct CreateWorktreeSheet: View {
                     .focused($isBranchFieldFocused)
 
                 Toggle("Create new branch", isOn: $draft.createNewBranch)
-                if showsRemoteBranches {
-                    Toggle("Use remote branch as start point", isOn: $draft.createFromRemoteBranch)
-                }
             }
 
             if let validationMessage {
                 Text(validationMessage)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Color.orange)
-            }
-
-            if !request.localBranches.isEmpty || (showsRemoteBranches && !request.remoteBranches.isEmpty) {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Quick Pick")
-                        .font(.headline)
-
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 14) {
-                            if !request.localBranches.isEmpty {
-                                branchSection(title: "Local Branches", branches: request.localBranches, remote: false)
-                            }
-                            if showsRemoteBranches && !request.remoteBranches.isEmpty {
-                                branchSection(title: "Remote Branches", branches: request.remoteBranches, remote: true)
-                            }
-                        }
-                    }
-                    .frame(maxHeight: 220)
-                }
             }
 
             HStack {
@@ -182,9 +154,6 @@ struct CreateWorktreeSheet: View {
         .frame(width: 560)
         .background(Color(nsColor: NSColor.windowBackgroundColor))
         .onAppear {
-            if !showsRemoteBranches {
-                draft.createFromRemoteBranch = false
-            }
             DispatchQueue.main.async {
                 isBranchFieldFocused = true
                 DispatchQueue.main.async {
@@ -193,41 +162,7 @@ struct CreateWorktreeSheet: View {
             }
         }
         .onChange(of: draft.branchName) { _, newValue in
-            if selectedQuickBranch != newValue {
-                selectedQuickBranch = nil
-            }
             updateSuggestedDirectoryPath(for: newValue)
-        }
-    }
-
-    @ViewBuilder
-    private func branchSection(title: String, branches: [String], remote: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.secondary)
-
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 8)], spacing: 8) {
-                ForEach(branches, id: \.self) { branch in
-                    Button {
-                        selectedQuickBranch = branch
-                        draft.createFromRemoteBranch = remote
-                        draft.createNewBranch = !remote
-                        draft.branchName = remote ? branch.replacingOccurrences(of: "origin/", with: "") : branch
-                    } label: {
-                        HStack {
-                            Text(branch)
-                                .lineLimit(1)
-                                .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            Spacer()
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background(Color.white.opacity(selectedQuickBranch == branch ? 0.12 : 0.05), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
         }
     }
 

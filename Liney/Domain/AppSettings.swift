@@ -234,7 +234,6 @@ struct AppSettings: Codable, Hashable {
     var githubIntegrationEnabled: Bool
     var autoCheckForUpdates: Bool
     var autoDownloadUpdates: Bool
-    var showRemoteBranchesInCreateWorktree: Bool
     var systemNotificationsEnabled: Bool
     var showArchivedWorkspaces: Bool
     var sidebarShowsSecondaryLabels: Bool
@@ -257,7 +256,6 @@ struct AppSettings: Codable, Hashable {
         githubIntegrationEnabled: Bool = true,
         autoCheckForUpdates: Bool = true,
         autoDownloadUpdates: Bool = false,
-        showRemoteBranchesInCreateWorktree: Bool = false,
         systemNotificationsEnabled: Bool = true,
         showArchivedWorkspaces: Bool = false,
         sidebarShowsSecondaryLabels: Bool = true,
@@ -279,7 +277,6 @@ struct AppSettings: Codable, Hashable {
         self.githubIntegrationEnabled = githubIntegrationEnabled
         self.autoCheckForUpdates = autoCheckForUpdates
         self.autoDownloadUpdates = autoDownloadUpdates
-        self.showRemoteBranchesInCreateWorktree = showRemoteBranchesInCreateWorktree
         self.systemNotificationsEnabled = systemNotificationsEnabled
         self.showArchivedWorkspaces = showArchivedWorkspaces
         self.sidebarShowsSecondaryLabels = sidebarShowsSecondaryLabels
@@ -308,7 +305,6 @@ extension AppSettings {
         case githubIntegrationEnabled
         case autoCheckForUpdates
         case autoDownloadUpdates
-        case showRemoteBranchesInCreateWorktree
         case systemNotificationsEnabled
         case showArchivedWorkspaces
         case sidebarShowsSecondaryLabels
@@ -341,7 +337,6 @@ extension AppSettings {
             githubIntegrationEnabled: try container.decodeIfPresent(Bool.self, forKey: .githubIntegrationEnabled) ?? true,
             autoCheckForUpdates: try container.decodeIfPresent(Bool.self, forKey: .autoCheckForUpdates) ?? true,
             autoDownloadUpdates: try container.decodeIfPresent(Bool.self, forKey: .autoDownloadUpdates) ?? false,
-            showRemoteBranchesInCreateWorktree: try container.decodeIfPresent(Bool.self, forKey: .showRemoteBranchesInCreateWorktree) ?? false,
             systemNotificationsEnabled: try container.decodeIfPresent(Bool.self, forKey: .systemNotificationsEnabled) ?? true,
             showArchivedWorkspaces: try container.decodeIfPresent(Bool.self, forKey: .showArchivedWorkspaces) ?? false,
             sidebarShowsSecondaryLabels: try container.decodeIfPresent(Bool.self, forKey: .sidebarShowsSecondaryLabels) ?? true,

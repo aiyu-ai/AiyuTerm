@@ -771,7 +771,6 @@ final class WorkspaceStore: ObservableObject {
             githubIntegrationEnabled: settings.githubIntegrationEnabled,
             autoCheckForUpdates: settings.autoCheckForUpdates,
             autoDownloadUpdates: settings.autoDownloadUpdates,
-            showRemoteBranchesInCreateWorktree: settings.showRemoteBranchesInCreateWorktree,
             systemNotificationsEnabled: settings.systemNotificationsEnabled,
             showArchivedWorkspaces: settings.showArchivedWorkspaces,
             sidebarShowsSecondaryLabels: settings.sidebarShowsSecondaryLabels,
@@ -1246,9 +1245,7 @@ final class WorkspaceStore: ObservableObject {
         createWorktreeRequest = CreateWorktreeSheetRequest(
             workspaceID: workspace.id,
             workspaceName: workspace.name,
-            repositoryRoot: workspace.repositoryRoot,
-            localBranches: workspace.localBranches,
-            remoteBranches: workspace.remoteBranches
+            repositoryRoot: workspace.repositoryRoot
         )
     }
 
@@ -1362,8 +1359,7 @@ final class WorkspaceStore: ObservableObject {
         let request = CreateWorktreeRequest(
             directoryPath: normalizedDirectoryPath,
             branchName: normalizedBranchName,
-            createNewBranch: draft.createNewBranch,
-            createFromRemoteBranch: draft.createFromRemoteBranch
+            createNewBranch: draft.createNewBranch
         )
 
         Task { @MainActor in

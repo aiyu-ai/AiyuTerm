@@ -59,7 +59,6 @@ final class ReleaseUpdateTests: XCTestCase {
         XCTAssertTrue(decoded.autoClosePaneOnProcessExit)
         XCTAssertTrue(decoded.autoCheckForUpdates)
         XCTAssertFalse(decoded.autoDownloadUpdates)
-        XCTAssertFalse(decoded.showRemoteBranchesInCreateWorktree)
         XCTAssertTrue(decoded.sidebarShowsSecondaryLabels)
         XCTAssertTrue(decoded.sidebarShowsWorkspaceBadges)
         XCTAssertTrue(decoded.sidebarShowsWorktreeBadges)

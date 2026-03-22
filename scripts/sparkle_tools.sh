@@ -109,10 +109,34 @@ sparkle_sign_embedded_bundle() {
   "${sign_runtime[@]}" "$framework_path"
 }
 
+sparkle_sign_embedded_frameworks() {
+  local app_path="$1"
+  local signing_identity="$2"
+  local frameworks_dir="$app_path/Contents/Frameworks"
+
+  [[ -d "$frameworks_dir" ]] || return 0
+  sparkle_require_cmd codesign || return 1
+
+  local sign_runtime_preserving=(
+    /usr/bin/codesign
+    --force
+    --sign "$signing_identity"
+    --options runtime
+    --timestamp
+    --preserve-metadata=identifier,entitlements,requirements,flags
+  )
+
+  local framework_path
+  while IFS= read -r -d '' framework_path; do
+    "${sign_runtime_preserving[@]}" "$framework_path"
+  done < <(find "$frameworks_dir" -mindepth 1 -maxdepth 1 -type d -name '*.framework' ! -name 'Sparkle.framework' -print0)
+}
+
 sparkle_codesign_app() {
   local app_path="$1"
   local signing_identity="$2"
 
+  sparkle_sign_embedded_frameworks "$app_path" "$signing_identity" || return 1
   sparkle_sign_embedded_bundle "$app_path" "$signing_identity" || return 1
   /usr/bin/codesign \
     --force \
