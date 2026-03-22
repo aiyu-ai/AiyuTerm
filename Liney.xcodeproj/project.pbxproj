@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		5A20D5722F6F788D001710AB /* Sentry-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 5A20D5712F6F788D001710AB /* Sentry-Dynamic */; };
+		5A4973AA2F6F90ED00B79656 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 5A4973A92F6F90ED00B79656 /* Sentry */; };
 		7F0A1B2C3D4E5F6071829301 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 7F0A1B2C3D4E5F6071829302 /* Sparkle */; };
 		8B1A2B3C4D5E6F708090A001 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8B1A2B3C4D5E6F708090A002 /* XCTest.framework */; };
 /* End PBXBuildFile section */
@@ -61,8 +61,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5A20D5722F6F788D001710AB /* Sentry-Dynamic in Frameworks */,
 				7F0A1B2C3D4E5F6071829301 /* Sparkle in Frameworks */,
+				5A4973AA2F6F90ED00B79656 /* Sentry in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -139,7 +139,7 @@
 			name = Liney;
 			packageProductDependencies = (
 				7F0A1B2C3D4E5F6071829302 /* Sparkle */,
-				5A20D5712F6F788D001710AB /* Sentry-Dynamic */,
+				5A4973A92F6F90ED00B79656 /* Sentry */,
 			);
 			productName = Liney;
 			productReference = 5A45CEF92F67D58F00861AB5 /* Liney.app */;
@@ -195,7 +195,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				7F0A1B2C3D4E5F6071829303 /* XCRemoteSwiftPackageReference "Sparkle" */,
-				5A20D5702F6F788D001710AB /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+				5A4973A82F6F90ED00B79656 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 5A45CEFA2F67D58F00861AB5 /* Products */;
@@ -393,6 +393,7 @@
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = Liney/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -430,6 +431,7 @@
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = Liney/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -624,7 +626,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		5A20D5702F6F788D001710AB /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+		5A4973A82F6F90ED00B79656 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
 			requirement = {
@@ -643,10 +645,10 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		5A20D5712F6F788D001710AB /* Sentry-Dynamic */ = {
+		5A4973A92F6F90ED00B79656 /* Sentry */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 5A20D5702F6F788D001710AB /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
-			productName = "Sentry-Dynamic";
+			package = 5A4973A82F6F90ED00B79656 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
 		};
 		7F0A1B2C3D4E5F6071829302 /* Sparkle */ = {
 			isa = XCSwiftPackageProductDependency;
