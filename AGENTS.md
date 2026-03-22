@@ -1,32 +1,40 @@
-# Liney 仓库协作指南
+# Liney Repository Collaboration Guide
 
-## 项目概览
+## Project Overview
 
-Liney 是一个原生 macOS 终端工作区应用，技术栈是 `AppKit + SwiftUI + libghostty`。
-当前代码已经从早期的根级 Swift Package 结构迁移到 Xcode 工程布局，主要交互围绕多仓库 sidebar、worktree 切换和多 pane 终端会话展开。
+Liney is a native macOS terminal workspace app built around `AppKit + SwiftUI + a vendored Ghostty runtime`.
+The core product experience centers on a multi-repository sidebar, worktree switching, terminal pane and tab layout restoration, diff and overview helper views, and GitHub and update-related features.
 
-## 目录结构
+The repository now uses an Xcode project as the primary development entry point. The root still contains release scripts, docs, website code, and local build artifacts.
 
-- `Liney/`：应用源码根目录。
-- `Liney/App/`：应用级状态与入口装配，重点看 `WorkspaceStore.swift`。
-- `Liney/Domain/`：工作区、worktree、pane layout 的领域模型。
-- `Liney/Persistence/`：工作区状态持久化与迁移。
-- `Liney/Services/Git/`：git 仓库检查、fetch、worktree 操作。
-- `Liney/Services/Process/`：子进程执行封装。
-- `Liney/Services/Terminal/`：Ghostty runtime、terminal surface、session backend。
-- `Liney/Support/`：主题、菜单、路径格式化和通用支持代码。
-- `Liney/UI/Components/`：状态栏和复用 UI 组件。
-- `Liney/UI/Sheets/`：创建 worktree、SSH、agent session 等弹窗。
-- `Liney/UI/Sidebar/`：左侧工作区树，核心文件是 `WorkspaceSidebarView.swift`。
-- `Liney/UI/Workspace/`：右侧工作区详情、split panes、terminal pane UI。
-- `Liney/Vendor/`：vendored `GhosttyKit.xcframework`。
-- `Tests/`：当前单元测试。
-- `RELEASING.md`：维护者发布说明。
-- `scripts/`：macOS app bundle / release 脚本。
+## Repository Layout
 
-## 工程与构建
+- `Liney/`: Main application source root.
+- `Liney/App/`: App assembly and high-level state orchestration. Start with `WorkspaceStore.swift`, `LineyDesktopApplication.swift`, and `WorkspaceGitHubCoordinator.swift`.
+- `Liney/Domain/`: Domain models for workspaces, pane layouts, tabs, and related state.
+- `Liney/Persistence/`: Workspace state, settings persistence, and migrations.
+- `Liney/Services/Git/`: Git repository inspection, worktree discovery, GitHub CLI integration, and metadata watching.
+- `Liney/Services/Process/`: Subprocess execution wrappers.
+- `Liney/Services/Terminal/`: Terminal sessions, Ghostty bridge code, and surface/controller lifecycle management.
+- `Liney/Services/Updates/`: Sparkle update checks and install flow entry points.
+- `Liney/Support/`: Menus, commands, path formatting, external editor support, sleep prevention, and shared UI state.
+- `Liney/UI/Sidebar/`: Left sidebar tree and bridge logic. The key file is `WorkspaceSidebarView.swift`.
+- `Liney/UI/Workspace/`: Workspace detail views, pane containers, and terminal pane UI.
+- `Liney/UI/Overview/`: Repository overview and desk views plus their view model.
+- `Liney/UI/Diff/`: Diff window state, rendering, and changed-file models.
+- `Liney/UI/Canvas/`: Global canvas-style UI.
+- `Liney/UI/Sheets/`: Sheets for creating worktrees, SSH sessions, agent sessions, settings, and related flows.
+- `Liney/UI/Components/`: Reusable UI components such as the command palette, terminal host, and toolbar icons.
+- `Liney/Vendor/`: Vendored `GhosttyKit.xcframework`. Do not modify this without explicit need.
+- `Tests/`: Unit tests covering git parsing, pane layout, terminal sessions, Ghostty input support, overview, diff, workspace tabs and settings, and related logic.
+- `docs/`: Maintainer documentation such as testing and terminal architecture notes.
+- `scripts/`: Local build, signing, release, Sparkle, and Homebrew publishing scripts.
+- `website/`: Website source, separate from the macOS app project.
+- `dist/`: Local build artifacts. Usually not edited directly.
 
-优先使用仓库根目录的 Xcode 工程：
+## Build And Test
+
+Use the root `Liney.xcodeproj` by default:
 
 ```sh
 xcodebuild \
@@ -37,29 +45,48 @@ xcodebuild \
   build
 ```
 
-补充说明：
+Run tests with:
 
-- 当前协作默认使用仓库根目录的 `Liney.xcodeproj`。
-- 发布脚本位于 `scripts/build_macos_app.sh` 和 `scripts/release_macos.sh`，它们依赖额外的发布输入和签名环境，不适合作为日常改动后的最小验证命令。
+```sh
+xcodebuild \
+  -project Liney.xcodeproj \
+  -scheme Liney \
+  -destination 'platform=macOS,arch=arm64' \
+  test
+```
 
-## 测试与验证
+Additional notes:
 
-- UI 或状态管理改动后，至少执行一次 `xcodebuild ... build`。
-- git / worktree / layout 逻辑改动时，优先查看并补充 `Tests/` 下对应单元测试。
-- 涉及 sidebar、pane 布局、worktree 操作或发版流程时，补充必要的手工 smoke test，并在结果里写清覆盖范围。
+- The current project targets are `Liney` and `LineyTests`, and the main scheme is `Liney`.
+- Dependencies are resolved through Xcode. Current Swift packages include Sparkle and Sentry.
+- Release-oriented scripts include `scripts/build_macos_app.sh`, `scripts/release_macos.sh`, and the root `deploy.sh`. They depend on signing, notarization, or release credentials and are not the default verification path for routine changes.
+- Documentation, script, or website changes do not automatically require a full app build, but command examples, paths, and references must remain valid.
 
-## 代码热点
+## Testing And Verification
 
-- `Liney/App/WorkspaceStore.swift`：大多数用户动作的入口，包含新增仓库、切换 worktree、创建 pane、刷新仓库等编排逻辑。
-- `Liney/UI/Sidebar/WorkspaceSidebarView.swift`：左侧树形列表、搜索、上下文菜单、多选与拖拽排序。
-- `Liney/UI/Workspace/WorkspaceDetailView.swift`：右侧工作区详情与 pane 容器。
-- `Liney/Services/Git/GitRepositoryService.swift`：git 状态解析与仓库检查。
-- `Liney/Services/Terminal/`：会话启动与 Ghostty bridge；改这里前先确认不会破坏现有 AppKit 集成。
+- After UI, state-management, terminal lifecycle, or update-flow changes, run at least one `xcodebuild ... build`.
+- For git, worktree, layout, diff, overview, or settings logic changes, prefer adding or updating focused unit tests under `Tests/`.
+- For terminal input, keyboard shortcut, IME, or Ghostty adapter changes, pay special attention to `Tests/LineyGhosttyInputSupportTests.swift` and `Tests/ShellSessionTests.swift`.
+- For changes affecting the sidebar, pane layout, worktree switching, command palette, diff windows, or external editor integration, include a brief manual smoke test and state what was covered.
+- For documentation-only changes, at minimum verify that referenced files still exist and command examples still match the current project layout.
 
-## 修改约定
+## Code Hotspots
 
-- 保持现有的 `AppKit 容器 + SwiftUI 内容` 模式，不要为了小改动重写整块 UI 架构。
-- sidebar 是自定义 `NSOutlineView` 桥接，改动时注意不要破坏多选、右键菜单、键盘操作和拖拽重排。
-- 终端相关代码默认依赖 vendored `libghostty`，不要引入新的备用终端实现。
-- 没有明确需求时，不要修改 `Vendor/` 下的二进制依赖。
-- 如果文档中的目录结构、命令或测试路径因代码变更失效，更新对应文档，避免继续漂移。
+- `Liney/App/WorkspaceStore.swift`: Main orchestration entry point for user actions, including repository refresh, worktree switching, and pane or tab management.
+- `Liney/UI/Sidebar/WorkspaceSidebarView.swift`: Sidebar tree, search, multi-selection, context menus, and drag reordering.
+- `Liney/UI/Workspace/WorkspaceDetailView.swift`: Main workspace detail view and pane container.
+- `Liney/Services/Git/GitRepositoryService.swift`: Git status parsing, branch information, and worktree inspection.
+- `Liney/Services/Terminal/`: Session launch, Ghostty runtime integration, and terminal surface/controller logic. Confirm AppKit integration is preserved before making changes here.
+- `Liney/UI/Overview/OverviewViewModel.swift`: Overview data shaping and derived state.
+- `Liney/UI/Diff/DiffRendering.swift`: Core diff rendering logic. Review diff-related tests when changing it.
+- `Liney/Services/Updates/AppUpdaterController.swift`: Sparkle update entry point.
+- `Liney/Support/QuickCommandSupport.swift` and `Liney/UI/Components/CommandPaletteView.swift`: Command palette and quick-command behavior.
+
+## Modification Conventions
+
+- Preserve the existing `AppKit container + SwiftUI content` architecture. Do not rewrite major UI sections for small changes.
+- The sidebar relies on a custom `NSOutlineView` bridge. Changes there must not break multi-selection, context menus, keyboard interaction, or drag reordering.
+- The terminal stack depends on the vendored Ghostty runtime and the adapters under `Liney/Services/Terminal/Ghostty/`. Do not introduce an alternate terminal implementation.
+- Unless explicitly required, do not modify binary dependencies under `Liney/Vendor/` or casually alter signing and notarization behavior in release scripts.
+- For GitHub CLI, Sparkle, Sentry, or external-editor-related work, prefer the existing service or support-layer entry points instead of scattering process execution logic into the UI layer.
+- If code changes invalidate directory descriptions, build commands, test entry points, or release paths, update `README.md`, `DEVELOP.md`, `docs/`, `RELEASING.md`, or nearby script comments so documentation does not drift.
