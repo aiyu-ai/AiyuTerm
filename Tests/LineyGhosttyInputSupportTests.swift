@@ -201,16 +201,32 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
         XCTAssertEqual(state.selectedRange, NSRange(location: 1, length: 0))
     }
 
-    func testDeleteBackwardHonorsMarkedSelectionRange() {
+    func testDeleteBackwardRemovesSingleCharacterWhenImeSelectionSpansMarkedText() {
         var state = LineyGhosttyMarkedTextState(
-            text: "nihao",
-            selectedRange: NSRange(location: 1, length: 2)
+            text: "你好",
+            selectedRange: NSRange(location: 0, length: 2)
         )
 
         state.deleteBackward()
 
-        XCTAssertEqual(state.text, "nao")
+        XCTAssertEqual(state.text, "你")
         XCTAssertEqual(state.selectedRange, NSRange(location: 1, length: 0))
+    }
+
+    func testSetMarkedTextHonorsReplacementRangeAndOffsetsSelection() {
+        var state = LineyGhosttyMarkedTextState(
+            text: "nihao",
+            selectedRange: NSRange(location: 5, length: 0)
+        )
+
+        state.setMarkedText(
+            "u",
+            selectedRange: NSRange(location: 1, length: 0),
+            replacementRange: NSRange(location: 4, length: 1)
+        )
+
+        XCTAssertEqual(state.text, "nihau")
+        XCTAssertEqual(state.selectedRange, NSRange(location: 5, length: 0))
     }
 
     func testAppKitModsReplacesDirectionalModifiersButPreservesFallbackFlags() {

@@ -1288,17 +1288,24 @@ extension LineyGhosttySurfaceView: @preconcurrency NSTextInputClient {
     }
 
     func setMarkedText(_ string: Any, selectedRange: NSRange, replacementRange: NSRange) {
-        let attributedValue: NSMutableAttributedString
+        let replacementText: String
         switch string {
         case let value as NSAttributedString:
-            attributedValue = NSMutableAttributedString(attributedString: value)
+            replacementText = value.string
         case let value as String:
-            attributedValue = NSMutableAttributedString(string: value)
+            replacementText = value
         default:
             return
         }
-        markedText = attributedValue
-        markedSelectionRange = LineyGhosttyMarkedTextState.clamp(selectedRange, textLength: markedText.length)
+
+        var state = LineyGhosttyMarkedTextState(text: markedText.string, selectedRange: markedSelectionRange)
+        state.setMarkedText(
+            replacementText,
+            selectedRange: selectedRange,
+            replacementRange: replacementRange
+        )
+        markedText = NSMutableAttributedString(string: state.text)
+        markedSelectionRange = state.selectedRange
 
         if keyTextAccumulator == nil {
             syncPreedit()
