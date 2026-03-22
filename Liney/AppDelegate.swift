@@ -19,13 +19,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         
         SentrySDK.start { options in
             options.dsn = "https://d2856035f52ef60d4ae74f88e0194793@o4510180697636864.ingest.us.sentry.io/4511085450297344"
-            options.debug = true // Enabling debug when first installing is always helpful
+//            options.debug = true // Enabling debug when first installing is always helpful
 
             // Adds IP for users.
             // For more information, visit: https://docs.sentry.io/platforms/apple/data-management/data-collected/
             options.sendDefaultPii = true
             options.enableAutoSessionTracking = true
-            options.releaseName = "liney"
+            options.releaseName = "liney-0x00"
         }
         
         Task { @MainActor in
