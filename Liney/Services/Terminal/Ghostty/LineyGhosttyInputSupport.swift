@@ -16,6 +16,13 @@ enum LineyGhosttyTextInputRouting {
         }
         return modifierFlags.intersection([.option, .command, .control]).isEmpty == false
     }
+
+    static func shouldMarkRawKeyEventAsComposing(
+        hadMarkedTextBeforeInterpretation: Bool,
+        hasMarkedTextAfterInterpretation: Bool
+    ) -> Bool {
+        hadMarkedTextBeforeInterpretation || hasMarkedTextAfterInterpretation
+    }
 }
 
 struct LineyGhosttyMarkedTextState: Equatable {
@@ -27,26 +34,39 @@ struct LineyGhosttyMarkedTextState: Equatable {
         self.selectedRange = Self.clamp(selectedRange, textLength: (text as NSString).length)
     }
 
+    mutating func setMarkedText(_ replacementText: String, selectedRange: NSRange, replacementRange: NSRange) {
+        let nsText = text as NSString
+        let resolvedReplacementRange = Self.markedReplacementRange(replacementRange, textLength: nsText.length)
+        text = nsText.replacingCharacters(in: resolvedReplacementRange, with: replacementText)
+
+        var adjustedSelection = selectedRange
+        if adjustedSelection.location != NSNotFound {
+            adjustedSelection.location += resolvedReplacementRange.location
+        }
+        self.selectedRange = Self.clamp(adjustedSelection, textLength: (text as NSString).length)
+    }
+
     mutating func deleteBackward() {
         let nsText = text as NSString
         let textLength = nsText.length
         let safeSelection = Self.clamp(selectedRange, textLength: textLength)
+        let insertionLocation = safeSelection.length > 0 ? NSMaxRange(safeSelection) : safeSelection.location
 
-        if safeSelection.length > 0 {
-            let updated = nsText.replacingCharacters(in: safeSelection, with: "")
-            text = updated
-            selectedRange = NSRange(location: safeSelection.location, length: 0)
-            return
-        }
-
-        guard safeSelection.location > 0 else {
+        guard insertionLocation > 0 else {
             selectedRange = NSRange(location: 0, length: 0)
             return
         }
 
-        let deleteRange = nsText.rangeOfComposedCharacterSequence(at: safeSelection.location - 1)
+        let deleteRange = nsText.rangeOfComposedCharacterSequence(at: insertionLocation - 1)
         text = nsText.replacingCharacters(in: deleteRange, with: "")
         selectedRange = NSRange(location: deleteRange.location, length: 0)
+    }
+
+    private static func markedReplacementRange(_ replacementRange: NSRange, textLength: Int) -> NSRange {
+        guard replacementRange.location != NSNotFound else {
+            return NSRange(location: 0, length: textLength)
+        }
+        return clamp(replacementRange, textLength: textLength)
     }
 
     static func clamp(_ range: NSRange, textLength: Int) -> NSRange {
@@ -193,13 +213,14 @@ func resolveGhosttyEquivalentKey(
 extension NSEvent {
     func ghosttyKeyEvent(
         _ action: ghostty_input_action_e,
-        translationMods: NSEvent.ModifierFlags? = nil
+        translationMods: NSEvent.ModifierFlags? = nil,
+        composing: Bool = false
     ) -> ghostty_input_key_s {
         var event = ghostty_input_key_s()
         event.action = action
         event.keycode = UInt32(keyCode)
         event.text = nil
-        event.composing = false
+        event.composing = composing
         event.mods = ghosttyMods(modifierFlags)
         event.consumed_mods = ghosttyMods((translationMods ?? modifierFlags).subtracting([.control, .command]))
         event.unshifted_codepoint = 0
