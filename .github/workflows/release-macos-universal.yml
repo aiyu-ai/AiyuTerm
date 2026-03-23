@@ -26,9 +26,6 @@ jobs:
       RELEASE_ARCHS: arm64 x86_64
       SKIP_PUSH: "1"
       SKIP_TAG: "1"
-      MACOS_CERTIFICATE_PATH: ${{ runner.temp }}/build_certificate.p12
-      MACOS_KEYCHAIN_PATH: ${{ runner.temp }}/liney-build.keychain-db
-      SPARKLE_PRIVATE_KEY_FILE: ${{ runner.temp }}/sparkle_private_key
 
     steps:
       - name: Resolve release metadata
@@ -122,6 +119,8 @@ jobs:
           MACOS_BUILD_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_BUILD_CERTIFICATE_P12_BASE64 }}
           MACOS_BUILD_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_BUILD_CERTIFICATE_PASSWORD }}
           MACOS_KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
+          MACOS_CERTIFICATE_PATH: ${{ runner.temp }}/build_certificate.p12
+          MACOS_KEYCHAIN_PATH: ${{ runner.temp }}/liney-build.keychain-db
         run: |
           set -euo pipefail
 
@@ -146,6 +145,7 @@ jobs:
         shell: bash
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+          SPARKLE_PRIVATE_KEY_FILE: ${{ runner.temp }}/sparkle_private_key
         run: |
           set -euo pipefail
 
@@ -159,6 +159,7 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          SPARKLE_PRIVATE_KEY_FILE: ${{ runner.temp }}/sparkle_private_key
           VERSION: ${{ steps.meta.outputs.version }}
           TAG: ${{ steps.meta.outputs.tag }}
         run: |
