@@ -17,17 +17,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var appSettingsObserver: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
-        
-        SentrySDK.start { options in
-            options.dsn = "https://d2856035f52ef60d4ae74f88e0194793@o4510180697636864.ingest.us.sentry.io/4511085450297344"
-//            options.debug = true // Enabling debug when first installing is always helpful
+        let releaseVersion = applicationReleaseVersion()
 
-            // Adds IP for users.
-            // For more information, visit: https://docs.sentry.io/platforms/apple/data-management/data-collected/
-            options.sendDefaultPii = true
+        SentrySDK.start { options in
+            // sentry id
+            options.dsn = "https://d2856035f52ef60d4ae74f88e0194793@o4510180697636864.ingest.us.sentry.io/4511085450297344"
+            
+            // version marker
+            options.releaseName = "liney-\(releaseVersion)"
+            print("release name : \(options.releaseName ?? "<null>")")
+            
+            // no need to debug
+            // options.debug = true // Enabling debug when first installing is always helpful
+
+            // No Pii information
+            options.sendDefaultPii = false
+            
+            // just get session
             options.enableAutoSessionTracking = true
-            options.releaseName = "liney-0x00"
+            
+            // disable hang detect now
+            options.enableAppHangTracking = false
         }
+        
+        // record app launch only
+        SentrySDK.metrics.count(key: "app.launch", value: 1)
         
         Task { @MainActor in
             let desktopApplication = LineyDesktopApplication()
@@ -270,6 +284,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         default:
             return "Version 1.0.0"
         }
+    }
+
+    private func applicationReleaseVersion() -> String {
+        let shortVersion = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if let shortVersion, !shortVersion.isEmpty {
+            return shortVersion
+        }
+
+        let buildVersion = (Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if let buildVersion, !buildVersion.isEmpty {
+            return buildVersion
+        }
+
+        return "0x00"
     }
 
     @MainActor
