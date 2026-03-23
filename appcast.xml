@@ -6,6 +6,16 @@
         <description>Signed Sparkle updates for Liney.</description>
         <language>en</language>
         <item>
+            <title>1.0.15</title>
+            <pubDate>Sun, 22 Mar 2026 21:45:43 -0700</pubDate>
+            <link>https://github.com/wuwenrui/liney</link>
+            <sparkle:fullReleaseNotesLink>https://github.com/wuwenrui/liney/releases/tag/v1.0.15</sparkle:fullReleaseNotesLink>
+            <sparkle:version>14</sparkle:version>
+            <sparkle:shortVersionString>1.0.15</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.6</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/wuwenrui/liney/releases/download/v1.0.15/Liney-1.0.15.app.zip" length="20920021" type="application/octet-stream" sparkle:edSignature="4f0xfaEtW5GLh4/JlsNGkEkYIIalBk3L+Hpk9gSBoy/yHCNe8a9GSHpyRGRgFwWtLGvY8jVKXE/28yi4kExRCQ=="/>
+        </item>
+        <item>
             <title>1.0.13</title>
             <pubDate>Sun, 22 Mar 2026 16:54:26 -0700</pubDate>
             <link>https://github.com/wuwenrui/liney</link>
@@ -94,16 +104,6 @@
             <sparkle:shortVersionString>1.0.5</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>15.6</sparkle:minimumSystemVersion>
             <enclosure url="https://github.com/wuwenrui/liney/releases/download/v1.0.5/Liney-1.0.5.app.zip" length="19880527" type="application/octet-stream" sparkle:edSignature="hBzmnT3OiCffGnpzLMKhSMsENqRFfwd3CKSz675DEdzIq0ZCzKIvgNFAieGWWCUAzmBKmb5GEbCE512CTC0SAQ=="/>
-        </item>
-        <item>
-            <title>1.0.3</title>
-            <pubDate>Sat, 21 Mar 2026 00:54:22 -0700</pubDate>
-            <link>https://github.com/wuwenrui/liney</link>
-            <sparkle:fullReleaseNotesLink>https://github.com/wuwenrui/liney/releases/tag/v1.0.3</sparkle:fullReleaseNotesLink>
-            <sparkle:version>4</sparkle:version>
-            <sparkle:shortVersionString>1.0.3</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>15.6</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/wuwenrui/liney/releases/download/v1.0.3/Liney-1.0.3.app.zip" length="19880513" type="application/octet-stream" sparkle:edSignature="2kmFCgAxEOQcZ5L41C3CDoKFzuxVkD9b+u4NNc/eK0bL0TKsXyAYPT/dp4gg3HY0LhCENsGxj8aR9HmKm9rtCw=="/>
         </item>
     </channel>
 </rss>
