@@ -185,7 +185,7 @@ void ghostty_key_encoder_setopt_from_terminal(GhosttyKeyEncoder encoder, Ghostty
  * typically don't generate escape sequences. Check the out_len parameter to
  * determine if any data was written.
  *
- * If the output buffer is too small, this function returns GHOSTTY_OUT_OF_MEMORY
+ * If the output buffer is too small, this function returns GHOSTTY_OUT_OF_SPACE
  * and out_len will contain the required buffer size. The caller can then
  * allocate a larger buffer and call the function again.
  *
@@ -194,15 +194,15 @@ void ghostty_key_encoder_setopt_from_terminal(GhosttyKeyEncoder encoder, Ghostty
  * @param out_buf Buffer to write the encoded sequence to
  * @param out_buf_size Size of the output buffer in bytes
  * @param out_len Pointer to store the number of bytes written (may be NULL)
- * @return GHOSTTY_SUCCESS on success, GHOSTTY_OUT_OF_MEMORY if buffer too small, or other error code
+ * @return GHOSTTY_SUCCESS on success, GHOSTTY_OUT_OF_SPACE if buffer too small, or other error code
  *
  * ## Example: Calculate required buffer size
  *
  * @code{.c}
- * // Query the required size with a NULL buffer (always returns OUT_OF_MEMORY)
+ * // Query the required size with a NULL buffer (always returns OUT_OF_SPACE)
  * size_t required = 0;
  * GhosttyResult result = ghostty_key_encoder_encode(encoder, event, NULL, 0, &required);
- * assert(result == GHOSTTY_OUT_OF_MEMORY);
+ * assert(result == GHOSTTY_OUT_OF_SPACE);
  * 
  * // Allocate buffer of required size
  * char *buf = malloc(required);
@@ -228,7 +228,7 @@ void ghostty_key_encoder_setopt_from_terminal(GhosttyKeyEncoder encoder, Ghostty
  * if (result == GHOSTTY_SUCCESS) {
  *   // Write the encoded sequence to the terminal
  *   write(pty_fd, buf, written);
- * } else if (result == GHOSTTY_OUT_OF_MEMORY) {
+ * } else if (result == GHOSTTY_OUT_OF_SPACE) {
  *   // Buffer too small, written contains required size
  *   char *dynamic_buf = malloc(written);
  *   result = ghostty_key_encoder_encode(encoder, event, dynamic_buf, written, &written);

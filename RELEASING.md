@@ -51,9 +51,9 @@ Optional environment:
 
 - `SIGNING_IDENTITY="Developer ID Application: Your Name (TEAMID)"`
 - `OUTPUT_DIR=/custom/output/path`
-- `RELEASE_ARCHS=arm64`
+- `RELEASE_ARCHS="arm64 x86_64"`
 
-The committed `GhosttyKit.xcframework` currently contains a macOS `arm64` slice only. Regenerate it before attempting Intel or universal release artifacts.
+The default release bundle is now a universal macOS artifact that contains both `arm64` and `x86_64` slices.
 
 ## Sign And Notarize
 
@@ -91,7 +91,7 @@ If the `liney-notarytool` profile exists in the current keychain, `scripts/sign_
 Default behavior:
 
 - bumps `MARKETING_VERSION` by patch and increments `CURRENT_PROJECT_VERSION` by 1 unless `SKIP_BUMP=1`
-- builds and signs the release DMG
+- builds and signs the universal release DMG
 - archives `Liney.app.dSYM` to `dist/dSYMs/Liney-<version>.app.dSYM`
 - packages `dist/dSYMs/Liney-<version>.app.dSYM.zip`
 - uploads `Liney.app.dSYM` to Sentry using the default target `xnu/liney`
@@ -121,5 +121,22 @@ Optional Sentry environment:
 - `SENTRY_INCLUDE_SOURCES=1` to upload source bundles together with the dSYM
 
 If you prefer the old path, `scripts/deploy.sh` remains available as a compatibility wrapper.
+
+## GitHub Actions Release Uploads
+
+The repository also includes a GitHub Actions workflow at `.github/workflows/release-macos-universal.yml` for maintainers who want GitHub to build, notarize, and upload the universal release assets directly into a GitHub release.
+
+Required secrets:
+
+- `MACOS_BUILD_CERTIFICATE_P12_BASE64`
+- `MACOS_BUILD_CERTIFICATE_PASSWORD`
+- `MACOS_KEYCHAIN_PASSWORD`
+- `MACOS_SIGNING_IDENTITY`
+- `APPLE_ID`
+- `APPLE_TEAM_ID`
+- `APPLE_APP_SPECIFIC_PASSWORD`
+- `SPARKLE_PRIVATE_KEY`
+
+The workflow is intended to publish one signed and notarized universal DMG and ZIP per release tag rather than separate Apple Silicon and Intel downloads. That keeps GitHub Releases, Sparkle metadata, and Homebrew cask references aligned to a single artifact line.
 
 For the first public release, prefer writing the GitHub release notes manually instead of relying only on generated commit summaries.

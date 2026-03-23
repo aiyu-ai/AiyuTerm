@@ -1,0 +1,166 @@
+name: Release macOS Universal
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to build, for example v1.0.16
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-macos-universal-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-upload:
+    runs-on: macos-15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ github.token }}
+      RELEASE_ARCHS: arm64 x86_64
+      SKIP_PUSH: "1"
+      SKIP_TAG: "1"
+      MACOS_CERTIFICATE_PATH: ${{ runner.temp }}/build_certificate.p12
+      MACOS_KEYCHAIN_PATH: ${{ runner.temp }}/liney-build.keychain-db
+      SPARKLE_PRIVATE_KEY_FILE: ${{ runner.temp }}/sparkle_private_key
+
+    steps:
+      - name: Resolve release metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+            tag="${{ github.event.release.tag_name }}"
+          else
+            tag="${{ inputs.tag }}"
+          fi
+
+          if [[ -z "$tag" ]]; then
+            echo "Release tag is required." >&2
+            exit 1
+          fi
+
+          version="${tag#v}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Validate required secrets
+        shell: bash
+        env:
+          MACOS_BUILD_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_BUILD_CERTIFICATE_P12_BASE64 }}
+          MACOS_BUILD_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_BUILD_CERTIFICATE_PASSWORD }}
+          MACOS_KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
+          MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+
+          missing=()
+          for key in \
+            MACOS_BUILD_CERTIFICATE_P12_BASE64 \
+            MACOS_BUILD_CERTIFICATE_PASSWORD \
+            MACOS_KEYCHAIN_PASSWORD \
+            MACOS_SIGNING_IDENTITY \
+            APPLE_ID \
+            APPLE_TEAM_ID \
+            APPLE_APP_SPECIFIC_PASSWORD \
+            SPARKLE_PRIVATE_KEY; do
+            if [[ -z "${!key}" ]]; then
+              missing+=("$key")
+            fi
+          done
+
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Missing required secret(s): %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ steps.meta.outputs.tag }}
+
+      - name: Ensure release tag matches project version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          project_version="$(
+            xcodebuild \
+              -project Liney.xcodeproj \
+              -scheme Liney \
+              -configuration Release \
+              -destination 'platform=macOS' \
+              -showBuildSettings |
+            awk -F ' = ' '$1 ~ /^[[:space:]]*MARKETING_VERSION$/ { print $2; exit }'
+          )"
+
+          if [[ "$project_version" != "${{ steps.meta.outputs.version }}" ]]; then
+            echo "Release tag ${{ steps.meta.outputs.tag }} does not match MARKETING_VERSION $project_version" >&2
+            exit 1
+          fi
+
+      - name: Install Metal toolchain
+        shell: bash
+        run: xcodebuild -downloadComponent MetalToolchain
+
+      - name: Import signing certificate
+        shell: bash
+        env:
+          MACOS_BUILD_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_BUILD_CERTIFICATE_P12_BASE64 }}
+          MACOS_BUILD_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_BUILD_CERTIFICATE_PASSWORD }}
+          MACOS_KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          echo "$MACOS_BUILD_CERTIFICATE_P12_BASE64" | base64 --decode > "$MACOS_CERTIFICATE_PATH"
+
+          security create-keychain -p "$MACOS_KEYCHAIN_PASSWORD" "$MACOS_KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$MACOS_KEYCHAIN_PATH"
+          security unlock-keychain -p "$MACOS_KEYCHAIN_PASSWORD" "$MACOS_KEYCHAIN_PATH"
+          security import "$MACOS_CERTIFICATE_PATH" \
+            -P "$MACOS_BUILD_CERTIFICATE_PASSWORD" \
+            -A \
+            -f pkcs12 \
+            -k "$MACOS_KEYCHAIN_PATH"
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s \
+            -k "$MACOS_KEYCHAIN_PASSWORD" \
+            "$MACOS_KEYCHAIN_PATH"
+          security list-keychains -d user -s "$MACOS_KEYCHAIN_PATH" login.keychain-db
+
+      - name: Write Sparkle private key
+        shell: bash
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+
+          printf '%s' "$SPARKLE_PRIVATE_KEY" > "$SPARKLE_PRIVATE_KEY_FILE"
+          chmod 600 "$SPARKLE_PRIVATE_KEY_FILE"
+
+      - name: Build, notarize, and upload universal assets
+        shell: bash
+        env:
+          SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          scripts/release_macos.sh
