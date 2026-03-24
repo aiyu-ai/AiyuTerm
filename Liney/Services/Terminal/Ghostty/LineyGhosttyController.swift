@@ -165,8 +165,7 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
             return true
 
         case GHOSTTY_ACTION_COMMAND_FINISHED:
-            let rawExitCode = action.action.command_finished.exit_code
-            handleManagedProcessExit(exitCode: rawExitCode >= 0 ? Int32(rawExitCode) : nil)
+            handleCommandFinished(action.action.command_finished)
             return true
 
         case GHOSTTY_ACTION_DESKTOP_NOTIFICATION:
@@ -255,6 +254,18 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
         DispatchQueue.main.async { [weak self] in
             self?.onProcessExit?(exitCode)
         }
+    }
+
+    func handleSurfaceClose(processAlive: Bool) {
+        guard lineyGhosttyShouldReportProcessExitForSurfaceClose(processAlive: processAlive) else { return }
+        handleManagedProcessExit(exitCode: nil)
+    }
+
+    func handleCommandFinished(_ action: ghostty_action_command_finished_s) {
+        // Ghostty reports shell command completion separately from shell process
+        // exit. Treating this as a process exit causes normal commands such as
+        // `clear` to close panes or tabs unexpectedly.
+        _ = lineyGhosttyShouldReportProcessExitForCommandFinished(action)
     }
 
     func completeClipboardRequest(_ text: String, state: UnsafeMutableRawPointer?, confirmed: Bool) {
@@ -387,6 +398,16 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
             self.onStatusChange?(terminalView.statusSnapshot)
         }
     }
+}
+
+func lineyGhosttyShouldReportProcessExitForSurfaceClose(processAlive: Bool) -> Bool {
+    !processAlive
+}
+
+func lineyGhosttyShouldReportProcessExitForCommandFinished(
+    _: ghostty_action_command_finished_s
+) -> Bool {
+    false
 }
 
 private struct LineyGhosttyScrollbarState {

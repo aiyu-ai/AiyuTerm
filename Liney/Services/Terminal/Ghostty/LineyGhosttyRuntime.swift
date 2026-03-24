@@ -238,12 +238,12 @@ final class LineyGhosttyRuntime: NSObject {
         lineyGhosttyWriteClipboard(items, to: pasteboard)
     }
 
-    nonisolated fileprivate static func closeSurface(_ userdata: UnsafeMutableRawPointer?) {
+    nonisolated fileprivate static func closeSurface(_ userdata: UnsafeMutableRawPointer?, processAlive: Bool) {
         let controllerAddress = pointerAddress(userdata)
         DispatchQueue.main.async {
             MainActor.assumeIsolated {
                 guard let controller = controller(fromAddress: controllerAddress) else { return }
-                controller.handleManagedProcessExit(exitCode: nil)
+                controller.handleSurfaceClose(processAlive: processAlive)
             }
         }
     }
@@ -331,6 +331,6 @@ nonisolated private func lineyGhosttyWriteClipboardCallback(
     LineyGhosttyRuntime.writeClipboard(userdata, location: location, content: content, count: count, confirm: confirm)
 }
 
-nonisolated private func lineyGhosttyCloseSurfaceCallback(_ userdata: UnsafeMutableRawPointer?, _: Bool) {
-    LineyGhosttyRuntime.closeSurface(userdata)
+nonisolated private func lineyGhosttyCloseSurfaceCallback(_ userdata: UnsafeMutableRawPointer?, processAlive: Bool) {
+    LineyGhosttyRuntime.closeSurface(userdata, processAlive: processAlive)
 }
