@@ -48,7 +48,6 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
     }
 
     func beginSearch(initialText: String?) {
-        focus()
         _ = terminalView.performBindingAction("start_search")
         if let initialText, !initialText.isEmpty {
             terminalView.insertTerminalText(initialText)
@@ -56,7 +55,6 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
     }
 
     func updateSearch(_ text: String) {
-        focus()
         _ = terminalView.performBindingAction("end_search")
         _ = terminalView.performBindingAction("start_search")
         if !text.isEmpty {
@@ -65,17 +63,14 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
     }
 
     func searchNext() {
-        focus()
         _ = terminalView.performBindingAction("search:next")
     }
 
     func searchPrevious() {
-        focus()
         _ = terminalView.performBindingAction("search:previous")
     }
 
     func endSearch() {
-        focus()
         _ = terminalView.performBindingAction("end_search")
     }
 
