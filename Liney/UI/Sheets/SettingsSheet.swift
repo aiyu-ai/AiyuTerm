@@ -132,10 +132,8 @@ struct SettingsSheet: View {
             }
         }
         .frame(width: 980, height: 720)
-        .task {
-            appSettings = store.appSettings
-            selectedWorkspaceID = request.workspaceID ?? store.selectedWorkspace?.id
-            loadWorkspaceSettings()
+        .task(id: request.id) {
+            reloadFromStore()
         }
     }
 
@@ -655,6 +653,12 @@ struct SettingsSheet: View {
         } else {
             workspaceSettings = WorkspaceSettings()
         }
+    }
+
+    private func reloadFromStore() {
+        appSettings = store.appSettings
+        selectedWorkspaceID = request.workspaceID ?? store.selectedWorkspace?.id
+        loadWorkspaceSettings()
     }
 
     private func save() {

@@ -30,6 +30,25 @@ final class QuickCommandSupportTests: XCTestCase {
         )
     }
 
+    func testSettingsEncodingPreservesHotKeyWindowFields() throws {
+        let settings = AppSettings(
+            hotKeyWindowEnabled: true,
+            hotKeyWindowShortcut: StoredShortcut(key: "k", command: true, shift: true, option: false, control: false)
+        )
+
+        let data = try JSONEncoder().encode(settings)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+
+        XCTAssertEqual(object["hotKeyWindowEnabled"] as? Bool, true)
+
+        let shortcut = try XCTUnwrap(object["hotKeyWindowShortcut"] as? [String: Any])
+        XCTAssertEqual(shortcut["key"] as? String, "k")
+        XCTAssertEqual(shortcut["command"] as? Bool, true)
+        XCTAssertEqual(shortcut["shift"] as? Bool, true)
+        XCTAssertEqual(shortcut["option"] as? Bool, false)
+        XCTAssertEqual(shortcut["control"] as? Bool, false)
+    }
+
     func testQuickCommandNormalizationTrimsAndDropsDuplicates() {
         let commands = [
             QuickCommandPreset(
