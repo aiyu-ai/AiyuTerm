@@ -71,6 +71,7 @@ final class ApplicationMenuController: NSObject {
 
         let fileMenu = NSMenu(title: "File")
         fileMenuItem.submenu = fileMenu
+        addShortcutItem(title: "New Window", shortcutAction: .newWindow, to: fileMenu, target: target)
         addShortcutItem(title: "New Tab", shortcutAction: .newTab, to: fileMenu, target: target)
         fileMenu.addItem(.separator())
         addShortcutItem(title: "Split Right", shortcutAction: .splitRight, to: fileMenu, target: target)

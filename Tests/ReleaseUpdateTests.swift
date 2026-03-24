@@ -9,6 +9,22 @@ import XCTest
 @testable import Liney
 
 final class ReleaseUpdateTests: XCTestCase {
+    func testNewWindowShortcutDefaultsToCommandN() {
+        XCTAssertEqual(LineyShortcutAction.newWindow.category, .window)
+        XCTAssertEqual(LineyShortcutAction.newWindow.title, "New Window")
+        XCTAssertEqual(
+            LineyShortcutAction.newWindow.defaultShortcut,
+            StoredShortcut(key: "n", command: true, shift: false, option: false, control: false)
+        )
+    }
+
+    func testWindowLifecycleHelpersRespectHotKeyAndVisibility() {
+        XCTAssertTrue(lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: false))
+        XCTAssertFalse(lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: true))
+        XCTAssertTrue(lineyShouldReopenMainWindow(hasVisibleWindows: false))
+        XCTAssertFalse(lineyShouldReopenMainWindow(hasVisibleWindows: true))
+    }
+
     func testAppUpdaterDefaultsToStableAppcastFeed() {
         XCTAssertEqual(
             AppUpdaterController.defaultFeedURLString,
