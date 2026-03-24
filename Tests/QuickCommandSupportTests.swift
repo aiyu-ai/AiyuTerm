@@ -5,6 +5,7 @@
 //  Author: wuwenrui
 //
 
+import Carbon
 import XCTest
 @testable import Liney
 
@@ -14,6 +15,11 @@ final class QuickCommandSupportTests: XCTestCase {
 
         XCTAssertEqual(settings.quickCommandPresets, QuickCommandCatalog.defaultCommands)
         XCTAssertTrue(settings.quickCommandRecentIDs.isEmpty)
+        XCTAssertFalse(settings.hotKeyWindowEnabled)
+        XCTAssertEqual(
+            settings.hotKeyWindowShortcut,
+            StoredShortcut(key: " ", command: false, shift: false, option: true, control: false)
+        )
         XCTAssertEqual(
             QuickCommandCatalog.defaultCommands.first(where: { $0.id == "codex-resume" })?.command,
             "codex resume"
@@ -107,5 +113,12 @@ final class QuickCommandSupportTests: XCTestCase {
             LineyKeyboardShortcuts.displayString(for: .selectTabByNumber, in: settings),
             "⌘1…9"
         )
+    }
+
+    func testStoredShortcutComputesCarbonHotKeyValues() {
+        let shortcut = StoredShortcut(key: " ", command: false, shift: true, option: true, control: false)
+
+        XCTAssertEqual(shortcut.carbonKeyCode, UInt32(kVK_Space))
+        XCTAssertEqual(shortcut.carbonModifierFlags, UInt32(optionKey | shiftKey))
     }
 }

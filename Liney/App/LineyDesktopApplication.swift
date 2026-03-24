@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import Carbon
 import SwiftUI
 
 @MainActor
@@ -14,6 +15,8 @@ public final class LineyDesktopApplication: NSObject {
 
     private let store = WorkspaceStore()
     private var windowController: NSWindowController?
+    private var mainWindowBaseLevel: NSWindow.Level = .normal
+    private var mainWindowBaseCollectionBehavior: NSWindow.CollectionBehavior = []
 
     public override init() {
         super.init()
@@ -45,12 +48,15 @@ public final class LineyDesktopApplication: NSObject {
             window.tabbingMode = .preferred
             window.tabbingIdentifier = Self.windowTabbingIdentifier
             window.isMovableByWindowBackground = false
+            mainWindowBaseLevel = window.level
+            mainWindowBaseCollectionBehavior = window.collectionBehavior
 
             let controller = NSWindowController(window: window)
             controller.shouldCascadeWindows = true
             windowController = controller
         }
 
+        applyHotKeyWindowSettings(store.appSettings)
         windowController?.showWindow(nil)
         windowController?.window?.makeKeyAndOrderFront(nil)
         NSApp.activate()
@@ -77,6 +83,7 @@ public final class LineyDesktopApplication: NSObject {
     }
 
     public func shutdown() {
+        LineyGlobalHotKeyMonitor.shared.unregister()
         store.stopSleepPrevention()
     }
 
@@ -197,5 +204,100 @@ public final class LineyDesktopApplication: NSObject {
 
     static var sharedWindowTabbingIdentifier: String {
         windowTabbingIdentifier
+    }
+
+    func updateHotKeyWindowSettings(_ settings: AppSettings) {
+        applyHotKeyWindowSettings(settings)
+    }
+
+    private func applyHotKeyWindowSettings(_ settings: AppSettings) {
+        guard let window = windowController?.window else { return }
+
+        if settings.hotKeyWindowEnabled {
+            window.level = .floating
+            window.collectionBehavior = mainWindowBaseCollectionBehavior.union([.moveToActiveSpace, .fullScreenAuxiliary])
+            LineyGlobalHotKeyMonitor.shared.register(
+                shortcut: settings.hotKeyWindowShortcut,
+                action: { [weak self] in
+                    self?.toggleHotKeyWindow()
+                }
+            )
+        } else {
+            window.level = mainWindowBaseLevel
+            window.collectionBehavior = mainWindowBaseCollectionBehavior
+            LineyGlobalHotKeyMonitor.shared.unregister()
+        }
+    }
+
+    private func toggleHotKeyWindow() {
+        guard let window = windowController?.window else { return }
+
+        if window.isVisible {
+            window.orderOut(nil)
+            return
+        }
+
+        if window.isMiniaturized {
+            window.deminiaturize(nil)
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        windowController?.showWindow(nil)
+        window.makeKeyAndOrderFront(nil)
+    }
+}
+
+@MainActor
+private final class LineyGlobalHotKeyMonitor {
+    static let shared = LineyGlobalHotKeyMonitor()
+
+    private var hotKeyRef: EventHotKeyRef?
+    private var eventHandlerRef: EventHandlerRef?
+    private var action: (() -> Void)?
+
+    private init() {
+        installEventHandlerIfNeeded()
+    }
+
+    func register(shortcut: StoredShortcut, action: @escaping () -> Void) {
+        unregister()
+        self.action = action
+        installEventHandlerIfNeeded()
+
+        guard let keyCode = shortcut.carbonKeyCode else { return }
+        var hotKeyID = EventHotKeyID(signature: OSType(0x4C4E5959), id: 1)
+        RegisterEventHotKey(
+            keyCode,
+            shortcut.carbonModifierFlags,
+            hotKeyID,
+            GetApplicationEventTarget(),
+            0,
+            &hotKeyRef
+        )
+    }
+
+    func unregister() {
+        if let hotKeyRef {
+            UnregisterEventHotKey(hotKeyRef)
+            self.hotKeyRef = nil
+        }
+        action = nil
+    }
+
+    private func installEventHandlerIfNeeded() {
+        guard eventHandlerRef == nil else { return }
+        var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+        InstallEventHandler(
+            GetApplicationEventTarget(),
+            { _, _, _ in
+                Task { @MainActor in
+                    LineyGlobalHotKeyMonitor.shared.action?()
+                }
+                return noErr
+            },
+            1,
+            &eventType,
+            nil,
+            &eventHandlerRef
+        )
     }
 }

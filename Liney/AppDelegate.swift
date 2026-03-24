@@ -58,6 +58,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 }
                 Task { @MainActor in
                     self.applicationMenuController.applySettings(settings)
+                    self.desktopApplication?.updateHotKeyWindowSettings(settings)
                 }
             }
             desktopApplication.launch()
