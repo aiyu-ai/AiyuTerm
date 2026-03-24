@@ -113,13 +113,7 @@ struct DiffWindowContentView: View {
             } else if let document = state.document {
                 VStack(spacing: 0) {
                     DiffDocumentHeader(file: document.file)
-                    DiffDocumentSummary(document: document)
-
-                    if document.isPatchOnly {
-                        DiffRawPatchDocumentView(text: document.unifiedPatch)
-                    } else {
-                        DiffYiTongDocumentView(document: document, diffStyle: diffStyle)
-                    }
+                    DiffYiTongDocumentView(document: document, diffStyle: diffStyle)
                 }
             } else if state.isLoadingFiles {
                 ProgressView()
@@ -230,29 +224,6 @@ private struct DiffDocumentHeader: View {
     }
 }
 
-private struct DiffDocumentSummary: View {
-    let document: DiffFileDocument
-
-    var body: some View {
-        HStack(spacing: 10) {
-            DiffSummaryBadge(label: "+\(document.renderedDiff.addedLineCount)", tint: LineyTheme.success)
-            DiffSummaryBadge(label: "-\(document.renderedDiff.removedLineCount)", tint: LineyTheme.danger)
-            if document.isPatchOnly {
-                DiffSummaryBadge(label: "Patch Only", tint: LineyTheme.warning)
-            }
-            Spacer()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(LineyTheme.panelBackground)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(LineyTheme.border)
-                .frame(height: 1)
-        }
-    }
-}
-
 private struct DiffYiTongDocumentView: View {
     let document: DiffFileDocument
     let diffStyle: DiffPresentationStyle
@@ -267,21 +238,6 @@ private struct DiffYiTongDocumentView: View {
     }
 
     private var yiTongDocument: DiffDocument {
-        if document.supportsFullFileExpansion {
-            return DiffDocument(
-                files: [
-                    DiffFile(
-                        oldPath: document.file.oldPath,
-                        newPath: document.file.newPath,
-                        oldContents: document.oldContents,
-                        newContents: document.newContents
-                    ),
-                ],
-                title: document.file.displayPath,
-                fallbackPatch: document.unifiedPatch.nilIfEmpty
-            )
-        }
-
         return DiffDocument(
             patch: document.unifiedPatch,
             title: document.file.displayPath
@@ -300,41 +256,6 @@ private struct DiffYiTongDocumentView: View {
             inlineChangeStyle: .wordAlt,
             allowsSelection: true
         )
-    }
-}
-
-private struct DiffRawPatchDocumentView: View {
-    let text: String
-
-    var body: some View {
-        ScrollView([.vertical, .horizontal]) {
-            Text(text.isEmpty ? "No patch available." : text)
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
-                .foregroundStyle(LineyTheme.secondaryText)
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(14)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(LineyTheme.canvasBackground)
-    }
-}
-
-private struct DiffSummaryBadge: View {
-    let label: String
-    let tint: Color
-
-    var body: some View {
-        Text(label)
-            .font(.system(size: 10, weight: .semibold))
-            .foregroundStyle(tint)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(tint.opacity(0.12), in: Capsule())
-            .overlay(
-                Capsule()
-                    .stroke(tint.opacity(0.22), lineWidth: 1)
-            )
     }
 }
 
