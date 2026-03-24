@@ -151,14 +151,24 @@ actor GitRepositoryService {
             return result.stdout
         }
 
-        let normalizedError = result.stderr.lowercased()
-        if normalizedError.contains("exists on disk, but not in 'head'") ||
-            normalizedError.contains("does not exist in 'head'") ||
-            normalizedError.contains("path '\(path.lowercased())' does not exist in 'head'") {
+        if Self.isMissingPathError(result.stderr, path: path) {
             return nil
         }
 
         throw GitServiceError.commandFailed(result.stderr.nonEmptyOrFallback("Unable to load \(path) from HEAD."))
+    }
+
+    func fileSizeAtHEAD(_ path: String, in repositoryPath: String) async throws -> Int? {
+        let result = try await git(arguments: ["cat-file", "-s", "HEAD:\(path)"], currentDirectory: repositoryPath)
+        if result.exitCode == 0 {
+            return Int(result.stdout.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+
+        if Self.isMissingPathError(result.stderr, path: path) {
+            return nil
+        }
+
+        throw GitServiceError.commandFailed(result.stderr.nonEmptyOrFallback("Unable to read size for \(path) at HEAD."))
     }
 
     func diffPatch(for repositoryPath: String, filePath: String) async throws -> String {
@@ -304,5 +314,14 @@ actor GitRepositoryService {
             .compactMap { Int($0) }
         guard components.count >= 2 else { return (0, 0) }
         return (components[0], components[1])
+    }
+
+    nonisolated private static func isMissingPathError(_ stderr: String, path: String) -> Bool {
+        let normalizedError = stderr.lowercased()
+        return normalizedError.contains("exists on disk, but not in 'head'") ||
+            normalizedError.contains("does not exist in 'head'") ||
+            normalizedError.contains("path '\(path.lowercased())' does not exist in 'head'") ||
+            normalizedError.contains("fatal: path '\(path.lowercased())' exists on disk, but not in 'head'") ||
+            normalizedError.contains("fatal: path '\(path.lowercased())' does not exist")
     }
 }

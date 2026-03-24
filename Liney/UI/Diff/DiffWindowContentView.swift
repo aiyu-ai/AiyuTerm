@@ -33,7 +33,7 @@ struct DiffWindowContentView: View {
     }
 
     private var showsFullFile: Bool {
-        contentVisibility == .fullFile
+        contentVisibility == .fullFile && (state.document?.supportsFullFileExpansion ?? false)
     }
 
     init(state: DiffWindowState) {
@@ -88,10 +88,10 @@ struct DiffWindowContentView: View {
                 } label: {
                     Image(systemName: showsFullFile ? "rectangle.compress.vertical" : "rectangle.expand.vertical")
                 }
-                .disabled(state.document?.isPatchOnly == true)
+                .disabled(!(state.document?.supportsFullFileExpansion ?? false))
                 .help(
-                    state.document?.isPatchOnly == true
-                        ? "Raw patch preview does not support full-file expansion"
+                    state.document?.supportsFullFileExpansion != true
+                        ? "Patch-based diff does not support full-file expansion"
                         : (showsFullFile ? "Show Diff Hunks" : "Show Full File")
                 )
             }

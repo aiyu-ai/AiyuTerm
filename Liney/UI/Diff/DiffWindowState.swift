@@ -15,6 +15,7 @@ struct DiffFileDocument: Sendable {
     let unifiedPatch: String
     let renderedDiff: StructuredDiffDocument
     let isPatchOnly: Bool
+    let supportsFullFileExpansion: Bool
 }
 
 enum DiffDiagnostics {
@@ -55,6 +56,11 @@ enum DiffDiagnostics {
 @MainActor
 final class DiffWindowState: ObservableObject {
     nonisolated private static let documentLoadTimeoutNanoseconds: UInt64 = 4_000_000_000
+    nonisolated private static let patchPreferredPatchByteThreshold = 128 * 1_024
+    nonisolated private static let patchPreferredFileByteThreshold = 256 * 1_024
+    nonisolated private static let patchPreferredMaxHunkSpan = 400
+    nonisolated private static let patchPreferredTotalHunkSpan = 800
+    nonisolated private static let patchPreferredTouchedLineThreshold = 2_000
 
     @Published var worktreePath: String?
     @Published var branchName: String = ""
@@ -203,6 +209,32 @@ final class DiffWindowState: ObservableObject {
     nonisolated private static func loadDocument(for file: DiffChangedFile, worktreePath: String) async throws -> DiffFileDocument {
         let gitRepositoryService = GitRepositoryService()
         let start = DiffDiagnostics.now()
+        let preloadedUnifiedPatch = try await preloadUnifiedPatch(for: file, worktreePath: worktreePath)
+
+        if let preloadedUnifiedPatch,
+           let patchRenderedDiff = DiffRenderingEngine.renderPatch(preloadedUnifiedPatch, debugLabel: file.displayPath) {
+            async let headFileSize = estimatedHeadFileSize(for: file, worktreePath: worktreePath)
+            async let worktreeFileSize = estimatedWorktreeFileSize(for: file, worktreePath: worktreePath)
+            let patchAnalysis = DiffRenderingEngine.analyzePatch(preloadedUnifiedPatch)
+            let preferenceReasons = patchRenderingPreferenceReasons(
+                analysis: patchAnalysis,
+                patchByteCount: preloadedUnifiedPatch.utf8.count,
+                estimatedOldFileSize: await headFileSize,
+                estimatedNewFileSize: await worktreeFileSize
+            )
+
+            if !preferenceReasons.isEmpty {
+                DiffDiagnostics.log(
+                    "Prefer patch rendering for \(file.displayPath): \(preferenceReasons.joined(separator: ", "))"
+                )
+                return makeStructuredPatchDocument(
+                    file: file,
+                    unifiedPatch: preloadedUnifiedPatch,
+                    renderedDiff: patchRenderedDiff
+                )
+            }
+        }
+
         let oldContents: String
         let newContents: String
 
@@ -230,7 +262,13 @@ final class DiffWindowState: ObservableObject {
             newContents = Self.readFile(at: URL(fileURLWithPath: worktreePath).appendingPathComponent(newPath))
         }
 
-        let unifiedPatch = try await loadUnifiedPatch(for: file, worktreePath: worktreePath, oldContents: oldContents, newContents: newContents)
+        let unifiedPatch = try await loadUnifiedPatch(
+            for: file,
+            worktreePath: worktreePath,
+            oldContents: oldContents,
+            newContents: newContents,
+            preloadedPatch: preloadedUnifiedPatch
+        )
         let renderStart = DiffDiagnostics.now()
         let renderResult = DiffRenderingEngine.render(old: oldContents, new: newContents, debugLabel: file.displayPath)
         DiffDiagnostics.log(
@@ -285,8 +323,13 @@ final class DiffWindowState: ObservableObject {
         for file: DiffChangedFile,
         worktreePath: String,
         oldContents: String,
-        newContents: String
+        newContents: String,
+        preloadedPatch: String? = nil
     ) async throws -> String {
+        if let preloadedPatch {
+            return preloadedPatch
+        }
+
         let gitRepositoryService = GitRepositoryService()
         if file.status == .added, file.oldPath == nil {
             DiffDiagnostics.log("Using synthetic patch for added file \(file.displayPath)")
@@ -352,21 +395,15 @@ final class DiffWindowState: ObservableObject {
                 newContents: newContents,
                 unifiedPatch: unifiedPatch,
                 renderedDiff: renderedDiff,
-                isPatchOnly: false
+                isPatchOnly: false,
+                supportsFullFileExpansion: true
             )
         case .requiresPatchFallback(let reason):
             if let renderedDiff = DiffRenderingEngine.renderPatch(unifiedPatch, debugLabel: file.displayPath) {
                 DiffDiagnostics.log(
                     "Structured diff switched to patch hunks for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(renderElapsedMilliseconds)): \(reason)"
                 )
-                return DiffFileDocument(
-                    file: file,
-                    oldContents: oldContents,
-                    newContents: newContents,
-                    unifiedPatch: unifiedPatch,
-                    renderedDiff: renderedDiff,
-                    isPatchOnly: false
-                )
+                return makeStructuredPatchDocument(file: file, unifiedPatch: unifiedPatch, renderedDiff: renderedDiff)
             } else {
                 DiffDiagnostics.log(
                     "Structured diff switched to patch-only for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(renderElapsedMilliseconds)): \(reason)"
@@ -398,7 +435,24 @@ final class DiffWindowState: ObservableObject {
             newContents: "",
             unifiedPatch: annotatedPatch,
             renderedDiff: .empty(),
-            isPatchOnly: true
+            isPatchOnly: true,
+            supportsFullFileExpansion: false
+        )
+    }
+
+    nonisolated private static func makeStructuredPatchDocument(
+        file: DiffChangedFile,
+        unifiedPatch: String,
+        renderedDiff: StructuredDiffDocument
+    ) -> DiffFileDocument {
+        DiffFileDocument(
+            file: file,
+            oldContents: "",
+            newContents: "",
+            unifiedPatch: unifiedPatch,
+            renderedDiff: renderedDiff,
+            isPatchOnly: false,
+            supportsFullFileExpansion: false
         )
     }
 
@@ -468,5 +522,76 @@ final class DiffWindowState: ObservableObject {
 
     nonisolated private static func lineCount(in text: String) -> Int {
         DiffDiagnostics.lineCount(in: text)
+    }
+
+    nonisolated private static func preloadUnifiedPatch(for file: DiffChangedFile, worktreePath: String) async throws -> String? {
+        guard !(file.status == .added && file.oldPath == nil) else {
+            return nil
+        }
+
+        let gitRepositoryService = GitRepositoryService()
+        let diffPath = file.newPath ?? file.oldPath ?? file.displayPath
+        let start = DiffDiagnostics.now()
+        DiffDiagnostics.log("Preloading git patch for \(diffPath)")
+        let patch = try await gitRepositoryService.diffPatch(for: worktreePath, filePath: diffPath)
+        DiffDiagnostics.log(
+            "Preloaded git patch for \(diffPath) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))) [\(patch.utf8.count)B]"
+        )
+        return patch.nilIfEmpty
+    }
+
+    nonisolated private static func estimatedHeadFileSize(for file: DiffChangedFile, worktreePath: String) async -> Int? {
+        guard let path = file.oldPath ?? file.newPath else {
+            return nil
+        }
+        let gitRepositoryService = GitRepositoryService()
+        return try? await gitRepositoryService.fileSizeAtHEAD(path, in: worktreePath)
+    }
+
+    nonisolated private static func estimatedWorktreeFileSize(for file: DiffChangedFile, worktreePath: String) async -> Int? {
+        guard let path = file.newPath else {
+            return nil
+        }
+        return fileSize(at: URL(fileURLWithPath: worktreePath).appendingPathComponent(path))
+    }
+
+    nonisolated static func patchRenderingPreferenceReasons(
+        analysis: DiffPatchAnalysis,
+        patchByteCount: Int,
+        estimatedOldFileSize: Int?,
+        estimatedNewFileSize: Int?
+    ) -> [String] {
+        var reasons: [String] = []
+
+        if patchByteCount >= patchPreferredPatchByteThreshold {
+            reasons.append("patch \(patchByteCount)B >= \(patchPreferredPatchByteThreshold)B")
+        }
+
+        let largestFileSize = max(estimatedOldFileSize ?? 0, estimatedNewFileSize ?? 0)
+        if largestFileSize >= patchPreferredFileByteThreshold {
+            reasons.append("file \(largestFileSize)B >= \(patchPreferredFileByteThreshold)B")
+        }
+
+        if analysis.maxSpan >= patchPreferredMaxHunkSpan {
+            reasons.append("max hunk span \(analysis.maxSpan) >= \(patchPreferredMaxHunkSpan)")
+        }
+
+        if analysis.totalSpan >= patchPreferredTotalHunkSpan {
+            reasons.append("total hunk span \(analysis.totalSpan) >= \(patchPreferredTotalHunkSpan)")
+        }
+
+        let maxTouchedLine = max(analysis.maxTouchedOldLine, analysis.maxTouchedNewLine)
+        if maxTouchedLine >= patchPreferredTouchedLineThreshold {
+            reasons.append("touched line \(maxTouchedLine) >= \(patchPreferredTouchedLineThreshold)")
+        }
+
+        return reasons
+    }
+
+    nonisolated private static func fileSize(at url: URL) -> Int? {
+        guard let values = try? url.resourceValues(forKeys: [.fileSizeKey]) else {
+            return nil
+        }
+        return values.fileSize
     }
 }
