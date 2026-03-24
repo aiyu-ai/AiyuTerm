@@ -227,6 +227,38 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
         XCTAssertNil(lineyTextFinderAction(for: NSObject()))
     }
 
+    func testGhosttySearchBindingActionUsesSearchPrefix() {
+        XCTAssertEqual(
+            lineyGhosttySearchBindingAction(for: "needle"),
+            "search:needle"
+        )
+    }
+
+    func testGhosttySearchBindingActionPreservesLiteralQueryText() {
+        XCTAssertEqual(
+            lineyGhosttySearchBindingAction(for: "error: timeout /tmp/a b"),
+            "search:error: timeout /tmp/a b"
+        )
+    }
+
+    func testGhosttySearchBindingActionAllowsEmptyQuery() {
+        XCTAssertEqual(
+            lineyGhosttySearchBindingAction(for: ""),
+            "search:"
+        )
+    }
+
+    func testGhosttySearchNavigationBindingActionUsesNavigateSearchAction() {
+        XCTAssertEqual(
+            lineyGhosttySearchNavigationBindingAction(.next),
+            "navigate_search:next"
+        )
+        XCTAssertEqual(
+            lineyGhosttySearchNavigationBindingAction(.previous),
+            "navigate_search:previous"
+        )
+    }
+
     func testTerminalDropTextQuotesFilePathsForShells() {
         let fileURLs = [
             URL(fileURLWithPath: "/tmp/liney screenshot.png"),

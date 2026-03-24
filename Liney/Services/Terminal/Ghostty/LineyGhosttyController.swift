@@ -48,26 +48,24 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
     }
 
     func beginSearch(initialText: String?) {
-        _ = terminalView.performBindingAction("start_search")
         if let initialText, !initialText.isEmpty {
-            terminalView.insertTerminalText(initialText)
+            _ = terminalView.performBindingAction(lineyGhosttySearchBindingAction(for: initialText))
+            return
         }
+
+        _ = terminalView.performBindingAction("start_search")
     }
 
     func updateSearch(_ text: String) {
-        _ = terminalView.performBindingAction("end_search")
-        _ = terminalView.performBindingAction("start_search")
-        if !text.isEmpty {
-            terminalView.insertTerminalText(text)
-        }
+        _ = terminalView.performBindingAction(lineyGhosttySearchBindingAction(for: text))
     }
 
     func searchNext() {
-        _ = terminalView.performBindingAction("search:next")
+        _ = terminalView.performBindingAction(lineyGhosttySearchNavigationBindingAction(.next))
     }
 
     func searchPrevious() {
-        _ = terminalView.performBindingAction("search:previous")
+        _ = terminalView.performBindingAction(lineyGhosttySearchNavigationBindingAction(.previous))
     }
 
     func endSearch() {
@@ -913,11 +911,11 @@ private final class LineyGhosttySurfaceView: NSView {
     }
 
     @IBAction func findNext(_ sender: Any?) {
-        _ = performBindingAction("search:next")
+        _ = performBindingAction(lineyGhosttySearchNavigationBindingAction(.next))
     }
 
     @IBAction func findPrevious(_ sender: Any?) {
-        _ = performBindingAction("search:previous")
+        _ = performBindingAction(lineyGhosttySearchNavigationBindingAction(.previous))
     }
 
     @IBAction func findHide(_ sender: Any?) {

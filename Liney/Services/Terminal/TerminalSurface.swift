@@ -75,6 +75,19 @@ func lineyTextFinderAction(for sender: Any?) -> NSTextFinder.Action? {
     return NSTextFinder.Action(rawValue: menuItem.tag)
 }
 
+enum LineyGhosttySearchNavigation: String {
+    case previous
+    case next
+}
+
+func lineyGhosttySearchBindingAction(for query: String) -> String {
+    "search:\(query)"
+}
+
+func lineyGhosttySearchNavigationBindingAction(_ direction: LineyGhosttySearchNavigation) -> String {
+    "navigate_search:\(direction.rawValue)"
+}
+
 func lineyTerminalDropText(fileURLs: [URL], plainText: String?) -> String? {
     let quotedPaths = fileURLs
         .filter(\.isFileURL)
