@@ -10,6 +10,8 @@ import SwiftUI
 
 @MainActor
 public final class LineyDesktopApplication: NSObject {
+    private static let windowTabbingIdentifier = "dev.liney.window"
+
     private let store = WorkspaceStore()
     private var windowController: NSWindowController?
 
@@ -20,7 +22,7 @@ public final class LineyDesktopApplication: NSObject {
     public func launch() {
         LineyGhosttyBootstrap.initialize()
         NSApplication.shared.appearance = NSAppearance(named: .darkAqua)
-        NSWindow.allowsAutomaticWindowTabbing = false
+        NSWindow.allowsAutomaticWindowTabbing = true
 
         if windowController == nil {
             let host = NSHostingController(
@@ -40,7 +42,8 @@ public final class LineyDesktopApplication: NSObject {
             window.titleVisibility = .visible
             window.titlebarAppearsTransparent = false
             window.toolbarStyle = .unifiedCompact
-            window.tabbingMode = .disallowed
+            window.tabbingMode = .preferred
+            window.tabbingIdentifier = Self.windowTabbingIdentifier
             window.isMovableByWindowBackground = false
 
             let controller = NSWindowController(window: window)
@@ -190,5 +193,9 @@ public final class LineyDesktopApplication: NSObject {
             return "Working directory is clean."
         }
         return "\(workspace.name) does not have a git diff context."
+    }
+
+    static var sharedWindowTabbingIdentifier: String {
+        windowTabbingIdentifier
     }
 }
