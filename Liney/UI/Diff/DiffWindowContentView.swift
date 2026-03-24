@@ -6,15 +6,11 @@
 //
 
 import SwiftUI
+import YiTong
 
 private enum DiffPresentationStyle: String {
     case split
     case unified
-}
-
-private enum DiffContentVisibilityMode: String {
-    case changesOnly
-    case fullFile
 }
 
 struct DiffWindowContentView: View {
@@ -22,18 +18,9 @@ struct DiffWindowContentView: View {
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
     @State private var listSelection: String?
     @AppStorage("liney.diff.viewStyle") private var diffStyleRaw = DiffPresentationStyle.split.rawValue
-    @AppStorage("liney.diff.contentVisibility") private var contentVisibilityRaw = DiffContentVisibilityMode.changesOnly.rawValue
 
     private var diffStyle: DiffPresentationStyle {
         DiffPresentationStyle(rawValue: diffStyleRaw) ?? .split
-    }
-
-    private var contentVisibility: DiffContentVisibilityMode {
-        DiffContentVisibilityMode(rawValue: contentVisibilityRaw) ?? .changesOnly
-    }
-
-    private var showsFullFile: Bool {
-        contentVisibility == .fullFile && (state.document?.supportsFullFileExpansion ?? false)
     }
 
     init(state: DiffWindowState) {
@@ -78,22 +65,6 @@ struct DiffWindowContentView: View {
                 .pickerStyle(.segmented)
                 .frame(width: 110)
                 .help("Diff Style")
-            }
-
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    contentVisibilityRaw = showsFullFile
-                        ? DiffContentVisibilityMode.changesOnly.rawValue
-                        : DiffContentVisibilityMode.fullFile.rawValue
-                } label: {
-                    Image(systemName: showsFullFile ? "rectangle.compress.vertical" : "rectangle.expand.vertical")
-                }
-                .disabled(!(state.document?.supportsFullFileExpansion ?? false))
-                .help(
-                    state.document?.supportsFullFileExpansion != true
-                        ? "Patch-based diff does not support full-file expansion"
-                        : (showsFullFile ? "Show Diff Hunks" : "Show Full File")
-                )
             }
 
             ToolbarItem(placement: .primaryAction) {
@@ -147,12 +118,7 @@ struct DiffWindowContentView: View {
                     if document.isPatchOnly {
                         DiffRawPatchDocumentView(text: document.unifiedPatch)
                     } else {
-                        switch diffStyle {
-                        case .split:
-                            DiffSplitDocumentView(document: document, showsFullFile: showsFullFile)
-                        case .unified:
-                            DiffUnifiedDocumentView(document: document, showsFullFile: showsFullFile)
-                        }
+                        DiffYiTongDocumentView(document: document, diffStyle: diffStyle)
                     }
                 }
             } else if state.isLoadingFiles {
@@ -287,70 +253,53 @@ private struct DiffDocumentSummary: View {
     }
 }
 
-private struct DiffSplitDocumentView: View {
+private struct DiffYiTongDocumentView: View {
     let document: DiffFileDocument
-    let showsFullFile: Bool
-    private let minimumColumnWidth: CGFloat = 420
+    let diffStyle: DiffPresentationStyle
 
     var body: some View {
-        GeometryReader { proxy in
-            let availableWidth = max(proxy.size.width, 0)
-            let columnWidth = max(minimumColumnWidth, floor(availableWidth / 2))
-            let contentWidth = max(availableWidth, columnWidth * 2)
-            let displayedRows = document.renderedDiff.displayedSplitRows(showsFullFile: showsFullFile)
-
-            ScrollView([.vertical, .horizontal]) {
-                LazyVStack(spacing: 0) {
-                    HStack(spacing: 0) {
-                        DiffSplitColumnHeader(title: "HEAD", tint: LineyTheme.danger, columnWidth: columnWidth)
-                        DiffSplitColumnHeader(title: "Working Tree", tint: LineyTheme.success, columnWidth: columnWidth)
-                    }
-
-                    ForEach(displayedRows) { row in
-                        HStack(spacing: 0) {
-                            DiffSplitCellView(cell: row.left, columnWidth: columnWidth)
-                            DiffSplitCellView(cell: row.right, columnWidth: columnWidth)
-                        }
-                    }
-                }
-                .frame(minWidth: contentWidth, maxWidth: .infinity, alignment: .topLeading)
-                .frame(minHeight: proxy.size.height, alignment: .topLeading)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        }
+        DiffView(
+            document: yiTongDocument,
+            configuration: yiTongConfiguration
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(LineyTheme.canvasBackground)
     }
-}
 
-private struct DiffUnifiedDocumentView: View {
-    let document: DiffFileDocument
-    let showsFullFile: Bool
-
-    var body: some View {
-        GeometryReader { proxy in
-            let availableWidth = max(proxy.size.width, 0)
-            let displayedLines = document.renderedDiff.displayedUnifiedLines(showsFullFile: showsFullFile)
-
-            ScrollView([.vertical, .horizontal]) {
-                LazyVStack(spacing: 0) {
-                    ForEach(displayedLines) { line in
-                        DiffUnifiedLineRow(line: line)
-                    }
-
-                    if displayedLines.isEmpty {
-                        Text(document.unifiedPatch.isEmpty ? "No visible changes." : document.unifiedPatch)
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundStyle(LineyTheme.secondaryText)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(14)
-                    }
-                }
-                .frame(minWidth: availableWidth, maxWidth: .infinity, alignment: .topLeading)
-                .frame(minHeight: proxy.size.height, alignment: .topLeading)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    private var yiTongDocument: DiffDocument {
+        if document.supportsFullFileExpansion {
+            return DiffDocument(
+                files: [
+                    DiffFile(
+                        oldPath: document.file.oldPath,
+                        newPath: document.file.newPath,
+                        oldContents: document.oldContents,
+                        newContents: document.newContents
+                    ),
+                ],
+                title: document.file.displayPath,
+                fallbackPatch: document.unifiedPatch.nilIfEmpty
+            )
         }
-        .background(LineyTheme.canvasBackground)
+
+        return DiffDocument(
+            patch: document.unifiedPatch,
+            title: document.file.displayPath
+        )
+    }
+
+    private var yiTongConfiguration: DiffConfiguration {
+        DiffConfiguration(
+            appearance: .automatic,
+            style: diffStyle == .split ? .split : .unified,
+            indicators: .bars,
+            showsLineNumbers: true,
+            showsChangeBackgrounds: true,
+            wrapsLines: false,
+            showsFileHeaders: false,
+            inlineChangeStyle: .wordAlt,
+            allowsSelection: true
+        )
     }
 }
 
@@ -368,175 +317,6 @@ private struct DiffRawPatchDocumentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(LineyTheme.canvasBackground)
-    }
-}
-
-private struct DiffSplitColumnHeader: View {
-    let title: String
-    let tint: Color
-    let columnWidth: CGFloat
-
-    var body: some View {
-        HStack {
-            Text(title)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(tint)
-            Spacer()
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .frame(minWidth: columnWidth, alignment: .leading)
-        .background(LineyTheme.panelBackground)
-        .overlay(alignment: .bottomTrailing) {
-            Rectangle()
-                .fill(LineyTheme.border)
-                .frame(width: 1)
-        }
-    }
-}
-
-private struct DiffSplitCellView: View {
-    let cell: DiffSplitCell?
-    let columnWidth: CGFloat
-
-    var body: some View {
-        HStack(spacing: 0) {
-            Text(cell?.lineNumber.map(String.init) ?? "")
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
-                .foregroundStyle(LineyTheme.mutedText)
-                .frame(width: 52, alignment: .trailing)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(backgroundColor.opacity(0.78))
-
-            Rectangle()
-                .fill(LineyTheme.border)
-                .frame(width: 1)
-
-            Text(cell?.text.isEmpty == false ? cell?.text ?? "" : " ")
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
-                .foregroundStyle(labelColor)
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-                .background(backgroundColor)
-        }
-        .frame(minWidth: columnWidth, alignment: .leading)
-        .overlay(alignment: .bottomTrailing) {
-            Rectangle()
-                .fill(LineyTheme.border.opacity(0.65))
-                .frame(height: 1)
-        }
-    }
-
-    private var backgroundColor: Color {
-        guard let cell else { return LineyTheme.canvasBackground }
-        switch cell.kind {
-        case .context:
-            return LineyTheme.canvasBackground
-        case .added:
-            return LineyTheme.success.opacity(0.14)
-        case .removed:
-            return LineyTheme.danger.opacity(0.14)
-        case .changedAdded:
-            return LineyTheme.success.opacity(0.18)
-        case .changedRemoved:
-            return LineyTheme.warning.opacity(0.16)
-        }
-    }
-
-    private var labelColor: Color {
-        guard let cell else { return LineyTheme.secondaryText }
-        switch cell.kind {
-        case .context:
-            return LineyTheme.secondaryText
-        case .added, .changedAdded, .removed, .changedRemoved:
-            return .white
-        }
-    }
-}
-
-private struct DiffUnifiedLineRow: View {
-    let line: DiffUnifiedLine
-
-    var body: some View {
-        HStack(spacing: 0) {
-            Text(prefix)
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .foregroundStyle(prefixColor)
-                .frame(width: 20, alignment: .center)
-                .padding(.vertical, 4)
-                .background(backgroundColor)
-
-            Text(line.oldLineNumber.map(String.init) ?? "")
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
-                .foregroundStyle(LineyTheme.mutedText)
-                .frame(width: 56, alignment: .trailing)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(backgroundColor)
-
-            Text(line.newLineNumber.map(String.init) ?? "")
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
-                .foregroundStyle(LineyTheme.mutedText)
-                .frame(width: 56, alignment: .trailing)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(backgroundColor)
-
-            Rectangle()
-                .fill(LineyTheme.border)
-                .frame(width: 1)
-
-            Text(line.text.isEmpty ? " " : line.text)
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
-                .foregroundStyle(LineyTheme.secondaryText)
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-                .background(backgroundColor)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(LineyTheme.border.opacity(0.65))
-                .frame(height: 1)
-        }
-    }
-
-    private var prefix: String {
-        switch line.kind {
-        case .context:
-            return " "
-        case .added:
-            return "+"
-        case .removed:
-            return "-"
-        }
-    }
-
-    private var backgroundColor: Color {
-        switch line.kind {
-        case .context:
-            return LineyTheme.canvasBackground
-        case .added:
-            return LineyTheme.success.opacity(0.15)
-        case .removed:
-            return LineyTheme.danger.opacity(0.15)
-        }
-    }
-
-    private var prefixColor: Color {
-        switch line.kind {
-        case .context:
-            return LineyTheme.mutedText
-        case .added:
-            return LineyTheme.success
-        case .removed:
-            return LineyTheme.danger
-        }
     }
 }
 
