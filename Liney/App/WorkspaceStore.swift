@@ -685,7 +685,32 @@ final class WorkspaceStore: ObservableObject {
     }
 
     func sidebarIcon(for worktree: WorktreeModel, in workspace: WorkspaceModel) -> SidebarItemIcon {
-        workspace.iconOverride(for: worktree.path) ?? appSettings.defaultWorktreeIcon
+        if let override = workspace.iconOverride(for: worktree.path) {
+            return override
+        }
+
+        if appSettings.defaultWorktreeIcon != .worktreeDefault {
+            return appSettings.defaultWorktreeIcon
+        }
+
+        let generatedIcons = SidebarItemIcon.generatedWorktreeIcons(
+            seedSourcesByID: Dictionary(
+                uniqueKeysWithValues: workspace.worktrees.map { candidate in
+                    (candidate.path, worktreeIconSeed(for: candidate, in: workspace))
+                }
+            ),
+            overrides: workspace.settings.worktreeIconOverrides
+        )
+
+        return generatedIcons[worktree.path] ?? .randomRepository(
+            preferredSeed: worktreeIconSeed(for: worktree, in: workspace),
+            avoiding: []
+        )
+    }
+
+    private func worktreeIconSeed(for worktree: WorktreeModel, in workspace: WorkspaceModel) -> String {
+        let repositoryName = URL(fileURLWithPath: workspace.repositoryRoot).lastPathComponent
+        return "\(repositoryName)|\(worktree.displayName)|\(worktree.path)"
     }
 
     func sidebarIconRequestTitle(_ request: SidebarIconCustomizationRequest) -> String {

@@ -277,8 +277,9 @@ struct SettingsSheet: View {
 
                     SidebarIconEditorCard(
                         title: "Worktree",
-                        subtitle: "Branch and worktree rows",
-                        icon: $appSettings.defaultWorktreeIcon
+                        subtitle: "Shared fallback icon. Leave it at default to auto-randomize rows.",
+                        icon: $appSettings.defaultWorktreeIcon,
+                        randomizer: SidebarItemIcon.randomRepository
                     )
                 }
                 .padding(.top, 8)
@@ -372,6 +373,7 @@ struct SettingsSheet: View {
 
                 if selectedWorkspace != nil {
                     WorkspaceSidebarAppearanceSection(
+                        store: store,
                         workspace: selectedWorkspace,
                         appSettings: appSettings,
                         workspaceSettings: $workspaceSettings
@@ -702,6 +704,7 @@ struct SettingsSheet: View {
 }
 
 private struct WorkspaceSidebarAppearanceSection: View {
+    let store: WorkspaceStore
     let workspace: WorkspaceModel?
     let appSettings: AppSettings
     @Binding var workspaceSettings: WorkspaceSettings
@@ -733,7 +736,11 @@ private struct WorkspaceSidebarAppearanceSection: View {
         Binding(
             get: {
                 guard let activeWorktree else { return appSettings.defaultWorktreeIcon }
-                return workspaceSettings.worktreeIconOverrides[activeWorktree.path] ?? appSettings.defaultWorktreeIcon
+                if let override = workspaceSettings.worktreeIconOverrides[activeWorktree.path] {
+                    return override
+                }
+                guard let workspace else { return appSettings.defaultWorktreeIcon }
+                return store.sidebarIcon(for: activeWorktree, in: workspace)
             },
             set: { updated in
                 guard let activeWorktree else { return }
@@ -772,7 +779,12 @@ private struct WorkspaceSidebarAppearanceSection: View {
                     isOn: Binding(
                         get: { workspaceSettings.worktreeIconOverrides[activeWorktree.path] != nil },
                         set: { isEnabled in
-                            workspaceSettings.worktreeIconOverrides[activeWorktree.path] = isEnabled ? appSettings.defaultWorktreeIcon : nil
+                            if isEnabled {
+                                let icon = workspace.map { store.sidebarIcon(for: activeWorktree, in: $0) } ?? appSettings.defaultWorktreeIcon
+                                workspaceSettings.worktreeIconOverrides[activeWorktree.path] = icon
+                            } else {
+                                workspaceSettings.worktreeIconOverrides[activeWorktree.path] = nil
+                            }
                         }
                     )
                 )
@@ -781,7 +793,8 @@ private struct WorkspaceSidebarAppearanceSection: View {
                     SidebarIconEditorCard(
                         title: "Active worktree icon",
                         subtitle: "For other branches, use the sidebar context menu",
-                        icon: activeWorktreeIconBinding
+                        icon: activeWorktreeIconBinding,
+                        randomizer: SidebarItemIcon.randomRepository
                     )
                 }
 
@@ -1139,7 +1152,9 @@ struct SidebarIconCustomizationSheet: View {
             return SidebarItemIcon.random
         case .appDefaultRepository:
             return SidebarItemIcon.randomRepository
-        case .worktree, .appDefaultLocalTerminal, .appDefaultWorktree:
+        case .worktree, .appDefaultWorktree:
+            return SidebarItemIcon.randomRepository
+        case .appDefaultLocalTerminal:
             return SidebarItemIcon.random
         }
     }

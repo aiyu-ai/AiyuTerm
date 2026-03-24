@@ -663,20 +663,20 @@
 				version = 9.8.0;
 			};
 		};
-		9D1A2B3C4D5E6F708091A003 /* XCRemoteSwiftPackageReference "YiTong" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/onevcat/YiTong.git";
-			requirement = {
-				kind = exactVersion;
-				version = 0.2.0;
-			};
-		};
 		7F0A1B2C3D4E5F6071829303 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sparkle-project/Sparkle";
 			requirement = {
 				kind = exactVersion;
 				version = 2.7.3;
+			};
+		};
+		9D1A2B3C4D5E6F708091A003 /* XCRemoteSwiftPackageReference "YiTong" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/onevcat/YiTong.git";
+			requirement = {
+				kind = exactVersion;
+				version = 0.2.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -687,15 +687,15 @@
 			package = 5A4973A82F6F90ED00B79656 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
 			productName = Sentry;
 		};
-		9D1A2B3C4D5E6F708091A002 /* YiTong */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 9D1A2B3C4D5E6F708091A003 /* XCRemoteSwiftPackageReference "YiTong" */;
-			productName = YiTong;
-		};
 		7F0A1B2C3D4E5F6071829302 /* Sparkle */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 7F0A1B2C3D4E5F6071829303 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
+		};
+		9D1A2B3C4D5E6F708091A002 /* YiTong */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9D1A2B3C4D5E6F708091A003 /* XCRemoteSwiftPackageReference "YiTong" */;
+			productName = YiTong;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
