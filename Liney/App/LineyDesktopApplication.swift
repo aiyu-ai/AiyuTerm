@@ -67,13 +67,15 @@ public final class LineyDesktopApplication: NSObject {
             controller.window
         }
 
-        func present(ignoringOtherApps: Bool) {
+        func present(ignoringOtherApps: Bool, activatesApplication: Bool = true) {
             guard let window else { return }
 
             if window.isMiniaturized {
                 window.deminiaturize(nil)
             }
-            NSApp.activate(ignoringOtherApps: ignoringOtherApps)
+            if activatesApplication {
+                NSApp.activate(ignoringOtherApps: ignoringOtherApps)
+            }
             controller.showWindow(nil)
             window.makeKeyAndOrderFront(nil)
         }
@@ -101,7 +103,9 @@ public final class LineyDesktopApplication: NSObject {
             initialAppSettings: nil
         )
         syncWindowPresentation()
-        context.present(ignoringOtherApps: false)
+        DispatchQueue.main.async {
+            context.present(ignoringOtherApps: false, activatesApplication: false)
+        }
 
         Task { @MainActor in
             await loadWindowContextIfNeeded(context, updateHotKeySettings: true)
@@ -254,6 +258,14 @@ public final class LineyDesktopApplication: NSObject {
 
     var isHotKeyWindowEnabled: Bool {
         hotKeyWindowSettings.hotKeyWindowEnabled
+    }
+
+    var confirmQuitWhenCommandsRunning: Bool {
+        hotKeyWindowSettings.confirmQuitWhenCommandsRunning
+    }
+
+    var quitConfirmationSessionCount: Int {
+        windowContexts.reduce(0) { $0 + $1.store.quitConfirmationSessionCount }
     }
 
     var canCloseSelectedTab: Bool {

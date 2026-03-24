@@ -46,7 +46,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         Task { @MainActor in
             let desktopApplication = LineyDesktopApplication()
             self.desktopApplication = desktopApplication
-            applicationMenuController.installMainMenu(appName: applicationName(), target: self, settings: AppSettings())
             appSettingsObserver = NotificationCenter.default.addObserver(
                 forName: .lineyAppSettingsDidChange,
                 object: nil,
@@ -62,6 +61,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 }
             }
             desktopApplication.launch()
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.applicationMenuController.installMainMenu(
+                    appName: self.applicationName(),
+                    target: self,
+                    settings: AppSettings()
+                )
+            }
         }
     }
 
@@ -82,6 +89,28 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             lineyShouldTerminateAfterLastWindowClosed(
                 hotKeyWindowEnabled: desktopApplication?.isHotKeyWindowEnabled ?? false
             )
+        }
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard Thread.isMainThread else { return .terminateNow }
+        return MainActor.assumeIsolated {
+            let sessionCount = desktopApplication?.quitConfirmationSessionCount ?? 0
+            let shouldConfirm = lineyShouldConfirmTermination(
+                confirmQuitWhenCommandsRunning: desktopApplication?.confirmQuitWhenCommandsRunning ?? true,
+                quitConfirmationSessionCount: sessionCount
+            )
+            guard shouldConfirm else { return .terminateNow }
+
+            let copy = lineyQuitConfirmationCopy(quitConfirmationSessionCount: sessionCount)
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = copy.title
+            alert.informativeText = copy.message
+            alert.addButton(withTitle: "Quit")
+            alert.addButton(withTitle: "Cancel")
+            NSApp.activate(ignoringOtherApps: true)
+            return alert.runModal() == .alertFirstButtonReturn ? .terminateNow : .terminateCancel
         }
     }
 
@@ -363,4 +392,23 @@ func lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: Bool) -> Boo
 
 func lineyShouldReopenMainWindow(hasVisibleWindows: Bool) -> Bool {
     !hasVisibleWindows
+}
+
+func lineyShouldConfirmTermination(
+    confirmQuitWhenCommandsRunning: Bool,
+    quitConfirmationSessionCount: Int
+) -> Bool {
+    confirmQuitWhenCommandsRunning && quitConfirmationSessionCount > 0
+}
+
+func lineyQuitConfirmationCopy(quitConfirmationSessionCount: Int) -> (title: String, message: String) {
+    let count = max(quitConfirmationSessionCount, 0)
+    let subject = count == 1
+        ? "1 terminal session still has a running command."
+        : "\(count) terminal sessions still have running commands."
+    let impact = count == 1 ? "Quitting now will stop it." : "Quitting now will stop them."
+    return (
+        title: "Quit Liney?",
+        message: "\(subject) \(impact) You can turn this confirmation off in Settings > General."
+    )
 }
