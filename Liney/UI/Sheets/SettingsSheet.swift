@@ -191,7 +191,7 @@ struct SettingsSheet: View {
                         Spacer()
                         ShortcutRecorderField(
                             shortcut: hotKeyWindowShortcutBinding,
-                            fallbackShortcut: StoredShortcut(key: " ", command: false, shift: false, option: true, control: false),
+                            fallbackShortcut: StoredShortcut(key: " ", command: true, shift: true, option: false, control: false),
                             emptyTitle: "Not Set",
                             displayString: { $0.displayString },
                             transformRecordedShortcut: { $0 }

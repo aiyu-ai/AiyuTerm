@@ -258,7 +258,7 @@ struct AppSettings: Codable, Hashable {
         autoRefreshIntervalSeconds: Int = 30,
         autoClosePaneOnProcessExit: Bool = true,
         hotKeyWindowEnabled: Bool = false,
-        hotKeyWindowShortcut: StoredShortcut = StoredShortcut(key: " ", command: false, shift: false, option: true, control: false),
+        hotKeyWindowShortcut: StoredShortcut = StoredShortcut(key: " ", command: true, shift: true, option: false, control: false),
         fileWatcherEnabled: Bool = true,
         githubIntegrationEnabled: Bool = true,
         autoCheckForUpdates: Bool = true,
@@ -349,7 +349,7 @@ extension AppSettings {
             autoClosePaneOnProcessExit: try container.decodeIfPresent(Bool.self, forKey: .autoClosePaneOnProcessExit) ?? true,
             hotKeyWindowEnabled: try container.decodeIfPresent(Bool.self, forKey: .hotKeyWindowEnabled) ?? false,
             hotKeyWindowShortcut: try container.decodeIfPresent(StoredShortcut.self, forKey: .hotKeyWindowShortcut)
-                ?? StoredShortcut(key: " ", command: false, shift: false, option: true, control: false),
+                ?? StoredShortcut(key: " ", command: true, shift: true, option: false, control: false),
             fileWatcherEnabled: try container.decodeIfPresent(Bool.self, forKey: .fileWatcherEnabled) ?? true,
             githubIntegrationEnabled: try container.decodeIfPresent(Bool.self, forKey: .githubIntegrationEnabled) ?? true,
             autoCheckForUpdates: try container.decodeIfPresent(Bool.self, forKey: .autoCheckForUpdates) ?? true,

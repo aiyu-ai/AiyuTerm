@@ -18,7 +18,7 @@ final class QuickCommandSupportTests: XCTestCase {
         XCTAssertFalse(settings.hotKeyWindowEnabled)
         XCTAssertEqual(
             settings.hotKeyWindowShortcut,
-            StoredShortcut(key: " ", command: false, shift: false, option: true, control: false)
+            StoredShortcut(key: " ", command: true, shift: true, option: false, control: false)
         )
         XCTAssertEqual(
             QuickCommandCatalog.defaultCommands.first(where: { $0.id == "codex-resume" })?.command,
