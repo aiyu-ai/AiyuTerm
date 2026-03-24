@@ -43,18 +43,28 @@ final class WorkspaceStore: ObservableObject {
 
     private let persistence = WorkspaceStatePersistence()
     private let appSettingsPersistence = AppSettingsPersistence()
+    private let initialWorkspaceState: PersistedWorkspaceState?
+    private let initialAppSettings: AppSettings?
     private let gitRepositoryService = GitRepositoryService()
     private let updaterController = AppUpdaterController()
     private let remoteSessionCoordinator = RemoteSessionCoordinator()
     private let metadataWatchService = WorkspaceMetadataWatchService()
     private let sleepPreventionController = SleepPreventionController()
+    private var persistsWorkspaceState: Bool
     private var hasLoaded = false
     private var hasConfiguredUpdater = false
     private var autoRefreshTask: Task<Void, Never>?
     private var statusMessageTask: Task<Void, Never>?
     private var sleepPreventionTickerTask: Task<Void, Never>?
 
-    init() {
+    init(
+        initialWorkspaceState: PersistedWorkspaceState? = nil,
+        initialAppSettings: AppSettings? = nil,
+        persistsWorkspaceState: Bool = true
+    ) {
+        self.initialWorkspaceState = initialWorkspaceState
+        self.initialAppSettings = initialAppSettings
+        self.persistsWorkspaceState = persistsWorkspaceState
         sleepPreventionController.onEvent = { [weak self] event in
             self?.handleSleepPreventionEvent(event)
         }
@@ -469,10 +479,10 @@ final class WorkspaceStore: ObservableObject {
         guard !hasLoaded else { return }
         hasLoaded = true
 
-        appSettings = appSettingsPersistence.load()
+        appSettings = initialAppSettings ?? appSettingsPersistence.load()
         appSettings.githubIntegrationEnabled = false
         NotificationCenter.default.post(name: .lineyAppSettingsDidChange, object: appSettings)
-        let state = normalizeLaunchState(persistence.load())
+        let state = normalizeLaunchState(initialWorkspaceState ?? persistence.load())
         workspaces = state.workspaces.map(WorkspaceModel.init(record:))
         globalCanvasState = state.globalCanvasState.pruned(to: validGlobalCanvasCardIDs(in: workspaces))
         ensureDefaultWorkspace()
@@ -1605,17 +1615,31 @@ final class WorkspaceStore: ObservableObject {
             if prunedGlobalCanvasState != globalCanvasState {
                 globalCanvasState = prunedGlobalCanvasState
             }
-            try persistence.save(
-                PersistedWorkspaceState(
-                    selectedWorkspaceID: selectedWorkspaceID,
-                    workspaces: workspaces.map { $0.snapshot() },
-                    globalCanvasState: prunedGlobalCanvasState
+            if persistsWorkspaceState {
+                try persistence.save(
+                    PersistedWorkspaceState(
+                        selectedWorkspaceID: selectedWorkspaceID,
+                        workspaces: workspaces.map { $0.snapshot() },
+                        globalCanvasState: prunedGlobalCanvasState
+                    )
                 )
-            )
+            }
             persistAppSettings()
         } catch {
             presentedError = PresentedError(title: "Unable to Save State", message: error.localizedDescription)
         }
+    }
+
+    func currentStateSnapshot() -> PersistedWorkspaceState {
+        PersistedWorkspaceState(
+            selectedWorkspaceID: selectedWorkspaceID,
+            workspaces: workspaces.map { $0.snapshot() },
+            globalCanvasState: globalCanvasState.pruned(to: validGlobalCanvasCardIDs())
+        )
+    }
+
+    func setWorkspaceStatePersistenceEnabled(_ enabled: Bool) {
+        persistsWorkspaceState = enabled
     }
 
     func replayActivity(workspaceID: UUID, activityID: UUID) {

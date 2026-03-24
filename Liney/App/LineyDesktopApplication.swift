@@ -13,21 +13,23 @@ import SwiftUI
 public final class LineyDesktopApplication: NSObject {
     private static let windowTabbingIdentifier = "dev.liney.window"
 
-    private let store = WorkspaceStore()
-    private var windowController: NSWindowController?
-    private var mainWindowBaseLevel: NSWindow.Level = .normal
-    private var mainWindowBaseCollectionBehavior: NSWindow.CollectionBehavior = []
+    private final class WindowContext: NSObject, NSWindowDelegate {
+        let store: WorkspaceStore
+        let controller: NSWindowController
+        var persistsWorkspaceState: Bool
+        let baseLevel: NSWindow.Level
+        let baseCollectionBehavior: NSWindow.CollectionBehavior
+        weak var owner: LineyDesktopApplication?
 
-    public override init() {
-        super.init()
-    }
+        init(
+            store: WorkspaceStore,
+            persistsWorkspaceState: Bool,
+            owner: LineyDesktopApplication
+        ) {
+            self.store = store
+            self.persistsWorkspaceState = persistsWorkspaceState
+            self.owner = owner
 
-    public func launch() {
-        LineyGhosttyBootstrap.initialize()
-        NSApplication.shared.appearance = NSAppearance(named: .darkAqua)
-        NSWindow.allowsAutomaticWindowTabbing = true
-
-        if windowController == nil {
             let host = NSHostingController(
                 rootView: MainWindowView()
                     .environmentObject(store)
@@ -46,52 +48,114 @@ public final class LineyDesktopApplication: NSObject {
             window.titlebarAppearsTransparent = false
             window.toolbarStyle = .unifiedCompact
             window.tabbingMode = .preferred
-            window.tabbingIdentifier = Self.windowTabbingIdentifier
+            window.tabbingIdentifier = LineyDesktopApplication.windowTabbingIdentifier
             window.isMovableByWindowBackground = false
-            mainWindowBaseLevel = window.level
-            mainWindowBaseCollectionBehavior = window.collectionBehavior
+
+            baseLevel = window.level
+            baseCollectionBehavior = window.collectionBehavior
 
             let controller = NSWindowController(window: window)
             controller.shouldCascadeWindows = true
-            windowController = controller
+            self.controller = controller
+
+            super.init()
+
+            window.delegate = self
         }
 
-        applyHotKeyWindowSettings(store.appSettings)
-        presentMainWindow(ignoringOtherApps: false)
+        var window: NSWindow? {
+            controller.window
+        }
+
+        func present(ignoringOtherApps: Bool) {
+            guard let window else { return }
+
+            if window.isMiniaturized {
+                window.deminiaturize(nil)
+            }
+            NSApp.activate(ignoringOtherApps: ignoringOtherApps)
+            controller.showWindow(nil)
+            window.makeKeyAndOrderFront(nil)
+        }
+
+        func windowWillClose(_ notification: Notification) {
+            owner?.removeWindowContext(self)
+        }
+    }
+
+    private var windowContexts: [WindowContext] = []
+    private var hotKeyWindowSettings = AppSettings()
+    private var lastPrimaryWindowState: PersistedWorkspaceState?
+
+    public override init() {
+        super.init()
+    }
+
+    public func launch() {
+        LineyGhosttyBootstrap.initialize()
+        NSApplication.shared.appearance = NSAppearance(named: .darkAqua)
+        NSWindow.allowsAutomaticWindowTabbing = true
+
+        let context = ensurePrimaryWindowContext(
+            initialState: nil,
+            initialAppSettings: nil
+        )
+        syncWindowPresentation()
+        context.present(ignoringOtherApps: false)
 
         Task { @MainActor in
-            await store.loadIfNeeded()
+            await loadWindowContextIfNeeded(context, updateHotKeySettings: true)
         }
     }
 
     public func toggleCommandPalette() {
-        store.dispatch(.toggleCommandPalette)
+        activeStore?.dispatch(.toggleCommandPalette)
     }
 
     public func toggleOverview() {
-        store.dispatch(.toggleOverview)
+        activeStore?.dispatch(.toggleOverview)
     }
 
     public func presentSettings() {
+        guard let store = activeStore else { return }
         store.presentSettings(for: store.selectedWorkspace)
     }
 
     public func checkForUpdates() {
-        store.dispatch(.checkForUpdates)
+        activeStore?.dispatch(.checkForUpdates)
     }
 
     public func shutdown() {
         LineyGlobalHotKeyMonitor.shared.unregister()
-        store.stopSleepPrevention()
+        for context in windowContexts {
+            context.store.stopSleepPrevention()
+        }
+    }
+
+    public func createNewWindow() {
+        let context = makeWindowContext(
+            persistsWorkspaceState: windowContexts.isEmpty,
+            initialState: activeStore?.currentStateSnapshot() ?? lastPrimaryWindowState,
+            initialAppSettings: activeStore?.appSettings ?? hotKeyWindowSettings
+        )
+        windowContexts.append(context)
+        syncWindowPresentation()
+        context.present(ignoringOtherApps: true)
+
+        Task { @MainActor in
+            await loadWindowContextIfNeeded(context, updateHotKeySettings: false)
+        }
     }
 
     public func createTabInSelectedWorkspace() {
-        guard let workspace = store.selectedWorkspace else { return }
+        guard let store = activeStore,
+              let workspace = store.selectedWorkspace else { return }
         store.createTab(in: workspace)
     }
 
     public func closeSelectedTab() {
-        guard let workspace = store.selectedWorkspace,
+        guard let store = activeStore,
+              let workspace = store.selectedWorkspace,
               workspace.tabs.count > 1,
               let activeTabID = workspace.activeTabID else {
             return
@@ -101,22 +165,26 @@ public final class LineyDesktopApplication: NSObject {
 
     public func selectTab(number: Int) {
         guard (1...9).contains(number),
+              let store = activeStore,
               let workspace = store.selectedWorkspace else { return }
         store.selectTab(in: workspace, index: number - 1)
     }
 
     public func selectNextTab() {
-        guard let workspace = store.selectedWorkspace else { return }
+        guard let store = activeStore,
+              let workspace = store.selectedWorkspace else { return }
         store.selectNextTab(in: workspace)
     }
 
     public func selectPreviousTab() {
-        guard let workspace = store.selectedWorkspace else { return }
+        guard let store = activeStore,
+              let workspace = store.selectedWorkspace else { return }
         store.selectPreviousTab(in: workspace)
     }
 
     func splitFocusedPane(axis: PaneSplitAxis) {
-        guard let workspace = store.selectedWorkspace,
+        guard let store = activeStore,
+              let workspace = store.selectedWorkspace,
               workspace.sessionController.focusedPaneID != nil else {
             return
         }
@@ -124,7 +192,8 @@ public final class LineyDesktopApplication: NSObject {
     }
 
     func duplicateFocusedPane() {
-        guard let workspace = store.selectedWorkspace,
+        guard let store = activeStore,
+              let workspace = store.selectedWorkspace,
               workspace.sessionController.focusedPaneID != nil else {
             return
         }
@@ -132,7 +201,8 @@ public final class LineyDesktopApplication: NSObject {
     }
 
     func toggleFocusedPaneZoom() {
-        guard let workspace = store.selectedWorkspace,
+        guard let store = activeStore,
+              let workspace = store.selectedWorkspace,
               workspace.sessionController.focusedPaneID != nil else {
             return
         }
@@ -140,7 +210,8 @@ public final class LineyDesktopApplication: NSObject {
     }
 
     func closeFocusedPane() {
-        guard let workspace = store.selectedWorkspace,
+        guard let store = activeStore,
+              let workspace = store.selectedWorkspace,
               let paneID = workspace.sessionController.focusedPaneID else {
             return
         }
@@ -148,15 +219,15 @@ public final class LineyDesktopApplication: NSObject {
     }
 
     func refreshSelectedWorkspace() {
-        store.refreshSelectedWorkspace()
+        activeStore?.refreshSelectedWorkspace()
     }
 
     func refreshAllRepositories() {
-        store.dispatch(.refreshAllRepositories)
+        activeStore?.dispatch(.refreshAllRepositories)
     }
 
     func openDiffWindow() {
-        let workspace = store.selectedWorkspace
+        let workspace = activeStore?.selectedWorkspace
         let supportsDiff = workspace?.supportsRepositoryFeatures == true
         DiffWindowManager.shared.show(
             worktreePath: supportsDiff ? workspace?.activeWorktreePath : nil,
@@ -166,32 +237,32 @@ public final class LineyDesktopApplication: NSObject {
     }
 
     public var hasSelectedWorkspace: Bool {
-        store.selectedWorkspace != nil
+        activeStore?.selectedWorkspace != nil
     }
 
     var selectedWorkspaceSupportsRepositoryFeatures: Bool {
-        store.selectedWorkspace?.supportsRepositoryFeatures == true
+        activeStore?.selectedWorkspace?.supportsRepositoryFeatures == true
     }
 
     var hasRepositoryWorkspaces: Bool {
-        store.workspaces.contains(where: \.supportsRepositoryFeatures)
+        activeStore?.workspaces.contains(where: \.supportsRepositoryFeatures) == true
     }
 
     public var selectedWorkspaceTabCount: Int {
-        store.selectedWorkspace?.tabs.count ?? 0
+        activeStore?.selectedWorkspace?.tabs.count ?? 0
     }
 
     var isHotKeyWindowEnabled: Bool {
-        store.appSettings.hotKeyWindowEnabled
+        hotKeyWindowSettings.hotKeyWindowEnabled
     }
 
     var canCloseSelectedTab: Bool {
-        guard let workspace = store.selectedWorkspace else { return false }
+        guard let workspace = activeStore?.selectedWorkspace else { return false }
         return workspace.tabs.count > 1 && workspace.activeTabID != nil
     }
 
     var hasFocusedPane: Bool {
-        store.selectedWorkspace?.sessionController.focusedPaneID != nil
+        activeStore?.selectedWorkspace?.sessionController.focusedPaneID != nil
     }
 
     private func diffEmptyStateMessage(for workspace: WorkspaceModel?, supportsDiff: Bool) -> String {
@@ -209,52 +280,148 @@ public final class LineyDesktopApplication: NSObject {
     }
 
     func updateHotKeyWindowSettings(_ settings: AppSettings) {
-        applyHotKeyWindowSettings(settings)
+        hotKeyWindowSettings = settings
+        syncWindowPresentation()
     }
 
     func reopenMainWindow() {
-        presentMainWindow(ignoringOtherApps: true)
+        let context = ensurePrimaryWindowContext(
+            initialState: lastPrimaryWindowState,
+            initialAppSettings: hotKeyWindowSettings
+        )
+        syncWindowPresentation()
+        context.present(ignoringOtherApps: true)
+
+        Task { @MainActor in
+            await loadWindowContextIfNeeded(context, updateHotKeySettings: true)
+        }
     }
 
-    private func applyHotKeyWindowSettings(_ settings: AppSettings) {
-        guard let window = windowController?.window else { return }
+    private var primaryWindowContext: WindowContext? {
+        windowContexts.first(where: \.persistsWorkspaceState)
+    }
 
-        if settings.hotKeyWindowEnabled {
-            window.level = .floating
-            window.collectionBehavior = mainWindowBaseCollectionBehavior.union([.moveToActiveSpace, .fullScreenAuxiliary])
+    private var activeWindowContext: WindowContext? {
+        if let keyWindow = NSApp.keyWindow,
+           let context = context(for: keyWindow) {
+            return context
+        }
+        if let mainWindow = NSApp.mainWindow,
+           let context = context(for: mainWindow) {
+            return context
+        }
+        return primaryWindowContext ?? windowContexts.first
+    }
+
+    private var activeStore: WorkspaceStore? {
+        activeWindowContext?.store
+    }
+
+    private func ensurePrimaryWindowContext(
+        initialState: PersistedWorkspaceState?,
+        initialAppSettings: AppSettings?
+    ) -> WindowContext {
+        if let primaryWindowContext {
+            return primaryWindowContext
+        }
+
+        let context = makeWindowContext(
+            persistsWorkspaceState: true,
+            initialState: initialState,
+            initialAppSettings: initialAppSettings
+        )
+        windowContexts.append(context)
+        return context
+    }
+
+    private func makeWindowContext(
+        persistsWorkspaceState: Bool,
+        initialState: PersistedWorkspaceState?,
+        initialAppSettings: AppSettings?
+    ) -> WindowContext {
+        let store = WorkspaceStore(
+            initialWorkspaceState: initialState,
+            initialAppSettings: initialAppSettings,
+            persistsWorkspaceState: persistsWorkspaceState
+        )
+        return WindowContext(
+            store: store,
+            persistsWorkspaceState: persistsWorkspaceState,
+            owner: self
+        )
+    }
+
+    private func context(for window: NSWindow) -> WindowContext? {
+        windowContexts.first { $0.window === window }
+    }
+
+    private func removeWindowContext(_ context: WindowContext) {
+        let wasPrimary = context.persistsWorkspaceState
+        if wasPrimary {
+            lastPrimaryWindowState = context.store.currentStateSnapshot()
+        }
+        windowContexts.removeAll { $0 === context }
+
+        if wasPrimary, let promotedContext = windowContexts.first {
+            promotedContext.persistsWorkspaceState = true
+            promotedContext.store.setWorkspaceStatePersistenceEnabled(true)
+        }
+
+        syncWindowPresentation()
+    }
+
+    private func syncWindowPresentation() {
+        if hotKeyWindowSettings.hotKeyWindowEnabled {
             LineyGlobalHotKeyMonitor.shared.register(
-                shortcut: settings.hotKeyWindowShortcut,
+                shortcut: hotKeyWindowSettings.hotKeyWindowShortcut,
                 action: { [weak self] in
                     self?.toggleHotKeyWindow()
                 }
             )
         } else {
-            window.level = mainWindowBaseLevel
-            window.collectionBehavior = mainWindowBaseCollectionBehavior
             LineyGlobalHotKeyMonitor.shared.unregister()
+        }
+
+        for context in windowContexts {
+            guard let window = context.window else { continue }
+
+            if hotKeyWindowSettings.hotKeyWindowEnabled, context.persistsWorkspaceState {
+                window.level = .floating
+                window.collectionBehavior = context.baseCollectionBehavior.union([.moveToActiveSpace, .fullScreenAuxiliary])
+            } else {
+                window.level = context.baseLevel
+                window.collectionBehavior = context.baseCollectionBehavior
+            }
         }
     }
 
     private func toggleHotKeyWindow() {
-        guard let window = windowController?.window else { return }
+        let context = ensurePrimaryWindowContext(
+            initialState: lastPrimaryWindowState,
+            initialAppSettings: hotKeyWindowSettings
+        )
+        syncWindowPresentation()
 
-        if window.isVisible {
+        guard let window = context.window else { return }
+
+        if window.isVisible, NSApp.keyWindow === window {
             window.orderOut(nil)
             return
         }
 
-        presentMainWindow(ignoringOtherApps: true)
+        context.present(ignoringOtherApps: true)
+
+        Task { @MainActor in
+            await loadWindowContextIfNeeded(context, updateHotKeySettings: true)
+        }
     }
 
-    private func presentMainWindow(ignoringOtherApps: Bool) {
-        guard let window = windowController?.window else { return }
-
-        if window.isMiniaturized {
-            window.deminiaturize(nil)
+    private func loadWindowContextIfNeeded(_ context: WindowContext, updateHotKeySettings: Bool) async {
+        await context.store.loadIfNeeded()
+        if updateHotKeySettings {
+            hotKeyWindowSettings = context.store.appSettings
         }
-        NSApp.activate(ignoringOtherApps: ignoringOtherApps)
-        windowController?.showWindow(nil)
-        window.makeKeyAndOrderFront(nil)
+        syncWindowPresentation()
     }
 }
 
@@ -276,7 +443,7 @@ private final class LineyGlobalHotKeyMonitor {
         installEventHandlerIfNeeded()
 
         guard let keyCode = shortcut.carbonKeyCode else { return }
-        var hotKeyID = EventHotKeyID(signature: OSType(0x4C4E5959), id: 1)
+        let hotKeyID = EventHotKeyID(signature: OSType(0x4C4E5959), id: 1)
         RegisterEventHotKey(
             keyCode,
             shortcut.carbonModifierFlags,

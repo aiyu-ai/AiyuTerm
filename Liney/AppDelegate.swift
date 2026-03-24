@@ -156,6 +156,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
         Task { @MainActor in
             switch shortcutAction {
+            case .newWindow:
+                desktopApplication?.createNewWindow()
+
             case .openSettings:
                 desktopApplication?.presentSettings()
 
@@ -232,7 +235,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         case #selector(performShortcutAction(_:)):
             guard let shortcutAction = shortcutAction(for: menuItem) else { return false }
             switch shortcutAction {
-            case .openSettings,
+            case .newWindow,
+                 .openSettings,
                  .toggleCommandPalette,
                  .toggleSidebar,
                  .toggleOverview,

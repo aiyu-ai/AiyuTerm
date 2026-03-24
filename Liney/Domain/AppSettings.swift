@@ -610,6 +610,7 @@ enum LineyShortcutCategory: String, CaseIterable, Hashable, Identifiable {
 }
 
 enum LineyShortcutAction: String, CaseIterable, Hashable, Identifiable {
+    case newWindow
     case openSettings
     case toggleCommandPalette
     case toggleSidebar
@@ -655,7 +656,8 @@ enum LineyShortcutAction: String, CaseIterable, Hashable, Identifiable {
              .togglePaneZoom,
              .closePane:
             return .panes
-        case .closeWindow,
+        case .newWindow,
+             .closeWindow,
              .enterFullScreen:
             return .window
         }
@@ -663,6 +665,8 @@ enum LineyShortcutAction: String, CaseIterable, Hashable, Identifiable {
 
     var title: String {
         switch self {
+        case .newWindow:
+            return "New Window"
         case .openSettings:
             return "Settings"
         case .toggleCommandPalette:
@@ -706,6 +710,8 @@ enum LineyShortcutAction: String, CaseIterable, Hashable, Identifiable {
 
     var subtitle: String {
         switch self {
+        case .newWindow:
+            return "Open another Liney window with its own workspace selection."
         case .openSettings:
             return "Open the Liney settings window."
         case .toggleCommandPalette:
@@ -749,6 +755,8 @@ enum LineyShortcutAction: String, CaseIterable, Hashable, Identifiable {
 
     var defaultShortcut: StoredShortcut? {
         switch self {
+        case .newWindow:
+            return StoredShortcut(key: "n", command: true, shift: false, option: false, control: false)
         case .openSettings:
             return StoredShortcut(key: ",", command: true, shift: false, option: false, control: false)
         case .toggleCommandPalette:
