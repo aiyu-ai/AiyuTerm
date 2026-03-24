@@ -623,6 +623,8 @@ final class WorkspaceStore: ObservableObject {
             autoRefreshEnabled: settings.autoRefreshEnabled,
             autoRefreshIntervalSeconds: settings.autoRefreshIntervalSeconds,
             autoClosePaneOnProcessExit: settings.autoClosePaneOnProcessExit,
+            hotKeyWindowEnabled: settings.hotKeyWindowEnabled,
+            hotKeyWindowShortcut: settings.hotKeyWindowShortcut,
             fileWatcherEnabled: settings.fileWatcherEnabled,
             githubIntegrationEnabled: false,
             autoCheckForUpdates: settings.autoCheckForUpdates,

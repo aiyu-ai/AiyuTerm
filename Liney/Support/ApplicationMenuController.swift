@@ -133,6 +133,10 @@ final class ApplicationMenuController: NSObject {
         addItem(title: "Zoom", action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "", to: windowMenu)
         addShortcutItem(title: "Close Window", shortcutAction: .closeWindow, to: windowMenu, target: target)
         windowMenu.addItem(.separator())
+        addItem(title: "Show Tab Bar", action: #selector(NSWindow.toggleTabBar(_:)), keyEquivalent: "", to: windowMenu)
+        addItem(title: "Move Tab to New Window", action: #selector(NSWindow.moveTabToNewWindow(_:)), keyEquivalent: "", to: windowMenu)
+        addItem(title: "Merge All Windows", action: #selector(NSWindow.mergeAllWindows(_:)), keyEquivalent: "", to: windowMenu)
+        windowMenu.addItem(.separator())
         addItem(title: "Bring All to Front", action: #selector(NSApplication.arrangeInFront(_:)), keyEquivalent: "", to: windowMenu)
         NSApp.windowsMenu = windowMenu
 

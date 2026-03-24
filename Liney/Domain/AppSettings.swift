@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import Carbon
 import Foundation
 
 nonisolated enum SidebarIconFillStyle: String, Codable, Hashable, CaseIterable, Identifiable {
@@ -231,6 +232,8 @@ struct AppSettings: Codable, Hashable {
     var autoRefreshEnabled: Bool
     var autoRefreshIntervalSeconds: Int
     var autoClosePaneOnProcessExit: Bool
+    var hotKeyWindowEnabled: Bool
+    var hotKeyWindowShortcut: StoredShortcut
     var fileWatcherEnabled: Bool
     var githubIntegrationEnabled: Bool
     var autoCheckForUpdates: Bool
@@ -254,6 +257,8 @@ struct AppSettings: Codable, Hashable {
         autoRefreshEnabled: Bool = true,
         autoRefreshIntervalSeconds: Int = 30,
         autoClosePaneOnProcessExit: Bool = true,
+        hotKeyWindowEnabled: Bool = false,
+        hotKeyWindowShortcut: StoredShortcut = StoredShortcut(key: " ", command: true, shift: true, option: false, control: false),
         fileWatcherEnabled: Bool = true,
         githubIntegrationEnabled: Bool = true,
         autoCheckForUpdates: Bool = true,
@@ -276,6 +281,8 @@ struct AppSettings: Codable, Hashable {
         self.autoRefreshEnabled = autoRefreshEnabled
         self.autoRefreshIntervalSeconds = max(10, autoRefreshIntervalSeconds)
         self.autoClosePaneOnProcessExit = autoClosePaneOnProcessExit
+        self.hotKeyWindowEnabled = hotKeyWindowEnabled
+        self.hotKeyWindowShortcut = hotKeyWindowShortcut
         self.fileWatcherEnabled = fileWatcherEnabled
         self.githubIntegrationEnabled = githubIntegrationEnabled
         self.autoCheckForUpdates = autoCheckForUpdates
@@ -305,6 +312,8 @@ extension AppSettings {
         case autoRefreshEnabled
         case autoRefreshIntervalSeconds
         case autoClosePaneOnProcessExit
+        case hotKeyWindowEnabled
+        case hotKeyWindowShortcut
         case fileWatcherEnabled
         case githubIntegrationEnabled
         case autoCheckForUpdates
@@ -338,6 +347,9 @@ extension AppSettings {
             autoRefreshEnabled: try container.decodeIfPresent(Bool.self, forKey: .autoRefreshEnabled) ?? true,
             autoRefreshIntervalSeconds: try container.decodeIfPresent(Int.self, forKey: .autoRefreshIntervalSeconds) ?? 30,
             autoClosePaneOnProcessExit: try container.decodeIfPresent(Bool.self, forKey: .autoClosePaneOnProcessExit) ?? true,
+            hotKeyWindowEnabled: try container.decodeIfPresent(Bool.self, forKey: .hotKeyWindowEnabled) ?? false,
+            hotKeyWindowShortcut: try container.decodeIfPresent(StoredShortcut.self, forKey: .hotKeyWindowShortcut)
+                ?? StoredShortcut(key: " ", command: true, shift: true, option: false, control: false),
             fileWatcherEnabled: try container.decodeIfPresent(Bool.self, forKey: .fileWatcherEnabled) ?? true,
             githubIntegrationEnabled: try container.decodeIfPresent(Bool.self, forKey: .githubIntegrationEnabled) ?? true,
             autoCheckForUpdates: try container.decodeIfPresent(Bool.self, forKey: .autoCheckForUpdates) ?? true,
@@ -493,6 +505,78 @@ struct StoredShortcut: Codable, Hashable {
             return String(char)
         }
         return nil
+    }
+}
+
+extension StoredShortcut {
+    private static let keyCodeByStoredKey: [String: UInt32] = [
+        "a": UInt32(kVK_ANSI_A),
+        "b": UInt32(kVK_ANSI_B),
+        "c": UInt32(kVK_ANSI_C),
+        "d": UInt32(kVK_ANSI_D),
+        "e": UInt32(kVK_ANSI_E),
+        "f": UInt32(kVK_ANSI_F),
+        "g": UInt32(kVK_ANSI_G),
+        "h": UInt32(kVK_ANSI_H),
+        "i": UInt32(kVK_ANSI_I),
+        "j": UInt32(kVK_ANSI_J),
+        "k": UInt32(kVK_ANSI_K),
+        "l": UInt32(kVK_ANSI_L),
+        "m": UInt32(kVK_ANSI_M),
+        "n": UInt32(kVK_ANSI_N),
+        "o": UInt32(kVK_ANSI_O),
+        "p": UInt32(kVK_ANSI_P),
+        "q": UInt32(kVK_ANSI_Q),
+        "r": UInt32(kVK_ANSI_R),
+        "s": UInt32(kVK_ANSI_S),
+        "t": UInt32(kVK_ANSI_T),
+        "u": UInt32(kVK_ANSI_U),
+        "v": UInt32(kVK_ANSI_V),
+        "w": UInt32(kVK_ANSI_W),
+        "x": UInt32(kVK_ANSI_X),
+        "y": UInt32(kVK_ANSI_Y),
+        "z": UInt32(kVK_ANSI_Z),
+        "0": UInt32(kVK_ANSI_0),
+        "1": UInt32(kVK_ANSI_1),
+        "2": UInt32(kVK_ANSI_2),
+        "3": UInt32(kVK_ANSI_3),
+        "4": UInt32(kVK_ANSI_4),
+        "5": UInt32(kVK_ANSI_5),
+        "6": UInt32(kVK_ANSI_6),
+        "7": UInt32(kVK_ANSI_7),
+        "8": UInt32(kVK_ANSI_8),
+        "9": UInt32(kVK_ANSI_9),
+        " ": UInt32(kVK_Space),
+        "\t": UInt32(kVK_Tab),
+        "\r": UInt32(kVK_Return),
+        "[": UInt32(kVK_ANSI_LeftBracket),
+        "]": UInt32(kVK_ANSI_RightBracket),
+        "-": UInt32(kVK_ANSI_Minus),
+        "=": UInt32(kVK_ANSI_Equal),
+        ",": UInt32(kVK_ANSI_Comma),
+        ".": UInt32(kVK_ANSI_Period),
+        "/": UInt32(kVK_ANSI_Slash),
+        ";": UInt32(kVK_ANSI_Semicolon),
+        "'": UInt32(kVK_ANSI_Quote),
+        "`": UInt32(kVK_ANSI_Grave),
+        "\\": UInt32(kVK_ANSI_Backslash),
+        "←": UInt32(kVK_LeftArrow),
+        "→": UInt32(kVK_RightArrow),
+        "↑": UInt32(kVK_UpArrow),
+        "↓": UInt32(kVK_DownArrow),
+    ]
+
+    var carbonKeyCode: UInt32? {
+        Self.keyCodeByStoredKey[key.lowercased()]
+    }
+
+    var carbonModifierFlags: UInt32 {
+        var flags: UInt32 = 0
+        if command { flags |= UInt32(cmdKey) }
+        if shift { flags |= UInt32(shiftKey) }
+        if option { flags |= UInt32(optionKey) }
+        if control { flags |= UInt32(controlKey) }
+        return flags
     }
 }
 

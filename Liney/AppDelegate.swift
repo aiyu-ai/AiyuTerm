@@ -58,6 +58,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 }
                 Task { @MainActor in
                     self.applicationMenuController.applySettings(settings)
+                    self.desktopApplication?.updateHotKeyWindowSettings(settings)
                 }
             }
             desktopApplication.launch()
@@ -76,7 +77,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        true
+        guard Thread.isMainThread else { return true }
+        return MainActor.assumeIsolated {
+            lineyShouldTerminateAfterLastWindowClosed(
+                hotKeyWindowEnabled: desktopApplication?.isHotKeyWindowEnabled ?? false
+            )
+        }
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        guard Thread.isMainThread else { return false }
+        return MainActor.assumeIsolated {
+            guard lineyShouldReopenMainWindow(hasVisibleWindows: flag) else { return false }
+            desktopApplication?.reopenMainWindow()
+            return true
+        }
     }
 
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
@@ -336,4 +351,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         )
         return credits
     }
+}
+
+func lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: Bool) -> Bool {
+    !hotKeyWindowEnabled
+}
+
+func lineyShouldReopenMainWindow(hasVisibleWindows: Bool) -> Bool {
+    !hasVisibleWindows
 }

@@ -208,7 +208,7 @@ struct TerminalPaneView: View {
             searchDraft = session.surfaceStatus.searchQuery ?? ""
         }
         session.beginSearch()
-        searchFieldFocused = true
+        requestSearchFieldFocus()
     }
 
     private func closeSearch() {
@@ -225,11 +225,20 @@ struct TerminalPaneView: View {
             if query != searchDraft {
                 searchDraft = query
             }
+            requestSearchFieldFocus()
         } else {
             searchTask?.cancel()
             searchTask = nil
             isSearchPresented = false
             searchFieldFocused = false
+        }
+    }
+
+    private func requestSearchFieldFocus() {
+        Task { @MainActor in
+            await Task.yield()
+            guard isSearchPresented else { return }
+            searchFieldFocused = true
         }
     }
 

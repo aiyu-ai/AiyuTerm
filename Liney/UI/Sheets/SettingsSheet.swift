@@ -132,10 +132,8 @@ struct SettingsSheet: View {
             }
         }
         .frame(width: 980, height: 720)
-        .task {
-            appSettings = store.appSettings
-            selectedWorkspaceID = request.workspaceID ?? store.selectedWorkspace?.id
-            loadWorkspaceSettings()
+        .task(id: request.id) {
+            reloadFromStore()
         }
     }
 
@@ -161,6 +159,7 @@ struct SettingsSheet: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Toggle("Enable automatic refresh", isOn: $appSettings.autoRefreshEnabled)
                     Toggle("Close terminal panes automatically after process exit", isOn: $appSettings.autoClosePaneOnProcessExit)
+                    Toggle("Enable hot key window", isOn: $appSettings.hotKeyWindowEnabled)
                     Toggle("Enable file watchers", isOn: $appSettings.fileWatcherEnabled)
                     Toggle("Allow system notifications", isOn: $appSettings.systemNotificationsEnabled)
                     Toggle("Show archived workspaces in sidebar", isOn: $appSettings.showArchivedWorkspaces)
@@ -175,6 +174,32 @@ struct SettingsSheet: View {
                             .foregroundStyle(.secondary)
                     }
 
+                }
+                .padding(.top, 8)
+            }
+
+            GroupBox("Hot Key Window") {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("When enabled, the configured global shortcut toggles the main Liney window even while another app is active.")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+
+                    HStack(alignment: .center, spacing: 12) {
+                        Text("Global shortcut")
+                        Spacer()
+                        ShortcutRecorderField(
+                            shortcut: hotKeyWindowShortcutBinding,
+                            fallbackShortcut: StoredShortcut(key: " ", command: true, shift: true, option: false, control: false),
+                            emptyTitle: "Not Set",
+                            displayString: { $0.displayString },
+                            transformRecordedShortcut: { $0 }
+                        )
+                        .frame(width: 132)
+                    }
+
+                    Text(appSettings.hotKeyWindowEnabled ? "The window stays available from the global shortcut until you turn this off." : "Disabled by default. Turn it on explicitly if you want iTerm-style summon/hide behavior.")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
                 }
                 .padding(.top, 8)
             }
@@ -630,6 +655,12 @@ struct SettingsSheet: View {
         }
     }
 
+    private func reloadFromStore() {
+        appSettings = store.appSettings
+        selectedWorkspaceID = request.workspaceID ?? store.selectedWorkspace?.id
+        loadWorkspaceSettings()
+    }
+
     private func save() {
         appSettings.autoRefreshIntervalSeconds = max(10, appSettings.autoRefreshIntervalSeconds)
         appSettings.keyboardShortcutOverrides = LineyKeyboardShortcuts.normalizedOverrides(appSettings.keyboardShortcutOverrides)
@@ -654,6 +685,16 @@ struct SettingsSheet: View {
                     return
                 }
                 LineyKeyboardShortcuts.setShortcut(newShortcut, for: action, in: &appSettings)
+            }
+        )
+    }
+
+    private var hotKeyWindowShortcutBinding: Binding<StoredShortcut?> {
+        Binding(
+            get: { appSettings.hotKeyWindowShortcut },
+            set: { newShortcut in
+                guard let newShortcut else { return }
+                appSettings.hotKeyWindowShortcut = newShortcut
             }
         )
     }

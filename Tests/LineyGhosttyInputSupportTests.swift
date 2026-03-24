@@ -216,6 +216,68 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
         )
     }
 
+    func testTextFinderActionResolvesFromMenuItemTag() {
+        let menuItem = NSMenuItem(title: "Find", action: nil, keyEquivalent: "f")
+        menuItem.tag = NSTextFinder.Action.showFindInterface.rawValue
+
+        XCTAssertEqual(lineyTextFinderAction(for: menuItem), .showFindInterface)
+    }
+
+    func testTextFinderActionIgnoresUnsupportedSender() {
+        XCTAssertNil(lineyTextFinderAction(for: NSObject()))
+    }
+
+    func testGhosttySearchBindingActionUsesSearchPrefix() {
+        XCTAssertEqual(
+            lineyGhosttySearchBindingAction(for: "needle"),
+            "search:needle"
+        )
+    }
+
+    func testGhosttySearchBindingActionPreservesLiteralQueryText() {
+        XCTAssertEqual(
+            lineyGhosttySearchBindingAction(for: "error: timeout /tmp/a b"),
+            "search:error: timeout /tmp/a b"
+        )
+    }
+
+    func testGhosttySearchBindingActionAllowsEmptyQuery() {
+        XCTAssertEqual(
+            lineyGhosttySearchBindingAction(for: ""),
+            "search:"
+        )
+    }
+
+    func testGhosttySearchNavigationBindingActionUsesNavigateSearchAction() {
+        XCTAssertEqual(
+            lineyGhosttySearchNavigationBindingAction(.next),
+            "navigate_search:next"
+        )
+        XCTAssertEqual(
+            lineyGhosttySearchNavigationBindingAction(.previous),
+            "navigate_search:previous"
+        )
+    }
+
+    func testTerminalDropTextQuotesFilePathsForShells() {
+        let fileURLs = [
+            URL(fileURLWithPath: "/tmp/liney screenshot.png"),
+            URL(fileURLWithPath: "/tmp/it's-liney.jpg"),
+        ]
+
+        XCTAssertEqual(
+            lineyTerminalDropText(fileURLs: fileURLs, plainText: nil),
+            "'/tmp/liney screenshot.png' '/tmp/it'\\''s-liney.jpg'"
+        )
+    }
+
+    func testTerminalDropTextFallsBackToPlainText() {
+        XCTAssertEqual(
+            lineyTerminalDropText(fileURLs: [], plainText: "dragged prompt"),
+            "dragged prompt"
+        )
+    }
+
     func testDeleteBackwardRemovesSingleComposedCharacter() {
         var state = LineyGhosttyMarkedTextState(
             text: "你好",

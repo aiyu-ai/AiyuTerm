@@ -5,6 +5,7 @@
 //  Author: wuwenrui
 //
 
+import Carbon
 import XCTest
 @testable import Liney
 
@@ -14,6 +15,11 @@ final class QuickCommandSupportTests: XCTestCase {
 
         XCTAssertEqual(settings.quickCommandPresets, QuickCommandCatalog.defaultCommands)
         XCTAssertTrue(settings.quickCommandRecentIDs.isEmpty)
+        XCTAssertFalse(settings.hotKeyWindowEnabled)
+        XCTAssertEqual(
+            settings.hotKeyWindowShortcut,
+            StoredShortcut(key: " ", command: true, shift: true, option: false, control: false)
+        )
         XCTAssertEqual(
             QuickCommandCatalog.defaultCommands.first(where: { $0.id == "codex-resume" })?.command,
             "codex resume"
@@ -22,6 +28,30 @@ final class QuickCommandSupportTests: XCTestCase {
             LineyKeyboardShortcuts.effectiveShortcut(for: .closeWindow, in: settings),
             StoredShortcut(key: "w", command: true, shift: false, option: false, control: true)
         )
+    }
+
+    func testSettingsEncodingPreservesHotKeyWindowFields() throws {
+        let settings = AppSettings(
+            hotKeyWindowEnabled: true,
+            hotKeyWindowShortcut: StoredShortcut(key: "k", command: true, shift: true, option: false, control: false)
+        )
+
+        let data = try JSONEncoder().encode(settings)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+
+        XCTAssertEqual(object["hotKeyWindowEnabled"] as? Bool, true)
+
+        let shortcut = try XCTUnwrap(object["hotKeyWindowShortcut"] as? [String: Any])
+        XCTAssertEqual(shortcut["key"] as? String, "k")
+        XCTAssertEqual(shortcut["command"] as? Bool, true)
+        XCTAssertEqual(shortcut["shift"] as? Bool, true)
+        XCTAssertEqual(shortcut["option"] as? Bool, false)
+        XCTAssertEqual(shortcut["control"] as? Bool, false)
+    }
+
+    func testDebugBuildUsesSeparatePersistenceDirectoryName() {
+        XCTAssertEqual(lineyStateDirectoryName(isDebugBuild: true), ".liney-debug")
+        XCTAssertEqual(lineyStateDirectoryName(isDebugBuild: false), ".liney")
     }
 
     func testQuickCommandNormalizationTrimsAndDropsDuplicates() {
@@ -107,5 +137,32 @@ final class QuickCommandSupportTests: XCTestCase {
             LineyKeyboardShortcuts.displayString(for: .selectTabByNumber, in: settings),
             "⌘1…9"
         )
+    }
+
+    func testStoredShortcutComputesCarbonHotKeyValues() {
+        let shortcut = StoredShortcut(key: " ", command: false, shift: true, option: true, control: false)
+
+        XCTAssertEqual(shortcut.carbonKeyCode, UInt32(kVK_Space))
+        XCTAssertEqual(shortcut.carbonModifierFlags, UInt32(optionKey | shiftKey))
+    }
+
+    func testHotKeyWindowKeepsAppRunningWhenLastWindowCloses() {
+        XCTAssertFalse(lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: true))
+    }
+
+    func testStandardWindowModeTerminatesAfterLastWindowCloses() {
+        XCTAssertTrue(lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: false))
+    }
+
+    func testDockReopenRestoresWindowWhenNoVisibleWindows() {
+        XCTAssertTrue(lineyShouldReopenMainWindow(hasVisibleWindows: false))
+        XCTAssertFalse(lineyShouldReopenMainWindow(hasVisibleWindows: true))
+    }
+
+    func testGhosttyLogFilterSuppressesOnlyKnownMailboxSpam() {
+        XCTAssertTrue(LineyGhosttyLogFilter.shouldSuppress("io_thread: mailbox message=start_synchronized_output"))
+        XCTAssertTrue(LineyGhosttyLogFilter.shouldSuppress("debug(io_thread): mailbox message=start_synchronized_output"))
+        XCTAssertFalse(LineyGhosttyLogFilter.shouldSuppress("io_thread: mailbox message=end_synchronized_output"))
+        XCTAssertFalse(LineyGhosttyLogFilter.shouldSuppress("warning(io_thread): error draining mailbox err=something"))
     }
 }
