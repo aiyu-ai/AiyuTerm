@@ -157,6 +157,37 @@ final class QuickCommandSupportTests: XCTestCase {
         XCTAssertTrue(lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: false))
     }
 
+    func testLastWindowCloseInterceptsTerminationWhenQuitNeedsConfirmation() {
+        XCTAssertTrue(
+            lineyShouldInterceptLastWindowCloseForTermination(
+                hotKeyWindowEnabled: false,
+                openWindowCount: 1,
+                needsConfirmQuit: true
+            )
+        )
+        XCTAssertFalse(
+            lineyShouldInterceptLastWindowCloseForTermination(
+                hotKeyWindowEnabled: false,
+                openWindowCount: 2,
+                needsConfirmQuit: true
+            )
+        )
+        XCTAssertFalse(
+            lineyShouldInterceptLastWindowCloseForTermination(
+                hotKeyWindowEnabled: true,
+                openWindowCount: 1,
+                needsConfirmQuit: true
+            )
+        )
+        XCTAssertFalse(
+            lineyShouldInterceptLastWindowCloseForTermination(
+                hotKeyWindowEnabled: false,
+                openWindowCount: 1,
+                needsConfirmQuit: false
+            )
+        )
+    }
+
     func testDockReopenRestoresWindowWhenNoVisibleWindows() {
         XCTAssertTrue(lineyShouldReopenMainWindow(hasVisibleWindows: false))
         XCTAssertFalse(lineyShouldReopenMainWindow(hasVisibleWindows: true))

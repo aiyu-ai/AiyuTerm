@@ -80,6 +80,10 @@ public final class LineyDesktopApplication: NSObject {
             window.makeKeyAndOrderFront(nil)
         }
 
+        func windowShouldClose(_ sender: NSWindow) -> Bool {
+            owner?.shouldCloseWindowContext(self) ?? true
+        }
+
         func windowWillClose(_ notification: Notification) {
             owner?.removeWindowContext(self)
         }
@@ -371,6 +375,19 @@ public final class LineyDesktopApplication: NSObject {
         windowContexts.first { $0.window === window }
     }
 
+    private func shouldCloseWindowContext(_ context: WindowContext) -> Bool {
+        guard lineyShouldInterceptLastWindowCloseForTermination(
+            hotKeyWindowEnabled: isHotKeyWindowEnabled,
+            openWindowCount: windowContexts.count,
+            needsConfirmQuit: needsConfirmQuit
+        ) else {
+            return true
+        }
+
+        NSApp.terminate(nil)
+        return false
+    }
+
     private func removeWindowContext(_ context: WindowContext) {
         let wasPrimary = context.persistsWorkspaceState
         if wasPrimary {
@@ -439,6 +456,14 @@ public final class LineyDesktopApplication: NSObject {
         }
         syncWindowPresentation()
     }
+}
+
+func lineyShouldInterceptLastWindowCloseForTermination(
+    hotKeyWindowEnabled: Bool,
+    openWindowCount: Int,
+    needsConfirmQuit: Bool
+) -> Bool {
+    !hotKeyWindowEnabled && openWindowCount <= 1 && needsConfirmQuit
 }
 
 @MainActor
