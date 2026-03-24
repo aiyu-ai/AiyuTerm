@@ -10,11 +10,7 @@ import Foundation
 
 struct DiffFileDocument: Sendable {
     let file: DiffChangedFile
-    let oldContents: String
-    let newContents: String
     let unifiedPatch: String
-    let renderedDiff: StructuredDiffDocument
-    let isPatchOnly: Bool
 }
 
 enum DiffDiagnostics {
@@ -54,8 +50,6 @@ enum DiffDiagnostics {
 
 @MainActor
 final class DiffWindowState: ObservableObject {
-    nonisolated private static let documentLoadTimeoutNanoseconds: UInt64 = 4_000_000_000
-
     @Published var worktreePath: String?
     @Published var branchName: String = ""
     @Published var emptyStateMessage: String = "Working directory is clean."
@@ -127,24 +121,23 @@ final class DiffWindowState: ObservableObject {
             DiffDiagnostics.log("Starting diff load for \(file.displayPath)")
             do {
                 let loadedDocument = try await Task.detached(priority: .userInitiated) {
-                    try await Self.loadDocumentWithTimeout(for: file, worktreePath: worktreePath)
+                    try await Self.loadDocument(for: file, worktreePath: worktreePath)
                 }.value
                 guard !Task.isCancelled else { return }
                 documentCache[file.id] = loadedDocument
                 document = loadedDocument
                 isLoadingDocument = false
                 DiffDiagnostics.log(
-                    "Finished diff load for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))) [patchOnly=\(loadedDocument.isPatchOnly)]"
+                    "Finished diff load for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))) [patchBytes=\(loadedDocument.unifiedPatch.utf8.count)]"
                 )
             } catch {
                 guard !Task.isCancelled else { return }
                 DiffDiagnostics.error(
                     "Diff load failed for \(file.displayPath) after \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))): \(error.localizedDescription)"
                 )
-                document = Self.makePatchOnlyDocument(
+                document = Self.makeDocument(
                     file: file,
-                    unifiedPatch: error.localizedDescription.nonEmptyOrFallback("Unable to load diff."),
-                    reason: nil
+                    unifiedPatch: error.localizedDescription.nonEmptyOrFallback("Unable to load diff.")
                 )
                 isLoadingDocument = false
             }
@@ -201,96 +194,24 @@ final class DiffWindowState: ObservableObject {
     }
 
     nonisolated private static func loadDocument(for file: DiffChangedFile, worktreePath: String) async throws -> DiffFileDocument {
-        let gitRepositoryService = GitRepositoryService()
         let start = DiffDiagnostics.now()
-        let oldContents: String
-        let newContents: String
-
-        switch file.status {
-        case .added:
-            oldContents = ""
-            newContents = Self.readFile(at: URL(fileURLWithPath: worktreePath).appendingPathComponent(file.displayPath))
-        case .deleted:
-            let headLoadStart = DiffDiagnostics.now()
-            DiffDiagnostics.log("Loading HEAD contents for deleted file \(file.displayPath)")
-            oldContents = try await gitRepositoryService.showFileAtHEAD(file.oldPath ?? file.displayPath, in: worktreePath) ?? ""
-            DiffDiagnostics.log(
-                "Loaded HEAD contents for deleted file \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: headLoadStart))) [\(DiffDiagnostics.describeText(oldContents))]"
-            )
-            newContents = ""
-        case .renamed, .copied, .modified, .unknown:
-            let oldPath = file.oldPath ?? file.displayPath
-            let newPath = file.newPath ?? file.displayPath
-            let headLoadStart = DiffDiagnostics.now()
-            DiffDiagnostics.log("Loading HEAD contents for \(oldPath)")
-            oldContents = try await gitRepositoryService.showFileAtHEAD(oldPath, in: worktreePath) ?? ""
-            DiffDiagnostics.log(
-                "Loaded HEAD contents for \(oldPath) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: headLoadStart))) [\(DiffDiagnostics.describeText(oldContents))]"
-            )
-            newContents = Self.readFile(at: URL(fileURLWithPath: worktreePath).appendingPathComponent(newPath))
-        }
-
-        let unifiedPatch = try await loadUnifiedPatch(for: file, worktreePath: worktreePath, oldContents: oldContents, newContents: newContents)
-        let renderStart = DiffDiagnostics.now()
-        let renderResult = DiffRenderingEngine.render(old: oldContents, new: newContents, debugLabel: file.displayPath)
+        let unifiedPatch = try await loadUnifiedPatch(for: file, worktreePath: worktreePath)
         DiffDiagnostics.log(
-            "Completed document assembly for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))) [old=\(DiffDiagnostics.describeText(oldContents)), new=\(DiffDiagnostics.describeText(newContents)), patch=\(unifiedPatch.utf8.count)B]"
+            "Completed document assembly for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))) [patch=\(unifiedPatch.utf8.count)B]"
         )
 
-        return makeDocument(
-            file: file,
-            oldContents: oldContents,
-            newContents: newContents,
-            unifiedPatch: unifiedPatch,
-            renderResult: renderResult,
-            renderElapsedMilliseconds: DiffDiagnostics.elapsedMilliseconds(since: renderStart)
-        )
-    }
-
-    nonisolated private static func loadDocumentWithTimeout(
-        for file: DiffChangedFile,
-        worktreePath: String
-    ) async throws -> DiffFileDocument {
-        let start = DiffDiagnostics.now()
-        let timeoutNanoseconds = documentLoadTimeoutNanoseconds
-        DiffDiagnostics.log("Starting timed diff load for \(file.displayPath)")
-        return try await withThrowingTaskGroup(of: DiffFileDocument.self) { group in
-            group.addTask {
-                try await loadDocument(for: file, worktreePath: worktreePath)
-            }
-            group.addTask {
-                try await Task.sleep(nanoseconds: timeoutNanoseconds)
-                DiffDiagnostics.log(
-                    "Structured diff timed out for \(file.displayPath) after \(DiffDiagnostics.formatMilliseconds(Double(timeoutNanoseconds) / 1_000_000))"
-                )
-                return try await loadPatchOnlyDocument(
-                    for: file,
-                    worktreePath: worktreePath,
-                    reason: "Structured diff timed out. Showing raw patch."
-                )
-            }
-
-            guard let first = try await group.next() else {
-                throw CancellationError()
-            }
-            group.cancelAll()
-            DiffDiagnostics.log(
-                "Timed diff load finished for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))) [patchOnly=\(first.isPatchOnly)]"
-            )
-            return first
-        }
+        return makeDocument(file: file, unifiedPatch: unifiedPatch)
     }
 
     nonisolated private static func loadUnifiedPatch(
         for file: DiffChangedFile,
-        worktreePath: String,
-        oldContents: String,
-        newContents: String
+        worktreePath: String
     ) async throws -> String {
         let gitRepositoryService = GitRepositoryService()
         if file.status == .added, file.oldPath == nil {
             DiffDiagnostics.log("Using synthetic patch for added file \(file.displayPath)")
-            return Self.syntheticPatch(for: file, oldContents: oldContents, newContents: newContents)
+            let newContents = Self.readFile(at: URL(fileURLWithPath: worktreePath).appendingPathComponent(file.displayPath))
+            return Self.syntheticPatch(for: file, oldContents: "", newContents: newContents)
         }
 
         let diffPath = file.newPath ?? file.oldPath ?? file.displayPath
@@ -300,105 +221,24 @@ final class DiffWindowState: ObservableObject {
         DiffDiagnostics.log(
             "Loaded git patch for \(diffPath) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))) [\(patch.utf8.count)B]"
         )
-        return patch.nilIfEmpty ?? Self.syntheticPatch(for: file, oldContents: oldContents, newContents: newContents)
-    }
-
-    nonisolated private static func loadPatchOnlyDocument(
-        for file: DiffChangedFile,
-        worktreePath: String,
-        reason: String?
-    ) async throws -> DiffFileDocument {
-        let start = DiffDiagnostics.now()
-        DiffDiagnostics.log("Loading patch-only fallback for \(file.displayPath)")
-        let patch: String
-
-        if file.status == .added, file.oldPath == nil {
-            let newContents = Self.readFile(at: URL(fileURLWithPath: worktreePath).appendingPathComponent(file.displayPath))
-            patch = Self.syntheticPatch(for: file, oldContents: "", newContents: newContents)
-        } else if file.status == .deleted {
-            let gitRepositoryService = GitRepositoryService()
-            let oldContents = try await gitRepositoryService.showFileAtHEAD(file.oldPath ?? file.displayPath, in: worktreePath) ?? ""
-            patch = Self.syntheticPatch(for: file, oldContents: oldContents, newContents: "")
-        } else {
-            let gitRepositoryService = GitRepositoryService()
-            let diffPath = file.newPath ?? file.oldPath ?? file.displayPath
-            let rawPatch = try await gitRepositoryService.diffPatch(for: worktreePath, filePath: diffPath)
-            patch = rawPatch.nilIfEmpty ?? "No unified patch available for \(file.displayPath)."
+        if let patch = patch.nilIfEmpty {
+            return patch
         }
-
-        DiffDiagnostics.log(
-            "Loaded patch-only fallback for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(DiffDiagnostics.elapsedMilliseconds(since: start))) [\(patch.utf8.count)B]"
-        )
-
-        return makePatchOnlyDocument(file: file, unifiedPatch: patch, reason: reason)
+        if file.status == .deleted {
+            DiffDiagnostics.log("Using synthetic patch for deleted file \(file.displayPath)")
+            let oldContents = try await gitRepositoryService.showFileAtHEAD(file.oldPath ?? file.displayPath, in: worktreePath) ?? ""
+            return Self.syntheticPatch(for: file, oldContents: oldContents, newContents: "")
+        }
+        return "No unified patch available for \(file.displayPath)."
     }
 
     nonisolated static func makeDocument(
         file: DiffChangedFile,
-        oldContents: String,
-        newContents: String,
-        unifiedPatch: String,
-        renderResult: DiffRenderingResult,
-        renderElapsedMilliseconds: Double
+        unifiedPatch: String
     ) -> DiffFileDocument {
-        switch renderResult {
-        case .document(let renderedDiff):
-            DiffDiagnostics.log(
-                "Rendered structured diff for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(renderElapsedMilliseconds)) [added=\(renderedDiff.addedLineCount), removed=\(renderedDiff.removedLineCount)]"
-            )
-            return DiffFileDocument(
-                file: file,
-                oldContents: oldContents,
-                newContents: newContents,
-                unifiedPatch: unifiedPatch,
-                renderedDiff: renderedDiff,
-                isPatchOnly: false
-            )
-        case .requiresPatchFallback(let reason):
-            if let renderedDiff = DiffRenderingEngine.renderPatch(unifiedPatch, debugLabel: file.displayPath) {
-                DiffDiagnostics.log(
-                    "Structured diff switched to patch hunks for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(renderElapsedMilliseconds)): \(reason)"
-                )
-                return DiffFileDocument(
-                    file: file,
-                    oldContents: oldContents,
-                    newContents: newContents,
-                    unifiedPatch: unifiedPatch,
-                    renderedDiff: renderedDiff,
-                    isPatchOnly: false
-                )
-            } else {
-                DiffDiagnostics.log(
-                    "Structured diff switched to patch-only for \(file.displayPath) in \(DiffDiagnostics.formatMilliseconds(renderElapsedMilliseconds)): \(reason)"
-                )
-                return makePatchOnlyDocument(
-                    file: file,
-                    unifiedPatch: unifiedPatch,
-                    reason: "\(reason) Showing raw patch."
-                )
-            }
-        }
-    }
-
-    nonisolated private static func makePatchOnlyDocument(
-        file: DiffChangedFile,
-        unifiedPatch: String,
-        reason: String?
-    ) -> DiffFileDocument {
-        let annotatedPatch: String
-        if let reason, !reason.isEmpty {
-            annotatedPatch = "\(reason)\n\n\(unifiedPatch)"
-        } else {
-            annotatedPatch = unifiedPatch
-        }
-
         return DiffFileDocument(
             file: file,
-            oldContents: "",
-            newContents: "",
-            unifiedPatch: annotatedPatch,
-            renderedDiff: .empty(),
-            isPatchOnly: true
+            unifiedPatch: unifiedPatch
         )
     }
 

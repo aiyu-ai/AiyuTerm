@@ -48,6 +48,24 @@ struct StructuredDiffDocument: Hashable, Sendable {
     let removedLineCount: Int
 }
 
+struct DiffPatchAnalysis: Hashable, Sendable {
+    let hunkCount: Int
+    let totalOldSpan: Int
+    let totalNewSpan: Int
+    let maxOldSpan: Int
+    let maxNewSpan: Int
+    let maxTouchedOldLine: Int
+    let maxTouchedNewLine: Int
+
+    nonisolated var maxSpan: Int {
+        max(maxOldSpan, maxNewSpan)
+    }
+
+    nonisolated var totalSpan: Int {
+        max(totalOldSpan, totalNewSpan)
+    }
+}
+
 extension StructuredDiffDocument {
     nonisolated static func empty() -> StructuredDiffDocument {
         StructuredDiffDocument(
@@ -248,6 +266,13 @@ private enum DiffEditOperation {
     case equal(String)
     case insert(String)
     case delete(String)
+}
+
+private struct DiffPatchHunkHeader {
+    let oldStart: Int
+    let oldCount: Int
+    let newStart: Int
+    let newCount: Int
 }
 
 enum DiffRenderingResult: Hashable, Sendable {
@@ -482,6 +507,37 @@ enum DiffRenderingEngine {
         return document
     }
 
+    nonisolated static func analyzePatch(_ patch: String) -> DiffPatchAnalysis {
+        var hunkCount = 0
+        var totalOldSpan = 0
+        var totalNewSpan = 0
+        var maxOldSpan = 0
+        var maxNewSpan = 0
+        var maxTouchedOldLine = 0
+        var maxTouchedNewLine = 0
+
+        for line in patch.split(separator: "\n", omittingEmptySubsequences: false) {
+            guard let hunk = parseHunkHeader(String(line)) else { continue }
+            hunkCount += 1
+            totalOldSpan += hunk.oldCount
+            totalNewSpan += hunk.newCount
+            maxOldSpan = max(maxOldSpan, hunk.oldCount)
+            maxNewSpan = max(maxNewSpan, hunk.newCount)
+            maxTouchedOldLine = max(maxTouchedOldLine, hunk.oldStart + max(hunk.oldCount - 1, 0))
+            maxTouchedNewLine = max(maxTouchedNewLine, hunk.newStart + max(hunk.newCount - 1, 0))
+        }
+
+        return DiffPatchAnalysis(
+            hunkCount: hunkCount,
+            totalOldSpan: totalOldSpan,
+            totalNewSpan: totalNewSpan,
+            maxOldSpan: maxOldSpan,
+            maxNewSpan: maxNewSpan,
+            maxTouchedOldLine: maxTouchedOldLine,
+            maxTouchedNewLine: maxTouchedNewLine
+        )
+    }
+
     private nonisolated static func makeDocument(from operations: [DiffEditOperation]) -> StructuredDiffDocument {
         var unifiedLines: [DiffUnifiedLine] = []
         var splitRows: [DiffSplitRow] = []
@@ -658,7 +714,7 @@ enum DiffRenderingEngine {
         return lines
     }
 
-    private nonisolated static func parseHunkHeader(_ line: String) -> (oldStart: Int, newStart: Int)? {
+    private nonisolated static func parseHunkHeader(_ line: String) -> DiffPatchHunkHeader? {
         guard line.hasPrefix("@@") else { return nil }
 
         let body = line.dropFirst(2)
@@ -666,17 +722,26 @@ enum DiffRenderingEngine {
         let header = body[..<closingRange.lowerBound].trimmingCharacters(in: .whitespaces)
         let parts = header.split(separator: " ")
         guard parts.count >= 2 else { return nil }
-        guard let oldStart = parseHunkRange(parts[0], prefix: "-"),
-              let newStart = parseHunkRange(parts[1], prefix: "+") else {
+        guard let oldRange = parseHunkRange(parts[0], prefix: "-"),
+              let newRange = parseHunkRange(parts[1], prefix: "+") else {
             return nil
         }
-        return (oldStart: oldStart, newStart: newStart)
+        return DiffPatchHunkHeader(
+            oldStart: oldRange.start,
+            oldCount: oldRange.count,
+            newStart: newRange.start,
+            newCount: newRange.count
+        )
     }
 
-    private nonisolated static func parseHunkRange<S: StringProtocol>(_ value: S, prefix: Character) -> Int? {
+    private nonisolated static func parseHunkRange<S: StringProtocol>(
+        _ value: S,
+        prefix: Character
+    ) -> (start: Int, count: Int)? {
         guard value.first == prefix else { return nil }
         let numbers = value.dropFirst().split(separator: ",", maxSplits: 1, omittingEmptySubsequences: false)
         guard let start = numbers.first.flatMap({ Int($0) }) else { return nil }
-        return start
+        let count = numbers.count > 1 ? Int(numbers[1]) ?? 1 : 1
+        return (start: start, count: count)
     }
 }
