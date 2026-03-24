@@ -137,6 +137,18 @@ struct SettingsSheet: View {
             selectedWorkspaceID = request.workspaceID ?? store.selectedWorkspace?.id
             loadWorkspaceSettings()
         }
+        .onChange(of: appSettings.hotKeyWindowEnabled) { _, newValue in
+            store.updateHotKeyWindowSettings(
+                enabled: newValue,
+                shortcut: appSettings.hotKeyWindowShortcut
+            )
+        }
+        .onChange(of: appSettings.hotKeyWindowShortcut) { _, newValue in
+            store.updateHotKeyWindowSettings(
+                enabled: appSettings.hotKeyWindowEnabled,
+                shortcut: newValue
+            )
+        }
     }
 
     @ViewBuilder

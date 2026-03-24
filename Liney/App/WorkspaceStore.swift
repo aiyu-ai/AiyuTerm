@@ -656,6 +656,26 @@ final class WorkspaceStore: ObservableObject {
         }
     }
 
+    func updateHotKeyWindowSettings(enabled: Bool, shortcut: StoredShortcut) {
+        let normalizedShortcut = StoredShortcut(
+            key: shortcut.key,
+            command: shortcut.command,
+            shift: shortcut.shift,
+            option: shortcut.option,
+            control: shortcut.control
+        )
+
+        guard appSettings.hotKeyWindowEnabled != enabled || appSettings.hotKeyWindowShortcut != normalizedShortcut else {
+            return
+        }
+
+        var settings = appSettings
+        settings.hotKeyWindowEnabled = enabled
+        settings.hotKeyWindowShortcut = normalizedShortcut
+        appSettings = settings
+        persistAppSettings()
+    }
+
     func updateWorkspaceSettings(workspaceID: UUID, settings: WorkspaceSettings) {
         guard let workspace = workspace(for: workspaceID) else { return }
         workspace.settings = normalizedWorkspaceSettings(settings, for: workspace)
