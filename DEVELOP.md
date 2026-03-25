@@ -5,7 +5,6 @@ This guide is for contributors and maintainers working on the Liney codebase.
 ## Requirements
 
 - macOS 14+
-- Apple Silicon Mac for the vendored Ghostty binary
 - Xcode 16+ with command line tools
 - `gh` is optional and only needed for GitHub features and release publishing
 
@@ -22,7 +21,7 @@ xcodebuild \
   -project Liney.xcodeproj \
   -scheme Liney \
   -configuration Debug \
-  -destination 'platform=macOS,arch=arm64' \
+  -destination 'platform=macOS' \
   build
 ```
 
@@ -32,7 +31,7 @@ xcodebuild \
 xcodebuild \
   -project Liney.xcodeproj \
   -scheme Liney \
-  -destination 'platform=macOS,arch=arm64' \
+  -destination 'platform=macOS' \
   test
 ```
 
@@ -63,6 +62,7 @@ Liney/
 
 - Testing guide: [`docs/testing.md`](./docs/testing.md)
 - Terminal architecture: [`docs/terminal-architecture.md`](./docs/terminal-architecture.md)
+- Ghostty vendor rebuild: [`docs/build_ghostty.md`](./docs/build_ghostty.md)
 - Release process: [`RELEASING.md`](./RELEASING.md)
 - Contributing guide: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
 - Security policy: [`SECURITY.md`](./SECURITY.md)
@@ -82,8 +82,11 @@ Optional variables:
 
 - `SIGNING_IDENTITY="Developer ID Application: Your Name (TEAMID)"` to sign the `.app`
 - `OUTPUT_DIR=/custom/output/path` to change the output folder
+- `RELEASE_ARCHS="arm64 x86_64"` to override the default universal macOS artifact
 
-The committed `GhosttyKit.xcframework` currently includes a macOS `arm64` slice only. If you want Intel or universal releases, regenerate the vendored framework before changing `RELEASE_ARCHS`.
+The committed `GhosttyKit.xcframework` now includes both macOS `arm64` and `x86_64` slices, so the default release build emits a universal app bundle and DMG.
+
+If you need to rebuild the vendored Ghostty xcframework, see [`docs/build_ghostty.md`](./docs/build_ghostty.md).
 
 The build script emits:
 
@@ -116,7 +119,7 @@ By default it:
 
 - bumps the patch version
 - increments the build number by 1
-- signs and notarizes release artifacts
+- signs and notarizes universal release artifacts
 - updates GitHub releases, Sparkle appcast metadata, and the Homebrew tap
 
 `scripts/deploy.sh` still exists as a compatibility wrapper.

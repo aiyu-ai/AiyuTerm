@@ -63,7 +63,7 @@ Run the full test suite:
 xcodebuild \
   -project Liney.xcodeproj \
   -scheme Liney \
-  -destination 'platform=macOS,arch=arm64' \
+  -destination 'platform=macOS' \
   test
 ```
 
@@ -73,7 +73,7 @@ Run just the Ghostty input-support tests:
 xcodebuild \
   -project Liney.xcodeproj \
   -scheme Liney \
-  -destination 'platform=macOS,arch=arm64' \
+  -destination 'platform=macOS' \
   test \
   -only-testing:LineyTests/LineyGhosttyInputSupportTests
 ```

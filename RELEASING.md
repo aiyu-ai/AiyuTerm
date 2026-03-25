@@ -51,9 +51,9 @@ Optional environment:
 
 - `SIGNING_IDENTITY="Developer ID Application: Your Name (TEAMID)"`
 - `OUTPUT_DIR=/custom/output/path`
-- `RELEASE_ARCHS=arm64`
+- `RELEASE_ARCHS="arm64 x86_64"`
 
-The committed `GhosttyKit.xcframework` currently contains a macOS `arm64` slice only. Regenerate it before attempting Intel or universal release artifacts.
+The default release bundle is now a universal macOS artifact that contains both `arm64` and `x86_64` slices.
 
 ## Sign And Notarize
 
@@ -91,7 +91,7 @@ If the `liney-notarytool` profile exists in the current keychain, `scripts/sign_
 Default behavior:
 
 - bumps `MARKETING_VERSION` by patch and increments `CURRENT_PROJECT_VERSION` by 1 unless `SKIP_BUMP=1`
-- builds and signs the release DMG
+- builds and signs the universal release DMG
 - archives `Liney.app.dSYM` to `dist/dSYMs/Liney-<version>.app.dSYM`
 - packages `dist/dSYMs/Liney-<version>.app.dSYM.zip`
 - uploads `Liney.app.dSYM` to Sentry using the default target `xnu/liney`
