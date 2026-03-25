@@ -830,17 +830,19 @@ private final class LineyGhosttySurfaceView: NSView {
             return false
         }
 
-        if let flags = bindingFlags(for: event, on: surface) {
-            if ghosttyShouldAttemptMenu(
-                flags: flags,
-                hasActiveKeySequence: !activeKeySequence.isEmpty,
-                hasActiveKeyTable: !activeKeyTables.isEmpty
-            ),
-               let menu = NSApp.mainMenu,
-               menu.performKeyEquivalent(with: event) {
-                return true
-            }
+        let flags = bindingFlags(for: event, on: surface)
+        if lineyGhosttyShouldAttemptMenuKeyEquivalent(
+            bindingFlags: flags,
+            modifierFlags: event.modifierFlags,
+            hasActiveKeySequence: !activeKeySequence.isEmpty,
+            hasActiveKeyTable: !activeKeyTables.isEmpty
+        ),
+           let menu = NSApp.mainMenu,
+           menu.performKeyEquivalent(with: event) {
+            return true
+        }
 
+        if flags != nil {
             keyDown(with: event)
             return true
         }

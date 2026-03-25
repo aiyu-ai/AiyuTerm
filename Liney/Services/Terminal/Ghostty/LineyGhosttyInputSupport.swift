@@ -169,6 +169,28 @@ func ghosttyShouldAttemptMenu(
     return !isAll && !isPerformable && isConsumed
 }
 
+func lineyGhosttyShouldAttemptMenuKeyEquivalent(
+    bindingFlags: ghostty_binding_flags_e?,
+    modifierFlags: NSEvent.ModifierFlags,
+    hasActiveKeySequence: Bool,
+    hasActiveKeyTable: Bool
+) -> Bool {
+    if let bindingFlags {
+        return ghosttyShouldAttemptMenu(
+            flags: bindingFlags,
+            hasActiveKeySequence: hasActiveKeySequence,
+            hasActiveKeyTable: hasActiveKeyTable
+        )
+    }
+
+    guard !hasActiveKeySequence, !hasActiveKeyTable else {
+        return false
+    }
+
+    let relevantModifiers = modifierFlags.intersection(.deviceIndependentFlagsMask)
+    return relevantModifiers.intersection([.command, .control, .option]).isEmpty == false
+}
+
 func resolveGhosttyEquivalentKey(
     charactersIgnoringModifiers: String?,
     characters: String?,

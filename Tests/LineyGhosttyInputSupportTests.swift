@@ -141,6 +141,39 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
         )
     }
 
+    func testUnboundOptionShortcutStillAttemptsMenu() {
+        XCTAssertTrue(
+            lineyGhosttyShouldAttemptMenuKeyEquivalent(
+                bindingFlags: nil,
+                modifierFlags: [.option],
+                hasActiveKeySequence: false,
+                hasActiveKeyTable: false
+            )
+        )
+    }
+
+    func testPlainUnboundKeyDoesNotAttemptMenu() {
+        XCTAssertFalse(
+            lineyGhosttyShouldAttemptMenuKeyEquivalent(
+                bindingFlags: nil,
+                modifierFlags: [],
+                hasActiveKeySequence: false,
+                hasActiveKeyTable: false
+            )
+        )
+    }
+
+    func testUnboundShortcutSkipsMenuDuringActiveKeySequence() {
+        XCTAssertFalse(
+            lineyGhosttyShouldAttemptMenuKeyEquivalent(
+                bindingFlags: nil,
+                modifierFlags: [.option],
+                hasActiveKeySequence: true,
+                hasActiveKeyTable: false
+            )
+        )
+    }
+
     func testCtrlReturnEquivalentKeyStaysReturn() {
         let resolution = resolveGhosttyEquivalentKey(
             charactersIgnoringModifiers: "\r",
