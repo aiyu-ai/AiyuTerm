@@ -62,6 +62,7 @@ Liney/
 
 - Testing guide: [`docs/testing.md`](./docs/testing.md)
 - Terminal architecture: [`docs/terminal-architecture.md`](./docs/terminal-architecture.md)
+- Ghostty vendor rebuild: [`docs/build_ghostty.md`](./docs/build_ghostty.md)
 - Release process: [`RELEASING.md`](./RELEASING.md)
 - Contributing guide: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
 - Security policy: [`SECURITY.md`](./SECURITY.md)
@@ -84,6 +85,8 @@ Optional variables:
 - `RELEASE_ARCHS="arm64 x86_64"` to override the default universal macOS artifact
 
 The committed `GhosttyKit.xcframework` now includes both macOS `arm64` and `x86_64` slices, so the default release build emits a universal app bundle and DMG.
+
+If you need to rebuild the vendored Ghostty xcframework, see [`docs/build_ghostty.md`](./docs/build_ghostty.md).
 
 The build script emits:
 
