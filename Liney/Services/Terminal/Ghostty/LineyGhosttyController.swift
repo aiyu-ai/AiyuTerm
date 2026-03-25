@@ -466,6 +466,7 @@ private final class LineyGhosttySurfaceView: NSView {
     private var handledTextInputCommand = false
     private var lastPerformKeyEvent: TimeInterval?
     private var markedSelectionRange = NSRange(location: NSNotFound, length: 0)
+    private var currentTextInputEventKeyCode: UInt16?
 
     override var acceptsFirstResponder: Bool { true }
 
@@ -786,6 +787,8 @@ private final class LineyGhosttySurfaceView: NSView {
             let hadMarkedTextBeforeInterpretation = hasMarkedText()
             keyTextAccumulator = []
             handledTextInputCommand = false
+            currentTextInputEventKeyCode = event.keyCode
+            defer { currentTextInputEventKeyCode = nil }
             interpretKeyEvents([translationEvent])
             let accumulated = keyTextAccumulator?.joined() ?? ""
             keyTextAccumulator = nil
@@ -1478,6 +1481,18 @@ extension LineyGhosttySurfaceView: @preconcurrency NSTextInputClient {
         case let value as String:
             characters = value
         default:
+            return
+        }
+
+        let hadMarkedTextBeforeInsertion = markedText.length > 0
+        if LineyGhosttyTextInputRouting.shouldTreatInsertedTextAsMarkedTextDuringDeletion(
+            insertedText: characters,
+            keyCode: currentTextInputEventKeyCode,
+            hadMarkedTextBeforeInsertion: hadMarkedTextBeforeInsertion
+        ) {
+            markedText = NSMutableAttributedString(string: characters)
+            markedSelectionRange = NSRange(location: markedText.length, length: 0)
+            syncPreedit()
             return
         }
 

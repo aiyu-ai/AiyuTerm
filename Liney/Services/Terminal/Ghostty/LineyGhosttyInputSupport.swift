@@ -35,6 +35,23 @@ enum LineyGhosttyTextInputRouting {
     ) -> Bool {
         hadMarkedTextBeforeInterpretation || hasMarkedTextAfterInterpretation
     }
+
+    static func shouldTreatInsertedTextAsMarkedTextDuringDeletion(
+        insertedText: String,
+        keyCode: UInt16?,
+        hadMarkedTextBeforeInsertion: Bool
+    ) -> Bool {
+        guard hadMarkedTextBeforeInsertion, !insertedText.isEmpty else {
+            return false
+        }
+
+        switch keyCode {
+        case UInt16(kVK_Delete), UInt16(kVK_ForwardDelete):
+            return true
+        default:
+            return false
+        }
+    }
 }
 
 struct LineyGhosttyMarkedTextState: Equatable {

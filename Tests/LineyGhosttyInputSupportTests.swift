@@ -114,6 +114,46 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
         )
     }
 
+    func testDeleteEventKeepsInsertedAsciiAsMarkedTextWhileComposing() {
+        XCTAssertTrue(
+            LineyGhosttyTextInputRouting.shouldTreatInsertedTextAsMarkedTextDuringDeletion(
+                insertedText: "n",
+                keyCode: UInt16(kVK_Delete),
+                hadMarkedTextBeforeInsertion: true
+            )
+        )
+    }
+
+    func testDeleteEventKeepsInsertedCjkTextAsMarkedTextWhileComposing() {
+        XCTAssertTrue(
+            LineyGhosttyTextInputRouting.shouldTreatInsertedTextAsMarkedTextDuringDeletion(
+                insertedText: "你",
+                keyCode: UInt16(kVK_Delete),
+                hadMarkedTextBeforeInsertion: true
+            )
+        )
+    }
+
+    func testDeleteEventWithoutMarkedTextDoesNotCreateMarkedText() {
+        XCTAssertFalse(
+            LineyGhosttyTextInputRouting.shouldTreatInsertedTextAsMarkedTextDuringDeletion(
+                insertedText: "n",
+                keyCode: UInt16(kVK_Delete),
+                hadMarkedTextBeforeInsertion: false
+            )
+        )
+    }
+
+    func testNonDeleteEventStillCommitsInsertedText() {
+        XCTAssertFalse(
+            LineyGhosttyTextInputRouting.shouldTreatInsertedTextAsMarkedTextDuringDeletion(
+                insertedText: "n",
+                keyCode: UInt16(kVK_ANSI_N),
+                hadMarkedTextBeforeInsertion: true
+            )
+        )
+    }
+
     func testReturnIsNotSentAsLiteralText() {
         XCTAssertFalse(shouldSendGhosttyText("\r"))
         XCTAssertFalse(shouldSendGhosttyText("\n"))
