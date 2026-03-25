@@ -39,9 +39,9 @@ enum LineyGhosttyTextInputRouting {
     static func shouldTreatInsertedTextAsMarkedTextDuringDeletion(
         insertedText: String,
         keyCode: UInt16?,
-        hadMarkedTextBeforeInsertion: Bool
+        hadMarkedTextBeforeDeletion: Bool
     ) -> Bool {
-        guard hadMarkedTextBeforeInsertion, !insertedText.isEmpty else {
+        guard hadMarkedTextBeforeDeletion, !insertedText.isEmpty else {
             return false
         }
 

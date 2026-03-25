@@ -119,7 +119,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
             LineyGhosttyTextInputRouting.shouldTreatInsertedTextAsMarkedTextDuringDeletion(
                 insertedText: "n",
                 keyCode: UInt16(kVK_Delete),
-                hadMarkedTextBeforeInsertion: true
+                hadMarkedTextBeforeDeletion: true
             )
         )
     }
@@ -129,7 +129,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
             LineyGhosttyTextInputRouting.shouldTreatInsertedTextAsMarkedTextDuringDeletion(
                 insertedText: "你",
                 keyCode: UInt16(kVK_Delete),
-                hadMarkedTextBeforeInsertion: true
+                hadMarkedTextBeforeDeletion: true
             )
         )
     }
@@ -139,7 +139,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
             LineyGhosttyTextInputRouting.shouldTreatInsertedTextAsMarkedTextDuringDeletion(
                 insertedText: "n",
                 keyCode: UInt16(kVK_Delete),
-                hadMarkedTextBeforeInsertion: false
+                hadMarkedTextBeforeDeletion: false
             )
         )
     }
@@ -149,7 +149,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
             LineyGhosttyTextInputRouting.shouldTreatInsertedTextAsMarkedTextDuringDeletion(
                 insertedText: "n",
                 keyCode: UInt16(kVK_ANSI_N),
-                hadMarkedTextBeforeInsertion: true
+                hadMarkedTextBeforeDeletion: true
             )
         )
     }
