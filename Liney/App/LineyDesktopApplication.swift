@@ -208,6 +208,15 @@ public final class LineyDesktopApplication: NSObject {
         store.duplicateFocusedPane(in: workspace)
     }
 
+    func focusFocusedPane(in direction: PaneFocusDirection) {
+        guard let store = activeStore,
+              let workspace = store.selectedWorkspace,
+              workspace.sessionController.focusedPaneID != nil else {
+            return
+        }
+        store.focusPane(in: workspace, direction: direction)
+    }
+
     func toggleFocusedPaneZoom() {
         guard let store = activeStore,
               let workspace = store.selectedWorkspace,

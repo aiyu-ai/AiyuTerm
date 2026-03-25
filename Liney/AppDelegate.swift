@@ -264,7 +264,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 return desktopApplication.selectedWorkspaceTabCount > 1
             case .selectTabByNumber:
                 return menuItem.tag >= 1 && menuItem.tag <= desktopApplication.selectedWorkspaceTabCount
-            case .splitRight,
+            case .focusPaneLeft,
+                 .focusPaneRight,
+                 .focusPaneUp,
+                 .focusPaneDown,
+                 .splitRight,
                  .splitDown,
                  .duplicatePane,
                  .togglePaneZoom,
@@ -327,6 +331,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
         case .selectTabByNumber:
             desktopApplication?.selectTab(number: tabNumber)
+
+        case .focusPaneLeft:
+            desktopApplication?.focusFocusedPane(in: .left)
+
+        case .focusPaneRight:
+            desktopApplication?.focusFocusedPane(in: .right)
+
+        case .focusPaneUp:
+            desktopApplication?.focusFocusedPane(in: .up)
+
+        case .focusPaneDown:
+            desktopApplication?.focusFocusedPane(in: .down)
 
         case .splitRight:
             desktopApplication?.splitFocusedPane(axis: .vertical)
