@@ -149,6 +149,32 @@ final class QuickCommandSupportTests: XCTestCase {
         XCTAssertEqual(shortcut.carbonModifierFlags, UInt32(optionKey | shiftKey))
     }
 
+    func testShortcutMatchingUsesStoredKeyForOptionModifiedLetters() {
+        var settings = AppSettings()
+        let shortcut = StoredShortcut(key: "d", command: false, shift: false, option: true, control: false)
+        LineyKeyboardShortcuts.setShortcut(shortcut, for: .splitRight, in: &settings)
+
+        let event = try! XCTUnwrap(
+            NSEvent.keyEvent(
+                with: .keyDown,
+                location: .zero,
+                modifierFlags: [.option],
+                timestamp: 1,
+                windowNumber: 0,
+                context: nil,
+                characters: "\u{2202}",
+                charactersIgnoringModifiers: "d",
+                isARepeat: false,
+                keyCode: UInt16(kVK_ANSI_D)
+            )
+        )
+
+        XCTAssertEqual(
+            lineyShortcutMatch(for: event, in: settings),
+            LineyShortcutMatch(action: .splitRight, tabNumber: nil)
+        )
+    }
+
     func testHotKeyWindowKeepsAppRunningWhenLastWindowCloses() {
         XCTAssertFalse(lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: true))
     }

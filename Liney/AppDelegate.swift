@@ -207,71 +207,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         guard let shortcutAction = shortcutAction(for: sender) else { return }
 
         Task { @MainActor in
-            switch shortcutAction {
-            case .newWindow:
-                desktopApplication?.createNewWindow()
-
-            case .openSettings:
-                desktopApplication?.presentSettings()
-
-            case .toggleCommandPalette:
-                desktopApplication?.toggleCommandPalette()
-
-            case .toggleSidebar:
-                NSApp.keyWindow?.firstResponder?.tryToPerform(
-                    #selector(NSSplitViewController.toggleSidebar(_:)),
-                    with: nil
-                )
-
-            case .toggleOverview:
-                desktopApplication?.toggleOverview()
-
-            case .openDiff:
-                desktopApplication?.openDiffWindow()
-
-            case .refreshSelectedWorkspace:
-                desktopApplication?.refreshSelectedWorkspace()
-
-            case .refreshAllRepositories:
-                desktopApplication?.refreshAllRepositories()
-
-            case .newTab:
-                desktopApplication?.createTabInSelectedWorkspace()
-
-            case .closeTab:
-                desktopApplication?.closeSelectedTab()
-
-            case .nextTab:
-                desktopApplication?.selectNextTab()
-
-            case .previousTab:
-                desktopApplication?.selectPreviousTab()
-
-            case .selectTabByNumber:
-                desktopApplication?.selectTab(number: sender.tag)
-
-            case .splitRight:
-                desktopApplication?.splitFocusedPane(axis: .vertical)
-
-            case .splitDown:
-                desktopApplication?.splitFocusedPane(axis: .horizontal)
-
-            case .duplicatePane:
-                desktopApplication?.duplicateFocusedPane()
-
-            case .togglePaneZoom:
-                desktopApplication?.toggleFocusedPaneZoom()
-
-            case .closePane:
-                desktopApplication?.closeFocusedPane()
-
-            case .closeWindow:
-                NSApp.keyWindow?.performClose(nil)
-
-            case .enterFullScreen:
-                NSApp.keyWindow?.toggleFullScreen(nil)
-            }
+            self.performShortcutAction(shortcutAction, tabNumber: sender.tag)
         }
+    }
+
+    @MainActor
+    func performShortcutAction(matching event: NSEvent) -> Bool {
+        guard let desktopApplication,
+              let match = lineyShortcutMatch(for: event, in: desktopApplication.currentAppSettings) else {
+            return false
+        }
+
+        performShortcutAction(match.action, tabNumber: match.tabNumber ?? 0)
+        return true
     }
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
@@ -323,6 +271,74 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private func shortcutAction(for menuItem: NSMenuItem) -> LineyShortcutAction? {
         guard let rawValue = menuItem.representedObject as? String else { return nil }
         return LineyShortcutAction(rawValue: rawValue)
+    }
+
+    @MainActor
+    private func performShortcutAction(_ shortcutAction: LineyShortcutAction, tabNumber: Int) {
+        switch shortcutAction {
+        case .newWindow:
+            desktopApplication?.createNewWindow()
+
+        case .openSettings:
+            desktopApplication?.presentSettings()
+
+        case .toggleCommandPalette:
+            desktopApplication?.toggleCommandPalette()
+
+        case .toggleSidebar:
+            NSApp.keyWindow?.firstResponder?.tryToPerform(
+                #selector(NSSplitViewController.toggleSidebar(_:)),
+                with: nil
+            )
+
+        case .toggleOverview:
+            desktopApplication?.toggleOverview()
+
+        case .openDiff:
+            desktopApplication?.openDiffWindow()
+
+        case .refreshSelectedWorkspace:
+            desktopApplication?.refreshSelectedWorkspace()
+
+        case .refreshAllRepositories:
+            desktopApplication?.refreshAllRepositories()
+
+        case .newTab:
+            desktopApplication?.createTabInSelectedWorkspace()
+
+        case .closeTab:
+            desktopApplication?.closeSelectedTab()
+
+        case .nextTab:
+            desktopApplication?.selectNextTab()
+
+        case .previousTab:
+            desktopApplication?.selectPreviousTab()
+
+        case .selectTabByNumber:
+            desktopApplication?.selectTab(number: tabNumber)
+
+        case .splitRight:
+            desktopApplication?.splitFocusedPane(axis: .vertical)
+
+        case .splitDown:
+            desktopApplication?.splitFocusedPane(axis: .horizontal)
+
+        case .duplicatePane:
+            desktopApplication?.duplicateFocusedPane()
+
+        case .togglePaneZoom:
+            desktopApplication?.toggleFocusedPaneZoom()
+
+        case .closePane:
+            desktopApplication?.closeFocusedPane()
+
+        case .closeWindow:
+            NSApp.keyWindow?.performClose(nil)
+
+        case .enterFullScreen:
+            NSApp.keyWindow?.toggleFullScreen(nil)
+        }
     }
 
     @MainActor

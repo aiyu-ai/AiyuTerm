@@ -842,6 +842,11 @@ private final class LineyGhosttySurfaceView: NSView {
             return true
         }
 
+        if let appDelegate = NSApp.delegate as? AppDelegate,
+           appDelegate.performShortcutAction(matching: event) {
+            return true
+        }
+
         if flags != nil {
             keyDown(with: event)
             return true

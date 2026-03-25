@@ -941,6 +941,36 @@ enum LineyKeyboardShortcuts {
     }
 }
 
+struct LineyShortcutMatch: Equatable {
+    var action: LineyShortcutAction
+    var tabNumber: Int?
+}
+
+func lineyShortcutMatch(for event: NSEvent, in settings: AppSettings) -> LineyShortcutMatch? {
+    guard let recordedShortcut = StoredShortcut.from(event: event) else { return nil }
+
+    for action in LineyShortcutAction.allCases {
+        guard let effectiveShortcut = LineyKeyboardShortcuts.effectiveShortcut(for: action, in: settings) else {
+            continue
+        }
+
+        if action.usesNumberedDigitMatching {
+            guard let tabNumber = Int(recordedShortcut.key),
+                  (1...9).contains(tabNumber),
+                  action.normalizedRecordedShortcut(recordedShortcut) == effectiveShortcut else {
+                continue
+            }
+            return LineyShortcutMatch(action: action, tabNumber: tabNumber)
+        }
+
+        if recordedShortcut == effectiveShortcut {
+            return LineyShortcutMatch(action: action, tabNumber: nil)
+        }
+    }
+
+    return nil
+}
+
 nonisolated struct GitHubAuthStatus: Codable, Hashable {
     var username: String
     var host: String

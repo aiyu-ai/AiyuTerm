@@ -285,6 +285,10 @@ public final class LineyDesktopApplication: NSObject {
         activeStore?.selectedWorkspace?.sessionController.focusedPaneID != nil
     }
 
+    var currentAppSettings: AppSettings {
+        activeStore?.appSettings ?? hotKeyWindowSettings
+    }
+
     private func diffEmptyStateMessage(for workspace: WorkspaceModel?, supportsDiff: Bool) -> String {
         guard let workspace else {
             return "Select a workspace to inspect changes."
