@@ -28,6 +28,10 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
         guard let surface = terminalView.surface else { return false }
         return !ghostty_surface_process_exited(surface)
     }
+    var needsConfirmQuit: Bool {
+        guard let surface = terminalView.surface else { return false }
+        return ghostty_surface_needs_confirm_quit(surface)
+    }
 
     var currentSurface: ghostty_surface_t? { terminalView.surface }
 
@@ -48,34 +52,27 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
     }
 
     func beginSearch(initialText: String?) {
-        focus()
-        _ = terminalView.performBindingAction("start_search")
         if let initialText, !initialText.isEmpty {
-            terminalView.insertTerminalText(initialText)
+            _ = terminalView.performBindingAction(lineyGhosttySearchBindingAction(for: initialText))
+            return
         }
+
+        _ = terminalView.performBindingAction("start_search")
     }
 
     func updateSearch(_ text: String) {
-        focus()
-        _ = terminalView.performBindingAction("end_search")
-        _ = terminalView.performBindingAction("start_search")
-        if !text.isEmpty {
-            terminalView.insertTerminalText(text)
-        }
+        _ = terminalView.performBindingAction(lineyGhosttySearchBindingAction(for: text))
     }
 
     func searchNext() {
-        focus()
-        _ = terminalView.performBindingAction("search:next")
+        _ = terminalView.performBindingAction(lineyGhosttySearchNavigationBindingAction(.next))
     }
 
     func searchPrevious() {
-        focus()
-        _ = terminalView.performBindingAction("search:previous")
+        _ = terminalView.performBindingAction(lineyGhosttySearchNavigationBindingAction(.previous))
     }
 
     func endSearch() {
-        focus()
         _ = terminalView.performBindingAction("end_search")
     }
 
@@ -168,8 +165,7 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
             return true
 
         case GHOSTTY_ACTION_COMMAND_FINISHED:
-            let rawExitCode = action.action.command_finished.exit_code
-            handleManagedProcessExit(exitCode: rawExitCode >= 0 ? Int32(rawExitCode) : nil)
+            handleCommandFinished(action.action.command_finished)
             return true
 
         case GHOSTTY_ACTION_DESKTOP_NOTIFICATION:
@@ -258,6 +254,18 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
         DispatchQueue.main.async { [weak self] in
             self?.onProcessExit?(exitCode)
         }
+    }
+
+    func handleSurfaceClose(processAlive: Bool) {
+        guard lineyGhosttyShouldReportProcessExitForSurfaceClose(processAlive: processAlive) else { return }
+        handleManagedProcessExit(exitCode: nil)
+    }
+
+    func handleCommandFinished(_ action: ghostty_action_command_finished_s) {
+        // Ghostty reports shell command completion separately from shell process
+        // exit. Treating this as a process exit causes normal commands such as
+        // `clear` to close panes or tabs unexpectedly.
+        _ = lineyGhosttyShouldReportProcessExitForCommandFinished(action)
     }
 
     func completeClipboardRequest(_ text: String, state: UnsafeMutableRawPointer?, confirmed: Bool) {
@@ -392,6 +400,16 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
     }
 }
 
+func lineyGhosttyShouldReportProcessExitForSurfaceClose(processAlive: Bool) -> Bool {
+    !processAlive
+}
+
+func lineyGhosttyShouldReportProcessExitForCommandFinished(
+    _: ghostty_action_command_finished_s
+) -> Bool {
+    false
+}
+
 private struct LineyGhosttyScrollbarState {
     let total: UInt64
     let offset: UInt64
@@ -450,6 +468,7 @@ private final class LineyGhosttySurfaceView: NSView {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         frame = NSRect(x: 0, y: 0, width: 800, height: 600)
+        registerForDraggedTypes([.fileURL, .URL, .string])
     }
 
     required init?(coder: NSCoder) {
@@ -721,6 +740,25 @@ private final class LineyGhosttySurfaceView: NSView {
         return ghostty_input_scroll_mods_t(value)
     }
 
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        draggedText(from: sender.draggingPasteboard) == nil ? [] : .copy
+    }
+
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        draggingEntered(sender)
+    }
+
+    override func prepareForDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        draggedText(from: sender.draggingPasteboard) != nil
+    }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        guard let text = draggedText(from: sender.draggingPasteboard) else { return false }
+        window?.makeFirstResponder(self)
+        insertTerminalText(text)
+        return true
+    }
+
     override func keyDown(with event: NSEvent) {
         guard let surface else {
             super.keyDown(with: event)
@@ -898,15 +936,35 @@ private final class LineyGhosttySurfaceView: NSView {
     }
 
     @IBAction func findNext(_ sender: Any?) {
-        _ = performBindingAction("search:next")
+        _ = performBindingAction(lineyGhosttySearchNavigationBindingAction(.next))
     }
 
     @IBAction func findPrevious(_ sender: Any?) {
-        _ = performBindingAction("search:previous")
+        _ = performBindingAction(lineyGhosttySearchNavigationBindingAction(.previous))
     }
 
     @IBAction func findHide(_ sender: Any?) {
         _ = performBindingAction("end_search")
+    }
+
+    @IBAction override func performTextFinderAction(_ sender: Any?) {
+        guard let action = lineyTextFinderAction(for: sender) else {
+            super.performTextFinderAction(sender)
+            return
+        }
+
+        switch action {
+        case .showFindInterface:
+            find(sender)
+        case .nextMatch:
+            findNext(sender)
+        case .previousMatch:
+            findPrevious(sender)
+        case .hideFindInterface:
+            findHide(sender)
+        default:
+            super.performTextFinderAction(sender)
+        }
     }
 
     @IBAction func toggleReadonly(_ sender: Any?) {
@@ -1256,6 +1314,14 @@ private final class LineyGhosttySurfaceView: NSView {
         default:
             return GHOSTTY_MOUSE_UNKNOWN
         }
+    }
+
+    private func draggedText(from pasteboard: NSPasteboard) -> String? {
+        let fileURLs = pasteboard.readObjects(
+            forClasses: [NSURL.self],
+            options: [.urlReadingFileURLsOnly: true]
+        ) as? [URL] ?? []
+        return lineyTerminalDropText(fileURLs: fileURLs, plainText: pasteboard.string(forType: .string))
     }
 }
 

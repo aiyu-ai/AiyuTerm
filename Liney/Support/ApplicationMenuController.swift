@@ -71,6 +71,7 @@ final class ApplicationMenuController: NSObject {
 
         let fileMenu = NSMenu(title: "File")
         fileMenuItem.submenu = fileMenu
+        addShortcutItem(title: "New Window", shortcutAction: .newWindow, to: fileMenu, target: target)
         addShortcutItem(title: "New Tab", shortcutAction: .newTab, to: fileMenu, target: target)
         fileMenu.addItem(.separator())
         addShortcutItem(title: "Split Right", shortcutAction: .splitRight, to: fileMenu, target: target)
@@ -132,6 +133,10 @@ final class ApplicationMenuController: NSObject {
         addItem(title: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m", to: windowMenu)
         addItem(title: "Zoom", action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "", to: windowMenu)
         addShortcutItem(title: "Close Window", shortcutAction: .closeWindow, to: windowMenu, target: target)
+        windowMenu.addItem(.separator())
+        addItem(title: "Show Tab Bar", action: #selector(NSWindow.toggleTabBar(_:)), keyEquivalent: "", to: windowMenu)
+        addItem(title: "Move Tab to New Window", action: #selector(NSWindow.moveTabToNewWindow(_:)), keyEquivalent: "", to: windowMenu)
+        addItem(title: "Merge All Windows", action: #selector(NSWindow.mergeAllWindows(_:)), keyEquivalent: "", to: windowMenu)
         windowMenu.addItem(.separator())
         addItem(title: "Bring All to Front", action: #selector(NSApplication.arrangeInFront(_:)), keyEquivalent: "", to: windowMenu)
         NSApp.windowsMenu = windowMenu

@@ -228,4 +228,48 @@ final class WorkspaceSettingsTests: XCTestCase {
             "archivebox.fill"
         ].contains(icon.symbolName))
     }
+
+    func testGeneratedWorktreeIconsAreStableForSameSeeds() {
+        let seedSources = [
+            "/tmp/openclaw": "openclaw|main|/tmp/openclaw",
+            "/tmp/openclaw-feature": "openclaw|feature/sidebar-icon|/tmp/openclaw-feature"
+        ]
+
+        let first = SidebarItemIcon.generatedWorktreeIcons(seedSourcesByID: seedSources)
+        let second = SidebarItemIcon.generatedWorktreeIcons(seedSourcesByID: seedSources)
+
+        XCTAssertEqual(first, second)
+    }
+
+    func testGeneratedWorktreeIconsAvoidDuplicatesWithinWorkspaceWhenPossible() {
+        let icons = SidebarItemIcon.generatedWorktreeIcons(
+            seedSourcesByID: [
+                "/tmp/openclaw": "openclaw|main|/tmp/openclaw",
+                "/tmp/openclaw-feature-a": "openclaw|feature/a|/tmp/openclaw-feature-a",
+                "/tmp/openclaw-feature-b": "openclaw|feature/b|/tmp/openclaw-feature-b"
+            ]
+        )
+
+        XCTAssertEqual(Set(icons.values).count, icons.count)
+    }
+
+    func testGeneratedWorktreeIconsRespectOverrides() {
+        let override = SidebarItemIcon(
+            symbolName: "bolt.fill",
+            palette: .orange,
+            fillStyle: .solid
+        )
+
+        let icons = SidebarItemIcon.generatedWorktreeIcons(
+            seedSourcesByID: [
+                "/tmp/openclaw": "openclaw|main|/tmp/openclaw",
+                "/tmp/openclaw-feature": "openclaw|feature/sidebar-icon|/tmp/openclaw-feature"
+            ],
+            overrides: [
+                "/tmp/openclaw-feature": override
+            ]
+        )
+
+        XCTAssertEqual(icons["/tmp/openclaw-feature"], override)
+    }
 }

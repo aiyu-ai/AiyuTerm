@@ -141,6 +141,31 @@ extension SidebarItemIcon {
 
         return bestCandidates.first ?? repositoryDefault
     }
+
+    nonisolated static func generatedWorktreeIcons(
+        seedSourcesByID: [String: String],
+        overrides: [String: SidebarItemIcon] = [:]
+    ) -> [String: SidebarItemIcon] {
+        let orderedIDs = seedSourcesByID.keys.sorted {
+            $0.localizedStandardCompare($1) == .orderedAscending
+        }
+
+        var iconsByID: [String: SidebarItemIcon] = [:]
+        for id in orderedIDs {
+            if let override = overrides[id] {
+                iconsByID[id] = override
+                continue
+            }
+
+            let preferredSeed = seedSourcesByID[id] ?? id
+            iconsByID[id] = randomRepository(
+                preferredSeed: preferredSeed,
+                avoiding: Array(iconsByID.values)
+            )
+        }
+
+        return iconsByID
+    }
 }
 
 extension SidebarIconCatalog {

@@ -65,6 +65,24 @@ final class DiffRenderingEngineTests: XCTestCase {
         XCTAssertEqual(rendered?.splitRows[1].right?.text, "TWO")
     }
 
+    func testAnalyzePatchCapturesLargeFileSignals() {
+        let patch = """
+        diff --git a/Sources/Large.swift b/Sources/Large.swift
+        --- a/Sources/Large.swift
+        +++ b/Sources/Large.swift
+        @@ -1998,5 +1998,420 @@
+         context
+        """
+
+        let analysis = DiffRenderingEngine.analyzePatch(patch)
+
+        XCTAssertEqual(analysis.hunkCount, 1)
+        XCTAssertEqual(analysis.maxOldSpan, 5)
+        XCTAssertEqual(analysis.maxNewSpan, 420)
+        XCTAssertEqual(analysis.totalNewSpan, 420)
+        XCTAssertEqual(analysis.maxTouchedNewLine, 2417)
+    }
+
     func testRenderRequiresPatchFallbackForLargeFiles() {
         let old = (0..<600).map { "old-\($0)" }.joined(separator: "\n")
         let new = (0..<600).map { "new-\($0)" }.joined(separator: "\n")
@@ -79,9 +97,6 @@ final class DiffRenderingEngineTests: XCTestCase {
 
     func testMakeDocumentUsesPatchHunksWhenStructuredDiffFallsBack() {
         let file = DiffChangedFile(status: .modified, oldPath: "Sources/Large.swift", newPath: "Sources/Large.swift")
-        let old = (0..<600).map { "old-\($0)" }.joined(separator: "\n")
-        let new = (0..<600).map { "new-\($0)" }.joined(separator: "\n")
-        let result = DiffRenderingEngine.render(old: old, new: new)
         let patch = """
         diff --git a/Sources/Large.swift b/Sources/Large.swift
         --- a/Sources/Large.swift
@@ -95,35 +110,22 @@ final class DiffRenderingEngineTests: XCTestCase {
 
         let document = DiffWindowState.makeDocument(
             file: file,
-            oldContents: old,
-            newContents: new,
-            unifiedPatch: patch,
-            renderResult: result,
-            renderElapsedMilliseconds: 1
+            unifiedPatch: patch
         )
 
-        XCTAssertFalse(document.isPatchOnly)
-        XCTAssertEqual(document.renderedDiff.addedLineCount, 1)
-        XCTAssertEqual(document.renderedDiff.removedLineCount, 1)
-        XCTAssertEqual(document.renderedDiff.splitRows[1].right?.text, "line-2-updated")
+        XCTAssertEqual(document.file.displayPath, "Sources/Large.swift")
+        XCTAssertEqual(document.unifiedPatch, patch)
     }
 
-    func testMakeDocumentUsesPatchOnlyWhenPatchFallbackCannotBeParsed() {
+    func testMakeDocumentPreservesPatchFallbackMessage() {
         let file = DiffChangedFile(status: .modified, oldPath: "Sources/Large.swift", newPath: "Sources/Large.swift")
-        let old = (0..<600).map { "old-\($0)" }.joined(separator: "\n")
-        let new = (0..<600).map { "new-\($0)" }.joined(separator: "\n")
-        let result = DiffRenderingEngine.render(old: old, new: new)
+        let patch = "Unable to load diff."
 
         let document = DiffWindowState.makeDocument(
             file: file,
-            oldContents: old,
-            newContents: new,
-            unifiedPatch: "diff --git a/Sources/Large.swift b/Sources/Large.swift",
-            renderResult: result,
-            renderElapsedMilliseconds: 1
+            unifiedPatch: patch
         )
 
-        XCTAssertTrue(document.isPatchOnly)
-        XCTAssertTrue(document.unifiedPatch.contains("Structured diff exceeded supported limits. Showing raw patch."))
+        XCTAssertEqual(document.unifiedPatch, patch)
     }
 }

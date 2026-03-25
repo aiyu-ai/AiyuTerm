@@ -53,6 +53,7 @@ protocol TerminalSurfaceController: AnyObject {
 protocol ManagedTerminalSessionSurfaceController: TerminalSurfaceController {
     var managedPID: Int32? { get }
     var isManagedSessionRunning: Bool { get }
+    var needsConfirmQuit: Bool { get }
     var onProcessExit: ((Int32?) -> Void)? { get set }
     func updateLaunchConfiguration(_ configuration: TerminalLaunchConfiguration)
     func startManagedSessionIfNeeded()
@@ -68,4 +69,37 @@ enum TerminalSurfaceFactory {
     ) -> ManagedTerminalSessionSurfaceController {
         return LineyGhosttyController(launchConfiguration: launchConfiguration)
     }
+}
+
+func lineyTextFinderAction(for sender: Any?) -> NSTextFinder.Action? {
+    guard let menuItem = sender as? NSMenuItem else { return nil }
+    return NSTextFinder.Action(rawValue: menuItem.tag)
+}
+
+enum LineyGhosttySearchNavigation: String {
+    case previous
+    case next
+}
+
+func lineyGhosttySearchBindingAction(for query: String) -> String {
+    "search:\(query)"
+}
+
+func lineyGhosttySearchNavigationBindingAction(_ direction: LineyGhosttySearchNavigation) -> String {
+    "navigate_search:\(direction.rawValue)"
+}
+
+func lineyTerminalDropText(fileURLs: [URL], plainText: String?) -> String? {
+    let quotedPaths = fileURLs
+        .filter(\.isFileURL)
+        .map(\.path)
+        .filter { !$0.isEmpty }
+        .map(\.shellQuoted)
+
+    if !quotedPaths.isEmpty {
+        return quotedPaths.joined(separator: " ")
+    }
+
+    guard let plainText, !plainText.isEmpty else { return nil }
+    return plainText
 }
