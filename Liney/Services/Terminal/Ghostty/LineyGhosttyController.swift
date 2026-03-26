@@ -778,9 +778,6 @@ private final class LineyGhosttySurfaceView: NSView {
         }
 
         if shouldPreferRawKeyEvent(for: event) {
-            logIMEDebug(
-                "keyDown raw keyCode=\(event.keyCode) chars=\(event.characters ?? "<nil>") modifiers=\(event.modifierFlags.rawValue)"
-            )
             sendRawKeyEvent(event, on: surface)
             return
         }
@@ -790,9 +787,6 @@ private final class LineyGhosttySurfaceView: NSView {
         let textModifiers = event.modifierFlags.intersection([.command, .control])
         if textModifiers.isEmpty {
             let hadMarkedTextBeforeInterpretation = hasMarkedText()
-            logIMEDebug(
-                "keyDown start keyCode=\(event.keyCode) chars=\(event.characters ?? "<nil>") marked=\(hadMarkedTextBeforeInterpretation)"
-            )
             keyTextAccumulator = []
             handledTextInputCommand = false
             currentTextInputEventKeyCode = event.keyCode
@@ -805,9 +799,6 @@ private final class LineyGhosttySurfaceView: NSView {
             let accumulated = keyTextAccumulator?.joined() ?? ""
             keyTextAccumulator = nil
             let hasMarkedTextAfterInterpretation = hasMarkedText()
-            logIMEDebug(
-                "keyDown end keyCode=\(event.keyCode) accumulated=\(accumulated.debugDescription) handled=\(handledTextInputCommand) marked=\(hasMarkedTextAfterInterpretation) text=\(markedText.string.debugDescription)"
-            )
 
             if LineyGhosttyTextInputRouting.shouldSyncPreeditAfterTextInterpretation(
                 hadMarkedTextBeforeInterpretation: hadMarkedTextBeforeInterpretation,
@@ -858,9 +849,6 @@ private final class LineyGhosttySurfaceView: NSView {
             return
         }
 
-        logIMEDebug(
-            "keyDown raw command/control path keyCode=\(event.keyCode) chars=\(event.characters ?? "<nil>") modifiers=\(event.modifierFlags.rawValue)"
-        )
         sendRawKeyEvent(
             event,
             on: surface,
@@ -876,10 +864,6 @@ private final class LineyGhosttySurfaceView: NSView {
             return false
         }
         guard let surface else { return false }
-
-        logIMEDebug(
-            "performKeyEquivalent keyCode=\(event.keyCode) chars=\(event.characters ?? "<nil>") modifiers=\(event.modifierFlags.rawValue) marked=\(hasMarkedText())"
-        )
 
         if hasMarkedText(),
            !event.modifierFlags.intersection(.deviceIndependentFlagsMask).contains(.command) {
@@ -1288,12 +1272,10 @@ private final class LineyGhosttySurfaceView: NSView {
 
     private func deleteBackwardInMarkedText() {
         guard markedText.length > 0 else { return }
-        logIMEDebug("deleteBackwardInMarkedText before=\(markedText.string.debugDescription) selection=\(NSStringFromRange(markedSelectionRange))")
         var state = LineyGhosttyMarkedTextState(text: markedText.string, selectedRange: markedSelectionRange)
         state.deleteBackward()
         markedText.mutableString.setString(state.text)
         markedSelectionRange = state.selectedRange
-        logIMEDebug("deleteBackwardInMarkedText after=\(state.text.debugDescription) selection=\(NSStringFromRange(state.selectedRange))")
         syncPreedit()
     }
 
@@ -1304,7 +1286,6 @@ private final class LineyGhosttySurfaceView: NSView {
     private func syncPreedit() {
         guard let surface else { return }
         let string = markedText.string
-        logIMEDebug("syncPreedit text=\(string.debugDescription) selection=\(NSStringFromRange(markedSelectionRange))")
         if string.isEmpty {
             "".withCString { pointer in
                 ghostty_surface_preedit(surface, pointer, 0)
