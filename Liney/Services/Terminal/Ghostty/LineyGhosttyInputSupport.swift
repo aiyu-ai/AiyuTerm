@@ -209,6 +209,38 @@ func appKitMods(_ mods: ghostty_input_mods_e, fallback: NSEvent.ModifierFlags = 
     return flags
 }
 
+func lineyGhosttyModifierAction(
+    keyCode: UInt16,
+    modifierFlags: NSEvent.ModifierFlags
+) -> ghostty_input_action_e? {
+    let isPressed: Bool
+
+    switch keyCode {
+    case UInt16(kVK_CapsLock):
+        isPressed = modifierFlags.contains(.capsLock)
+    case UInt16(kVK_Shift):
+        isPressed = modifierFlags.contains(.shift)
+    case UInt16(kVK_RightShift):
+        isPressed = modifierFlags.rawValue & UInt(NX_DEVICERSHIFTKEYMASK) != 0
+    case UInt16(kVK_Control):
+        isPressed = modifierFlags.contains(.control)
+    case UInt16(kVK_RightControl):
+        isPressed = modifierFlags.rawValue & UInt(NX_DEVICERCTLKEYMASK) != 0
+    case UInt16(kVK_Option):
+        isPressed = modifierFlags.contains(.option)
+    case UInt16(kVK_RightOption):
+        isPressed = modifierFlags.rawValue & UInt(NX_DEVICERALTKEYMASK) != 0
+    case UInt16(kVK_Command):
+        isPressed = modifierFlags.contains(.command)
+    case UInt16(kVK_RightCommand):
+        isPressed = modifierFlags.rawValue & UInt(NX_DEVICERCMDKEYMASK) != 0
+    default:
+        return nil
+    }
+
+    return isPressed ? GHOSTTY_ACTION_PRESS : GHOSTTY_ACTION_RELEASE
+}
+
 func textForGhosttyKeyEvent(_ event: NSEvent) -> String? {
     guard let characters = event.characters, !characters.isEmpty else { return nil }
 
