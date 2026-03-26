@@ -39,10 +39,43 @@ validate_semver() {
   [[ "$1" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]
 }
 
-next_patch_without_four() {
-  local patch_value="$1"
+version_contains_four() {
+  local version="$1"
+  [[ "${version//./}" == *4* ]]
+}
 
-  while [[ "$patch_value" == *4* ]]; do
+validate_version_digits() {
+  local version="$1"
+  ! version_contains_four "$version"
+}
+
+next_major_without_four() {
+  local major_value="$1"
+
+  while version_contains_four "$major_value.0.0"; do
+    major_value=$((major_value + 1))
+  done
+
+  echo "$major_value"
+}
+
+next_minor_without_four() {
+  local major_value="$1"
+  local minor_value="$2"
+
+  while version_contains_four "$major_value.$minor_value.0"; do
+    minor_value=$((minor_value + 1))
+  done
+
+  echo "$minor_value"
+}
+
+next_patch_without_four() {
+  local major_value="$1"
+  local minor_value="$2"
+  local patch_value="$3"
+
+  while version_contains_four "$major_value.$minor_value.$patch_value"; do
     patch_value=$((patch_value + 1))
   done
 
@@ -62,18 +95,20 @@ patch="${patch:-0}"
 case "$PART" in
   major)
     major=$((major + 1))
+    major="$(next_major_without_four "$major")"
     minor=0
     patch=0
     NEW_VERSION="$major.$minor.$patch"
     ;;
   minor)
     minor=$((minor + 1))
+    minor="$(next_minor_without_four "$major" "$minor")"
     patch=0
     NEW_VERSION="$major.$minor.$patch"
     ;;
   patch)
     patch=$((patch + 1))
-    patch="$(next_patch_without_four "$patch")"
+    patch="$(next_patch_without_four "$major" "$minor" "$patch")"
     NEW_VERSION="$major.$minor.$patch"
     ;;
   set)
@@ -93,6 +128,11 @@ esac
 
 if ! validate_semver "$NEW_VERSION"; then
   echo "Invalid semantic version: $NEW_VERSION" >&2
+  exit 1
+fi
+
+if ! validate_version_digits "$NEW_VERSION"; then
+  echo "Invalid semantic version: version cannot contain digit 4: $NEW_VERSION" >&2
   exit 1
 fi
 
