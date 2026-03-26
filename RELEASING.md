@@ -1,5 +1,7 @@
 # Releasing Liney
 
+[中文版本](./RELEASING.zh-CN.md)
+
 ## Preconditions
 
 - Clean git worktree

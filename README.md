@@ -1,5 +1,7 @@
 # Liney
 
+[中文版本](./README.zh-CN.md)
+
 [![Website](https://img.shields.io/badge/Website-liney.dev-111111?style=flat-square)](https://liney.dev)
 [![Releases](https://img.shields.io/badge/Download-GitHub%20Releases-24292f?style=flat-square&logo=github)](https://github.com/wuwenrui/liney/releases)
 [![Platform](https://img.shields.io/badge/Platform-macOS-black?style=flat-square)](https://liney.dev)
