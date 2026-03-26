@@ -13,13 +13,21 @@ struct QuickCommandEditorSheet: View {
 
     @State private var draftCommands: [QuickCommandPreset] = []
 
+    private func localized(_ key: String) -> String {
+        LocalizationManager.shared.string(key)
+    }
+
+    private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
+        l10nFormat(localized(key), locale: Locale.current, arguments: arguments)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Quick Commands")
+                Text(localized("sheet.quickCommands.title"))
                     .font(.system(size: 20, weight: .semibold))
 
-                Text("These snippets are inserted into the focused terminal and wait for you to press Return.")
+                Text(localized("sheet.quickCommands.subtitle"))
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.secondary)
             }
@@ -32,29 +40,29 @@ struct QuickCommandEditorSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
-                        Button("Add Command") {
+                        Button(localized("sheet.quickCommands.add")) {
                             draftCommands.append(
                                 QuickCommandPreset(
-                                    title: "New Command",
+                                    title: localized("sheet.quickCommands.defaultName"),
                                     command: "",
                                     category: .codex
                                 )
                             )
                         }
 
-                        Button("Reset Defaults") {
+                        Button(localized("sheet.quickCommands.resetDefaults")) {
                             draftCommands = QuickCommandCatalog.defaultCommands
                         }
 
                         Spacer()
 
-                        Text("\(draftCommands.count) commands")
+                        Text(localizedFormat("sheet.quickCommands.countFormat", draftCommands.count))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(.secondary)
                     }
 
                     if draftCommands.isEmpty {
-                        Text("No quick commands configured. Add one or restore the defaults.")
+                        Text(localized("sheet.quickCommands.empty"))
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(.secondary)
                             .padding(.top, 12)
@@ -79,11 +87,11 @@ struct QuickCommandEditorSheet: View {
             HStack {
                 Spacer()
 
-                Button("Cancel") {
+                Button(localized("common.cancel")) {
                     dismiss()
                 }
 
-                Button("Save") {
+                Button(localized("common.save")) {
                     store.updateQuickCommandPresets(draftCommands)
                     dismiss()
                 }
@@ -117,6 +125,10 @@ private struct QuickCommandEditorCard: View {
     let onMoveDown: () -> Void
     let onDelete: () -> Void
 
+    private func localized(_ key: String) -> String {
+        LocalizationManager.shared.string(key)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 12) {
@@ -125,9 +137,9 @@ private struct QuickCommandEditorCard: View {
                     tint: tint
                 )
 
-                TextField("Title", text: $command.title)
+                TextField(localized("sheet.quickCommands.commandTitle"), text: $command.title)
 
-                Picker("Category", selection: $command.category) {
+                Picker(localized("sheet.quickCommands.category"), selection: $command.category) {
                     ForEach(QuickCommandCategory.allCases) { category in
                         Text(category.title).tag(category)
                     }
@@ -150,7 +162,7 @@ private struct QuickCommandEditorCard: View {
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("Command")
+                Text(localized("sheet.quickCommands.commandBody"))
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.secondary)
 

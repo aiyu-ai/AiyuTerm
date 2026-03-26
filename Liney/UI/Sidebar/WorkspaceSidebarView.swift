@@ -10,7 +10,12 @@ import SwiftUI
 
 struct WorkspaceSidebarView: View {
     @EnvironmentObject private var store: WorkspaceStore
+    @ObservedObject private var localization = LocalizationManager.shared
     @State private var query: String = ""
+
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -21,7 +26,7 @@ struct WorkspaceSidebarView: View {
 
                 TextField(
                     text: $query,
-                    prompt: Text("Filter workspaces")
+                    prompt: Text(localized("sidebar.filterWorkspaces"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(LineyTheme.mutedText)
                 ) {
@@ -78,14 +83,19 @@ private struct WorkspaceOutlineSidebar: NSViewRepresentable {
 }
 
 private struct SidebarOpenRepositoryRow: View {
+    @ObservedObject private var localization = LocalizationManager.shared
     let action: () -> Void
+
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 5) {
                 Image(systemName: "folder.badge.plus")
                     .font(.system(size: 11, weight: .semibold))
-                Text("Open folder…")
+                Text(localized("sidebar.openFolder"))
                     .font(.system(size: 11, weight: .semibold))
 
                 Spacer(minLength: 0)
@@ -101,7 +111,7 @@ private struct SidebarOpenRepositoryRow: View {
                 .foregroundStyle(LineyTheme.border)
         )
         .foregroundStyle(LineyTheme.secondaryText)
-        .help("Open Folder")
+        .help(localized("sidebar.openFolderHelp"))
     }
 }
 
@@ -122,6 +132,10 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
 
     init(store: WorkspaceStore) {
         self.store = store
+    }
+
+    private func localized(_ key: String) -> String {
+        LocalizationManager.shared.string(key)
     }
 
     func attach(_ container: SidebarOutlineContainerView) {
@@ -325,7 +339,7 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             if !paths.isEmpty {
                 addMenuItem(
                     to: menu,
-                    title: "Copy Selected Paths",
+                    title: localized("sidebar.menu.copySelectedPaths"),
                     action: #selector(copySelectedPaths(_:)),
                     representedObject: paths
                 )
@@ -352,15 +366,15 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             let workspaceIDs = nodes.compactMap(\.workspace?.id)
             let paths = nodes.compactMap(\.workspace?.activeWorktreePath)
 
-            addMenuItem(to: menu, title: "Refresh Selected Workspaces", action: #selector(refreshSelectedWorkspaces(_:)), representedObject: workspaceIDs)
-            addMenuItem(to: menu, title: "Fetch Selected Workspaces", action: #selector(fetchSelectedWorkspaces(_:)), representedObject: workspaceIDs)
+            addMenuItem(to: menu, title: localized("sidebar.menu.refreshSelectedWorkspaces"), action: #selector(refreshSelectedWorkspaces(_:)), representedObject: workspaceIDs)
+            addMenuItem(to: menu, title: localized("sidebar.menu.fetchSelectedWorkspaces"), action: #selector(fetchSelectedWorkspaces(_:)), representedObject: workspaceIDs)
 
             menu.addItem(.separator())
-            addMenuItem(to: menu, title: "Copy Selected Paths", action: #selector(copySelectedPaths(_:)), representedObject: paths)
-            addMenuItem(to: menu, title: "Reveal Selected in Finder", action: #selector(revealSelectedPaths(_:)), representedObject: paths)
+            addMenuItem(to: menu, title: localized("sidebar.menu.copySelectedPaths"), action: #selector(copySelectedPaths(_:)), representedObject: paths)
+            addMenuItem(to: menu, title: localized("sidebar.menu.revealSelectedInFinder"), action: #selector(revealSelectedPaths(_:)), representedObject: paths)
 
             menu.addItem(.separator())
-            addMenuItem(to: menu, title: "Remove Selected Workspaces", action: #selector(removeSelectedWorkspaces(_:)), representedObject: workspaceIDs)
+            addMenuItem(to: menu, title: localized("sidebar.menu.removeSelectedWorkspaces"), action: #selector(removeSelectedWorkspaces(_:)), representedObject: workspaceIDs)
             return menu
         }
 
@@ -370,26 +384,26 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             if workspace.supportsRepositoryFeatures {
                 addMenuItem(
                     to: menu,
-                    title: "Create Worktree",
+                    title: localized("sidebar.menu.createWorktree"),
                     action: #selector(createWorktree(_:)),
                     representedObject: workspace.id
                 )
                 addMenuItem(
                     to: menu,
-                    title: "Fetch Remotes",
+                    title: localized("sidebar.menu.fetchRemotes"),
                     action: #selector(fetchWorkspace(_:)),
                     representedObject: workspace.id
                 )
                 addMenuItem(
                     to: menu,
-                    title: "Refresh Repository",
+                    title: localized("sidebar.menu.refreshRepository"),
                     action: #selector(refreshWorkspace(_:)),
                     representedObject: workspace.id
                 )
             } else {
                 addMenuItem(
                     to: menu,
-                    title: "Open as Repository",
+                    title: localized("sidebar.menu.openAsRepository"),
                     action: #selector(openWorkspaceAsRepository(_:)),
                     representedObject: workspace.id
                 )
@@ -398,13 +412,13 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             if LineyFeatureFlags.showsRemoteSessionCreationUI {
                 addMenuItem(
                     to: menu,
-                    title: "New SSH Session",
+                    title: localized("sidebar.menu.newSSHSession"),
                     action: #selector(newSSHSession(_:)),
                     representedObject: workspace.id
                 )
                 addMenuItem(
                     to: menu,
-                    title: "New Agent Session",
+                    title: localized("sidebar.menu.newAgentSession"),
                     action: #selector(newAgentSession(_:)),
                     representedObject: workspace.id
                 )
@@ -414,13 +428,13 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
 
             addMenuItem(
                 to: menu,
-                title: "Reveal in Finder",
+                title: localized("sidebar.menu.revealInFinder"),
                 action: #selector(revealPath(_:)),
                 representedObject: workspace.activeWorktreePath
             )
             addMenuItem(
                 to: menu,
-                title: "Copy Path",
+                title: localized("sidebar.menu.copyPath"),
                 action: #selector(copyPath(_:)),
                 representedObject: workspace.activeWorktreePath
             )
@@ -429,38 +443,38 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
 
             addMenuItem(
                 to: menu,
-                title: "Rename Workspace",
+                title: localized("sidebar.menu.renameWorkspace"),
                 action: #selector(renameWorkspace(_:)),
                 representedObject: workspace.id
             )
             addMenuItem(
                 to: menu,
-                title: "Customize Icon…",
+                title: localized("sidebar.menu.customizeIcon"),
                 action: #selector(customizeWorkspaceIcon(_:)),
                 representedObject: workspace.id
             )
             addMenuItem(
                 to: menu,
-                title: workspace.isPinned ? "Unpin Workspace" : "Pin Workspace",
+                title: workspace.isPinned ? localized("sidebar.menu.unpinWorkspace") : localized("sidebar.menu.pinWorkspace"),
                 action: #selector(togglePinnedWorkspace(_:)),
                 representedObject: workspace.id
             )
             addMenuItem(
                 to: menu,
-                title: workspace.isArchived ? "Unarchive Workspace" : "Archive Workspace",
+                title: workspace.isArchived ? localized("sidebar.menu.unarchiveWorkspace") : localized("sidebar.menu.archiveWorkspace"),
                 action: #selector(toggleArchivedWorkspace(_:)),
                 representedObject: workspace.id
             )
                 if !workspace.runScript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     addMenuItem(
                         to: menu,
-                        title: "Run Workspace Script",
+                        title: localized("sidebar.menu.runWorkspaceScript"),
                         action: #selector(runWorkspaceScript(_:)),
                         representedObject: workspace.id
                     )
                 }
             if !workspace.workflows.isEmpty {
-                let workflowsItem = NSMenuItem(title: "Run Workflow", action: nil, keyEquivalent: "")
+                let workflowsItem = NSMenuItem(title: localized("sidebar.menu.runWorkflow"), action: nil, keyEquivalent: "")
                 let workflowsMenu = NSMenu()
                 for workflow in workspace.workflows {
                     addMenuItem(
@@ -475,13 +489,13 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             }
             addMenuItem(
                 to: menu,
-                title: "Workspace Settings",
+                title: localized("sidebar.menu.workspaceSettings"),
                 action: #selector(openWorkspaceSettings(_:)),
                 representedObject: workspace.id
             )
             addMenuItem(
                 to: menu,
-                title: "Remove Workspace",
+                title: localized("sidebar.menu.removeWorkspace"),
                 action: #selector(removeWorkspace(_:)),
                 representedObject: workspace.id
             )
@@ -493,9 +507,9 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             let paths = worktrees.map(\.path)
 
             if let first = worktrees.first {
-                addMenuItem(to: menu, title: "Switch to First Selected", action: #selector(switchWorktree(_:)), representedObject: SidebarActionWorktree(workspaceID: workspace.id, worktreePath: first.path))
+                addMenuItem(to: menu, title: localized("sidebar.menu.switchToFirstSelected"), action: #selector(switchWorktree(_:)), representedObject: SidebarActionWorktree(workspaceID: workspace.id, worktreePath: first.path))
 
-                let switchMenu = NSMenuItem(title: "Switch to Selected Worktree", action: nil, keyEquivalent: "")
+                let switchMenu = NSMenuItem(title: localized("sidebar.menu.switchToSelectedWorktree"), action: nil, keyEquivalent: "")
                 let switchSubmenu = NSMenu()
                 for worktree in worktrees {
                     addMenuItem(
@@ -508,23 +522,23 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
                 menu.setSubmenu(switchSubmenu, for: switchMenu)
                 menu.addItem(switchMenu)
 
-                addMenuItem(to: menu, title: "New Session in First Selected", action: #selector(newSessionForWorktree(_:)), representedObject: SidebarActionWorktree(workspaceID: workspace.id, worktreePath: first.path))
-                addMenuItem(to: menu, title: "Split Right in First Selected", action: #selector(splitRightForWorktree(_:)), representedObject: SidebarActionWorktree(workspaceID: workspace.id, worktreePath: first.path))
-                addMenuItem(to: menu, title: "Split Down in First Selected", action: #selector(splitDownForWorktree(_:)), representedObject: SidebarActionWorktree(workspaceID: workspace.id, worktreePath: first.path))
+                addMenuItem(to: menu, title: localized("sidebar.menu.newSessionInFirstSelected"), action: #selector(newSessionForWorktree(_:)), representedObject: SidebarActionWorktree(workspaceID: workspace.id, worktreePath: first.path))
+                addMenuItem(to: menu, title: localized("sidebar.menu.splitRightInFirstSelected"), action: #selector(splitRightForWorktree(_:)), representedObject: SidebarActionWorktree(workspaceID: workspace.id, worktreePath: first.path))
+                addMenuItem(to: menu, title: localized("sidebar.menu.splitDownInFirstSelected"), action: #selector(splitDownForWorktree(_:)), representedObject: SidebarActionWorktree(workspaceID: workspace.id, worktreePath: first.path))
             }
 
             menu.addItem(.separator())
-            addMenuItem(to: menu, title: "Copy Selected Paths", action: #selector(copySelectedPaths(_:)), representedObject: paths)
-            addMenuItem(to: menu, title: "Reveal Selected in Finder", action: #selector(revealSelectedPaths(_:)), representedObject: paths)
+            addMenuItem(to: menu, title: localized("sidebar.menu.copySelectedPaths"), action: #selector(copySelectedPaths(_:)), representedObject: paths)
+            addMenuItem(to: menu, title: localized("sidebar.menu.revealSelectedInFinder"), action: #selector(revealSelectedPaths(_:)), representedObject: paths)
 
             let removablePaths = worktrees.filter { !$0.isMainWorktree }.map(\.path)
             if !removablePaths.isEmpty {
                 menu.addItem(.separator())
-                addMenuItem(to: menu, title: "Remove Selected Worktrees", action: #selector(removeSelectedWorktrees(_:)), representedObject: SidebarActionWorktreeBatch(workspaceID: workspace.id, worktreePaths: removablePaths))
+                addMenuItem(to: menu, title: localized("sidebar.menu.removeSelectedWorktrees"), action: #selector(removeSelectedWorktrees(_:)), representedObject: SidebarActionWorktreeBatch(workspaceID: workspace.id, worktreePaths: removablePaths))
             }
 
             menu.addItem(.separator())
-            addMenuItem(to: menu, title: "Refresh Repository", action: #selector(refreshWorkspace(_:)), representedObject: workspace.id)
+            addMenuItem(to: menu, title: localized("sidebar.menu.refreshRepository"), action: #selector(refreshWorkspace(_:)), representedObject: workspace.id)
             return menu
         }
 
@@ -533,13 +547,13 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
 
             addMenuItem(
                 to: menu,
-                title: "Reveal Path",
+                title: localized("sidebar.menu.revealPath"),
                 action: #selector(revealPath(_:)),
                 representedObject: worktree.path
             )
             addMenuItem(
                 to: menu,
-                title: "Copy Path",
+                title: localized("sidebar.menu.copyPath"),
                 action: #selector(copyPath(_:)),
                 representedObject: worktree.path
             )
@@ -547,7 +561,7 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             menu.addItem(.separator())
             addMenuItem(
                 to: menu,
-                title: "Customize Icon…",
+                title: localized("sidebar.menu.customizeIcon"),
                 action: #selector(customizeWorktreeIcon(_:)),
                 representedObject: SidebarActionWorktree(workspaceID: workspace.id, worktreePath: worktree.path)
             )
@@ -556,7 +570,7 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
                 menu.addItem(.separator())
                 addMenuItem(
                     to: menu,
-                    title: "Remove Worktree",
+                    title: localized("sidebar.menu.removeWorktree"),
                     action: #selector(removeWorktree(_:)),
                     representedObject: SidebarActionWorktree(workspaceID: workspace.id, worktreePath: worktree.path)
                 )
@@ -1266,8 +1280,13 @@ private struct SidebarNodeRow: View {
 
 private struct WorkspaceRowContent: View {
     @ObservedObject var workspace: WorkspaceModel
+    @ObservedObject private var localization = LocalizationManager.shared
     let store: WorkspaceStore?
     @State private var isHovering = false
+
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
 
     private var appSettings: AppSettings {
         store?.appSettings ?? AppSettings()
@@ -1324,11 +1343,11 @@ private struct WorkspaceRowContent: View {
                     }
 
                     if !workspace.runScript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        SidebarInfoBadge(text: "run", tone: .success)
+                        SidebarInfoBadge(text: localized("sidebar.badge.run"), tone: .success)
                     }
 
                     if !workspace.workflows.isEmpty {
-                        SidebarInfoBadge(text: "flow", tone: .accent)
+                        SidebarInfoBadge(text: localized("sidebar.badge.flow"), tone: .accent)
                     }
                 }
             }
@@ -1348,9 +1367,14 @@ private struct WorkspaceRowContent: View {
 
 private struct WorktreeRowContent: View {
     @ObservedObject var workspace: WorkspaceModel
+    @ObservedObject private var localization = LocalizationManager.shared
     let worktree: WorktreeModel
     let store: WorkspaceStore?
     @State private var isHovering = false
+
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
 
     private var appSettings: AppSettings {
         store?.appSettings ?? AppSettings()
@@ -1379,7 +1403,7 @@ private struct WorktreeRowContent: View {
             if appSettings.sidebarShowsWorktreeBadges {
                 HStack(spacing: 5) {
                     if workspace.activeWorktreePath == worktree.path {
-                        SidebarInfoBadge(text: "current", tone: .subtleSuccess)
+                        SidebarInfoBadge(text: localized("sidebar.badge.current"), tone: .subtleSuccess)
                     }
 
                     if let status = workspace.status(for: worktree.path),

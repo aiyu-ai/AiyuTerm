@@ -39,25 +39,33 @@ struct CreateWorktreeSheet: View {
         _parentDirectoryPath = State(initialValue: parentDirectoryPath)
     }
 
+    private func localized(_ key: String) -> String {
+        LocalizationManager.shared.string(key)
+    }
+
+    private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
+        l10nFormat(localized(key), locale: Locale.current, arguments: arguments)
+    }
+
     private var validationMessage: String? {
         if draft.normalizedDirectoryPath.isEmpty {
-            return "Directory path is required."
+            return localized("sheet.worktree.validation.directoryRequired")
         }
         if draft.normalizedBranchName.isEmpty {
-            return "Branch name is required."
+            return localized("sheet.worktree.validation.branchRequired")
         }
         if draft.normalizedBranchName.contains(" ") {
-            return "Branch names cannot contain spaces."
+            return localized("sheet.worktree.validation.branchNoSpaces")
         }
         if FileManager.default.fileExists(atPath: draft.normalizedDirectoryPath) {
-            return "This path already exists. Please keep adding to the branch name."
+            return localized("sheet.worktree.validation.pathExists")
         }
         return nil
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Create Worktree")
+            Text(localized("sheet.worktree.title"))
                 .font(.title2.weight(.semibold))
 
             Text(request.repositoryRoot.abbreviatedPath)
@@ -66,18 +74,18 @@ struct CreateWorktreeSheet: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Text("Directory Path")
+                    Text(localized("sheet.worktree.directoryPath"))
                         .font(.headline)
                     Spacer()
                     HStack(spacing: 6) {
                         directoryActionButton(
                             systemImage: "folder.badge.gearshape",
-                            help: "Choose parent directory",
+                            help: localized("sheet.worktree.chooseParentDirectory"),
                             action: chooseParentDirectory
                         )
                         directoryActionButton(
                             systemImage: "arrow.up.forward.app",
-                            help: "Open in Finder",
+                            help: localized("sheet.worktree.openInFinder"),
                             action: openDirectoryInFinder
                         )
                         .disabled(draft.directoryPath.isEmpty)
@@ -91,11 +99,11 @@ struct CreateWorktreeSheet: View {
                         .frame(width: 18)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Target folder preview")
+                        Text(localized("sheet.worktree.targetFolderPreview"))
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(.secondary)
 
-                        Text(draft.directoryPath.isEmpty ? "/path/to/new/worktree" : draft.directoryPath)
+                        Text(draft.directoryPath.isEmpty ? localized("sheet.worktree.pathPlaceholder") : draft.directoryPath)
                             .font(.system(size: 13, design: .monospaced))
                             .foregroundStyle(draft.directoryPath.isEmpty ? .tertiary : .primary)
                             .lineLimit(2)
@@ -121,13 +129,13 @@ struct CreateWorktreeSheet: View {
                         .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
                 )
 
-                Text("Branch Name")
+                Text(localized("sheet.worktree.branchName"))
                     .font(.headline)
-                TextField("feature/my-branch", text: $draft.branchName)
+                TextField(localized("sheet.worktree.branchPlaceholder"), text: $draft.branchName)
                     .textFieldStyle(.roundedBorder)
                     .focused($isBranchFieldFocused)
 
-                Toggle("Create new branch", isOn: $draft.createNewBranch)
+                Toggle(localized("sheet.worktree.createNewBranch"), isOn: $draft.createNewBranch)
             }
 
             if let validationMessage {
@@ -138,10 +146,10 @@ struct CreateWorktreeSheet: View {
 
             HStack {
                 Spacer()
-                Button("Cancel") {
+                Button(localized("common.cancel")) {
                     dismiss()
                 }
-                Button("Create") {
+                Button(localized("common.create")) {
                     if onSubmit(draft) {
                         dismiss()
                     }
@@ -171,7 +179,7 @@ struct CreateWorktreeSheet: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.prompt = "Choose"
+        panel.prompt = localized("common.choose")
         panel.directoryURL = URL(fileURLWithPath: parentDirectoryPath)
 
         guard panel.runModal() == .OK, let url = panel.url else { return }

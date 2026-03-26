@@ -9,6 +9,10 @@ import AppKit
 import Carbon
 import Foundation
 
+private func lineyLocalizedSettingsString(_ key: String) -> String {
+    LocalizationManager.shared.string(key)
+}
+
 nonisolated enum SidebarIconFillStyle: String, Codable, Hashable, CaseIterable, Identifiable {
     case solid
     case gradient
@@ -18,9 +22,9 @@ nonisolated enum SidebarIconFillStyle: String, Codable, Hashable, CaseIterable, 
     var title: String {
         switch self {
         case .solid:
-            return "Solid"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.style.solid")
         case .gradient:
-            return "Gradient"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.style.gradient")
         }
     }
 }
@@ -72,85 +76,85 @@ nonisolated enum SidebarIconPalette: String, Codable, Hashable, CaseIterable, Id
     var title: String {
         switch self {
         case .blue:
-            return "Blue"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.blue")
         case .cyan:
-            return "Cyan"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.cyan")
         case .aqua:
-            return "Aqua"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.aqua")
         case .ice:
-            return "Ice"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.ice")
         case .sky:
-            return "Sky"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.sky")
         case .teal:
-            return "Teal"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.teal")
         case .turquoise:
-            return "Turquoise"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.turquoise")
         case .mint:
-            return "Mint"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.mint")
         case .green:
-            return "Green"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.green")
         case .forest:
-            return "Forest"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.forest")
         case .lime:
-            return "Lime"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.lime")
         case .olive:
-            return "Olive"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.olive")
         case .gold:
-            return "Gold"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.gold")
         case .sand:
-            return "Sand"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.sand")
         case .bronze:
-            return "Bronze"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.bronze")
         case .amber:
-            return "Amber"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.amber")
         case .orange:
-            return "Orange"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.orange")
         case .copper:
-            return "Copper"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.copper")
         case .rust:
-            return "Rust"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.rust")
         case .coral:
-            return "Coral"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.coral")
         case .peach:
-            return "Peach"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.peach")
         case .brick:
-            return "Brick"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.brick")
         case .crimson:
-            return "Crimson"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.crimson")
         case .ruby:
-            return "Ruby"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.ruby")
         case .berry:
-            return "Berry"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.berry")
         case .rose:
-            return "Rose"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.rose")
         case .magenta:
-            return "Magenta"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.magenta")
         case .orchid:
-            return "Orchid"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.orchid")
         case .indigo:
-            return "Indigo"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.indigo")
         case .navy:
-            return "Navy"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.navy")
         case .steel:
-            return "Steel"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.steel")
         case .violet:
-            return "Violet"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.violet")
         case .iris:
-            return "Iris"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.iris")
         case .lavender:
-            return "Lavender"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.lavender")
         case .plum:
-            return "Plum"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.plum")
         case .slate:
-            return "Slate"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.slate")
         case .smoke:
-            return "Smoke"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.smoke")
         case .charcoal:
-            return "Charcoal"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.charcoal")
         case .graphite:
-            return "Graphite"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.graphite")
         case .mocha:
-            return "Mocha"
+            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.mocha")
         }
     }
 }
@@ -229,6 +233,7 @@ nonisolated enum ExternalEditor: String, Codable, Hashable, CaseIterable, Identi
 }
 
 struct AppSettings: Codable, Hashable {
+    var appLanguage: AppLanguage
     var autoRefreshEnabled: Bool
     var autoRefreshIntervalSeconds: Int
     var autoClosePaneOnProcessExit: Bool
@@ -255,6 +260,7 @@ struct AppSettings: Codable, Hashable {
     var keyboardShortcutOverrides: [String: KeyboardShortcutOverride]
 
     init(
+        appLanguage: AppLanguage = .automatic,
         autoRefreshEnabled: Bool = true,
         autoRefreshIntervalSeconds: Int = 30,
         autoClosePaneOnProcessExit: Bool = true,
@@ -280,6 +286,7 @@ struct AppSettings: Codable, Hashable {
         commandPaletteRecents: [String: TimeInterval] = [:],
         keyboardShortcutOverrides: [String: KeyboardShortcutOverride] = [:]
     ) {
+        self.appLanguage = appLanguage
         self.autoRefreshEnabled = autoRefreshEnabled
         self.autoRefreshIntervalSeconds = max(10, autoRefreshIntervalSeconds)
         self.autoClosePaneOnProcessExit = autoClosePaneOnProcessExit
@@ -312,6 +319,7 @@ struct AppSettings: Codable, Hashable {
 
 extension AppSettings {
     private enum CodingKeys: String, CodingKey {
+        case appLanguage
         case autoRefreshEnabled
         case autoRefreshIntervalSeconds
         case autoClosePaneOnProcessExit
@@ -348,6 +356,7 @@ extension AppSettings {
             preferredExternalEditor = .cursor
         }
         self.init(
+            appLanguage: try container.decodeIfPresent(AppLanguage.self, forKey: .appLanguage) ?? .automatic,
             autoRefreshEnabled: try container.decodeIfPresent(Bool.self, forKey: .autoRefreshEnabled) ?? true,
             autoRefreshIntervalSeconds: try container.decodeIfPresent(Int.self, forKey: .autoRefreshIntervalSeconds) ?? 30,
             autoClosePaneOnProcessExit: try container.decodeIfPresent(Bool.self, forKey: .autoClosePaneOnProcessExit) ?? true,
@@ -601,15 +610,15 @@ enum LineyShortcutCategory: String, CaseIterable, Hashable, Identifiable {
     var title: String {
         switch self {
         case .general:
-            return "General"
+            return lineyLocalizedSettingsString("settings.shortcuts.category.general")
         case .workspace:
-            return "Workspace"
+            return lineyLocalizedSettingsString("settings.shortcuts.category.workspace")
         case .tabs:
-            return "Tabs"
+            return lineyLocalizedSettingsString("settings.shortcuts.category.tabs")
         case .panes:
-            return "Panes"
+            return lineyLocalizedSettingsString("settings.shortcuts.category.panes")
         case .window:
-            return "Window"
+            return lineyLocalizedSettingsString("settings.shortcuts.category.window")
         }
     }
 }
@@ -679,106 +688,106 @@ enum LineyShortcutAction: String, CaseIterable, Hashable, Identifiable {
     var title: String {
         switch self {
         case .newWindow:
-            return "New Window"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.newWindow.title")
         case .openSettings:
-            return "Settings"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.openSettings.title")
         case .toggleCommandPalette:
-            return "Command Palette"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.toggleCommandPalette.title")
         case .toggleSidebar:
-            return "Toggle Sidebar"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.toggleSidebar.title")
         case .toggleOverview:
-            return "Toggle Overview"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.toggleOverview.title")
         case .openDiff:
-            return "Open Diff"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.openDiff.title")
         case .refreshSelectedWorkspace:
-            return "Refresh Selected Workspace"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.refreshSelectedWorkspace.title")
         case .refreshAllRepositories:
-            return "Refresh All Repositories"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.refreshAllRepositories.title")
         case .newTab:
-            return "New Tab"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.newTab.title")
         case .closeTab:
-            return "Close Tab"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.closeTab.title")
         case .nextTab:
-            return "Next Tab"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.nextTab.title")
         case .previousTab:
-            return "Previous Tab"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.previousTab.title")
         case .selectTabByNumber:
-            return "Select Tab 1…9"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.selectTabByNumber.title")
         case .focusPaneLeft:
-            return "Focus Pane Left"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.focusPaneLeft.title")
         case .focusPaneRight:
-            return "Focus Pane Right"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.focusPaneRight.title")
         case .focusPaneUp:
-            return "Focus Pane Up"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.focusPaneUp.title")
         case .focusPaneDown:
-            return "Focus Pane Down"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.focusPaneDown.title")
         case .splitRight:
-            return "Split Right"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.splitRight.title")
         case .splitDown:
-            return "Split Down"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.splitDown.title")
         case .duplicatePane:
-            return "Duplicate Pane"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.duplicatePane.title")
         case .togglePaneZoom:
-            return "Toggle Pane Zoom"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.togglePaneZoom.title")
         case .closePane:
-            return "Close Pane"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.closePane.title")
         case .closeWindow:
-            return "Close Window"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.closeWindow.title")
         case .enterFullScreen:
-            return "Enter Full Screen"
+            return lineyLocalizedSettingsString("settings.shortcuts.action.enterFullScreen.title")
         }
     }
 
     var subtitle: String {
         switch self {
         case .newWindow:
-            return "Open another Liney window with its own workspace selection."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.newWindow.subtitle")
         case .openSettings:
-            return "Open the Liney settings window."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.openSettings.subtitle")
         case .toggleCommandPalette:
-            return "Search and run workspace actions."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.toggleCommandPalette.subtitle")
         case .toggleSidebar:
-            return "Show or hide the repository sidebar."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.toggleSidebar.subtitle")
         case .toggleOverview:
-            return "Open or close the workspace overview."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.toggleOverview.subtitle")
         case .openDiff:
-            return "Open the current workspace diff window."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.openDiff.subtitle")
         case .refreshSelectedWorkspace:
-            return "Reload git status for the selected workspace."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.refreshSelectedWorkspace.subtitle")
         case .refreshAllRepositories:
-            return "Refresh every repository in the sidebar."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.refreshAllRepositories.subtitle")
         case .newTab:
-            return "Create a new tab in the selected workspace."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.newTab.subtitle")
         case .closeTab:
-            return "Close the active tab without closing the app window."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.closeTab.subtitle")
         case .nextTab:
-            return "Select the next tab in the current workspace."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.nextTab.subtitle")
         case .previousTab:
-            return "Select the previous tab in the current workspace."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.previousTab.subtitle")
         case .selectTabByNumber:
-            return "Jump directly to tabs 1 through 9."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.selectTabByNumber.subtitle")
         case .focusPaneLeft:
-            return "Move focus to the pane on the left."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.focusPaneLeft.subtitle")
         case .focusPaneRight:
-            return "Move focus to the pane on the right."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.focusPaneRight.subtitle")
         case .focusPaneUp:
-            return "Move focus to the pane above."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.focusPaneUp.subtitle")
         case .focusPaneDown:
-            return "Move focus to the pane below."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.focusPaneDown.subtitle")
         case .splitRight:
-            return "Split the focused pane to the right."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.splitRight.subtitle")
         case .splitDown:
-            return "Split the focused pane downward."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.splitDown.subtitle")
         case .duplicatePane:
-            return "Duplicate the focused pane."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.duplicatePane.subtitle")
         case .togglePaneZoom:
-            return "Zoom or unzoom the focused pane."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.togglePaneZoom.subtitle")
         case .closePane:
-            return "Close the focused pane."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.closePane.subtitle")
         case .closeWindow:
-            return "Close the current Liney window."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.closeWindow.subtitle")
         case .enterFullScreen:
-            return "Toggle macOS full screen for the current window."
+            return lineyLocalizedSettingsString("settings.shortcuts.action.enterFullScreen.subtitle")
         }
     }
 

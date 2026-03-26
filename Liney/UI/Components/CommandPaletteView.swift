@@ -9,7 +9,12 @@ import SwiftUI
 
 struct CommandPaletteView: View {
     @EnvironmentObject private var store: WorkspaceStore
+    @ObservedObject private var localization = LocalizationManager.shared
     @FocusState private var isSearchFocused: Bool
+
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
 
     var body: some View {
         ZStack {
@@ -24,7 +29,7 @@ struct CommandPaletteView: View {
                     Image(systemName: "command")
                         .foregroundStyle(LineyTheme.mutedText)
                     TextField(
-                        "Search commands, workspaces, scripts, workflows",
+                        localized("main.commandPalette.searchPlaceholder"),
                         text: Binding(
                             get: { store.commandPaletteQuery },
                             set: { store.updateCommandPaletteQuery($0) }
@@ -46,7 +51,7 @@ struct CommandPaletteView: View {
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         if store.commandPaletteSections.allSatisfy({ $0.items.isEmpty }) {
-                            Text("No matching commands")
+                            Text(localized("main.commandPalette.noMatches"))
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(LineyTheme.mutedText)
                                 .frame(maxWidth: .infinity, alignment: .leading)

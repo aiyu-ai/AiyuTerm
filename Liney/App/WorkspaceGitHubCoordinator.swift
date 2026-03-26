@@ -7,6 +7,16 @@
 
 import Foundation
 
+@MainActor
+private func githubL10n(_ key: String) -> String {
+    LocalizationManager.shared.string(key)
+}
+
+@MainActor
+private func githubL10nFormat(_ key: String, _ arguments: CVarArg...) -> String {
+    l10nFormat(githubL10n(key), locale: Locale.current, arguments: arguments)
+}
+
 protocol GitHubCLIClient {
     func integrationState() async -> GitHubIntegrationState
     func status(repositoryRoot: String, branch: String) async throws -> GitHubWorktreeStatus
@@ -106,7 +116,7 @@ struct WorkspaceGitHubCoordinator {
                     statuses: statuses,
                     integrationStateOverride: .unauthorized,
                     statusUpdate: WorkspaceCoordinatorStatusUpdate(
-                        text: "GitHub CLI is not authenticated. Run `gh auth login`.",
+                        text: githubL10n("github.status.unauthenticated"),
                         tone: .warning
                     )
                 )
@@ -128,7 +138,7 @@ struct WorkspaceGitHubCoordinator {
                 activity(
                     workspaceID: workspace.id,
                     kind: .github,
-                    title: "Opened pull request",
+                    title: githubL10n("github.activity.pullRequestOpened"),
                     detail: "#\(number) · \(worktreeDisplayName(in: workspace, path: worktreePath))",
                     worktreePath: worktreePath,
                     replayAction: .gitHub(.openPullRequest, worktreePath: worktreePath)
@@ -147,13 +157,13 @@ struct WorkspaceGitHubCoordinator {
                 activity(
                     workspaceID: workspace.id,
                     kind: .github,
-                    title: "Marked PR ready",
+                    title: githubL10n("github.activity.pullRequestReady"),
                     detail: "#\(number) · \(worktreeDisplayName(in: workspace, path: worktreePath))",
                     worktreePath: worktreePath,
                     replayAction: .gitHub(.markPullRequestReady, worktreePath: worktreePath)
                 )
             ],
-            statusUpdate: WorkspaceCoordinatorStatusUpdate(text: "Marked pull request ready for review.", tone: .success),
+            statusUpdate: WorkspaceCoordinatorStatusUpdate(text: githubL10n("github.status.pullRequestReady"), tone: .success),
             workspaceIDsToRefresh: [workspace.id],
             shouldPersist: true
         )
@@ -169,13 +179,13 @@ struct WorkspaceGitHubCoordinator {
                 activity(
                     workspaceID: workspace.id,
                     kind: .github,
-                    title: "Rebased PR branch",
+                    title: githubL10n("github.activity.pullRequestRebased"),
                     detail: "#\(number) · \(worktreeDisplayName(in: workspace, path: worktreePath))",
                     worktreePath: worktreePath,
                     replayAction: nil
                 )
             ],
-            statusUpdate: WorkspaceCoordinatorStatusUpdate(text: "Requested PR branch rebase.", tone: .success),
+            statusUpdate: WorkspaceCoordinatorStatusUpdate(text: githubL10n("github.status.pullRequestRebaseRequested"), tone: .success),
             workspaceIDsToRefresh: [workspace.id],
             shouldPersist: true
         )
@@ -191,13 +201,13 @@ struct WorkspaceGitHubCoordinator {
                 activity(
                     workspaceID: workspace.id,
                     kind: .github,
-                    title: "Queued PR for merge",
+                    title: githubL10n("github.activity.pullRequestQueued"),
                     detail: "#\(number) · \(worktreeDisplayName(in: workspace, path: worktreePath))",
                     worktreePath: worktreePath,
                     replayAction: nil
                 )
             ],
-            statusUpdate: WorkspaceCoordinatorStatusUpdate(text: "Queued pull request for auto-merge.", tone: .success),
+            statusUpdate: WorkspaceCoordinatorStatusUpdate(text: githubL10n("github.status.pullRequestQueued"), tone: .success),
             shouldPersist: true
         )
     }
@@ -213,13 +223,13 @@ struct WorkspaceGitHubCoordinator {
                 activity(
                     workspaceID: workspace.id,
                     kind: .release,
-                    title: "Generated release context",
-                    detail: "#\(number) · copied to clipboard",
+                    title: githubL10n("github.activity.releaseContextGenerated"),
+                    detail: githubL10nFormat("github.activity.releaseContextCopiedDetail", number),
                     worktreePath: worktreePath,
                     replayAction: nil
                 )
             ],
-            statusUpdate: WorkspaceCoordinatorStatusUpdate(text: "Release draft context copied to clipboard.", tone: .success),
+            statusUpdate: WorkspaceCoordinatorStatusUpdate(text: githubL10n("github.status.releaseContextCopied"), tone: .success),
             shouldPersist: true
         )
     }
@@ -260,7 +270,7 @@ struct WorkspaceGitHubCoordinator {
                         activity(
                             workspaceID: request.workspace.id,
                             kind: .github,
-                            title: "Rebased PR branch",
+                            title: githubL10n("github.activity.pullRequestRebased"),
                             detail: "#\(number) · \(worktreeDisplayName(in: request.workspace, path: request.worktreePath))",
                             worktreePath: request.worktreePath,
                             replayAction: nil
@@ -273,7 +283,7 @@ struct WorkspaceGitHubCoordinator {
                         activity(
                             workspaceID: request.workspace.id,
                             kind: .github,
-                            title: "Queued PR for merge",
+                            title: githubL10n("github.activity.pullRequestQueued"),
                             detail: "#\(number) · \(worktreeDisplayName(in: request.workspace, path: request.worktreePath))",
                             worktreePath: request.worktreePath,
                             replayAction: nil
@@ -286,8 +296,8 @@ struct WorkspaceGitHubCoordinator {
                         activity(
                             workspaceID: request.workspace.id,
                             kind: .release,
-                            title: "Generated release context",
-                            detail: "#\(number) · included in batch draft",
+                            title: githubL10n("github.activity.releaseContextGenerated"),
+                            detail: githubL10nFormat("github.activity.batchReleaseContextIncludedDetail", number),
                             worktreePath: request.worktreePath,
                             replayAction: nil
                         )
@@ -313,7 +323,7 @@ struct WorkspaceGitHubCoordinator {
             result.sideEffects.append(.copyText(drafts.joined(separator: "\n\n---\n\n")))
         } else if action == .copyReleaseContext, drafts.isEmpty {
             result.statusUpdate = WorkspaceCoordinatorStatusUpdate(
-                text: "Unable to generate release context for the selected pull requests.",
+                text: githubL10n("github.status.batchReleaseContextFailed"),
                 tone: .warning
             )
         }
@@ -323,7 +333,7 @@ struct WorkspaceGitHubCoordinator {
 
     func openLatestRun(workspace: WorkspaceModel, worktreePath: String) async throws -> WorkspaceGitHubCommandResult {
         guard let latestRun = workspace.gitHubStatus(for: worktreePath)?.latestRun else {
-            return WorkspaceGitHubCommandResult(statusUpdate: WorkspaceCoordinatorStatusUpdate(text: "No CI run found for this worktree.", tone: .warning))
+            return WorkspaceGitHubCommandResult(statusUpdate: WorkspaceCoordinatorStatusUpdate(text: githubL10n("github.status.noCIRun"), tone: .warning))
         }
         try await client.openRun(repositoryRoot: workspace.repositoryRoot, runID: latestRun.id)
         return WorkspaceGitHubCommandResult(
@@ -331,7 +341,7 @@ struct WorkspaceGitHubCoordinator {
                 activity(
                     workspaceID: workspace.id,
                     kind: .github,
-                    title: "Opened latest CI run",
+                    title: githubL10n("github.activity.latestCIRunOpened"),
                     detail: worktreeDisplayName(in: workspace, path: worktreePath),
                     worktreePath: worktreePath,
                     replayAction: .gitHub(.openLatestRun, worktreePath: worktreePath)
@@ -343,42 +353,42 @@ struct WorkspaceGitHubCoordinator {
     func openFailingCheckDetails(workspace: WorkspaceModel, worktreePath: String) -> WorkspaceGitHubCommandResult {
         guard let urlString = workspace.gitHubStatus(for: worktreePath)?.checksSummary?.failingChecks.first?.link,
               let url = URL(string: urlString) else {
-            return WorkspaceGitHubCommandResult(statusUpdate: WorkspaceCoordinatorStatusUpdate(text: "No failing check details found for this worktree.", tone: .warning))
+            return WorkspaceGitHubCommandResult(statusUpdate: WorkspaceCoordinatorStatusUpdate(text: githubL10n("github.status.noFailingCheckDetails"), tone: .warning))
         }
         return WorkspaceGitHubCommandResult(sideEffects: [.openURL(url)])
     }
 
     func copyFailingCheckURL(workspace: WorkspaceModel, worktreePath: String) -> WorkspaceGitHubCommandResult {
         guard let urlString = workspace.gitHubStatus(for: worktreePath)?.checksSummary?.failingChecks.first?.link else {
-            return WorkspaceGitHubCommandResult(statusUpdate: WorkspaceCoordinatorStatusUpdate(text: "No failing check URL found for this worktree.", tone: .warning))
+            return WorkspaceGitHubCommandResult(statusUpdate: WorkspaceCoordinatorStatusUpdate(text: githubL10n("github.status.noFailingCheckURL"), tone: .warning))
         }
         return WorkspaceGitHubCommandResult(
             sideEffects: [.copyText(urlString)],
-            statusUpdate: WorkspaceCoordinatorStatusUpdate(text: "Failing check URL copied to clipboard.", tone: .success)
+            statusUpdate: WorkspaceCoordinatorStatusUpdate(text: githubL10n("github.status.failingCheckURLCopied"), tone: .success)
         )
     }
 
     func rerunLatestFailedJobs(workspace: WorkspaceModel, worktreePath: String) async throws -> WorkspaceGitHubCommandResult {
         guard let latestRun = workspace.gitHubStatus(for: worktreePath)?.latestRun else {
-            return WorkspaceGitHubCommandResult(statusUpdate: WorkspaceCoordinatorStatusUpdate(text: "No CI run found for this worktree.", tone: .warning))
+            return WorkspaceGitHubCommandResult(statusUpdate: WorkspaceCoordinatorStatusUpdate(text: githubL10n("github.status.noCIRun"), tone: .warning))
         }
         guard latestRun.isFailing else {
-            return WorkspaceGitHubCommandResult(statusUpdate: WorkspaceCoordinatorStatusUpdate(text: "Latest CI run is not failing.", tone: .neutral))
+            return WorkspaceGitHubCommandResult(statusUpdate: WorkspaceCoordinatorStatusUpdate(text: githubL10n("github.status.latestCIRunNotFailing"), tone: .neutral))
         }
         try await client.rerunFailedJobs(repositoryRoot: workspace.repositoryRoot, runID: latestRun.id)
         return WorkspaceGitHubCommandResult(
-            statusUpdate: WorkspaceCoordinatorStatusUpdate(text: "Requested rerun for failed jobs.", tone: .success)
+            statusUpdate: WorkspaceCoordinatorStatusUpdate(text: githubL10n("github.status.rerunRequested"), tone: .success)
         )
     }
 
     func copyLatestRunLogs(workspace: WorkspaceModel, worktreePath: String) async throws -> WorkspaceGitHubCommandResult {
         guard let latestRun = workspace.gitHubStatus(for: worktreePath)?.latestRun else {
-            return WorkspaceGitHubCommandResult(statusUpdate: WorkspaceCoordinatorStatusUpdate(text: "No CI run found for this worktree.", tone: .warning))
+            return WorkspaceGitHubCommandResult(statusUpdate: WorkspaceCoordinatorStatusUpdate(text: githubL10n("github.status.noCIRun"), tone: .warning))
         }
         let logs = try await client.latestRunLogs(repositoryRoot: workspace.repositoryRoot, runID: latestRun.id)
         return WorkspaceGitHubCommandResult(
             sideEffects: [.copyText(logs)],
-            statusUpdate: WorkspaceCoordinatorStatusUpdate(text: "Latest CI logs copied to clipboard.", tone: .success)
+            statusUpdate: WorkspaceCoordinatorStatusUpdate(text: githubL10n("github.status.latestCILogsCopied"), tone: .success)
         )
     }
 
@@ -391,7 +401,7 @@ struct WorkspaceGitHubCoordinator {
     }
 
     private func missingPullRequestResult() -> WorkspaceGitHubCommandResult {
-        WorkspaceGitHubCommandResult(statusUpdate: WorkspaceCoordinatorStatusUpdate(text: "No pull request found for this worktree.", tone: .warning))
+        WorkspaceGitHubCommandResult(statusUpdate: WorkspaceCoordinatorStatusUpdate(text: githubL10n("github.status.noPullRequest"), tone: .warning))
     }
 
     private func activity(
@@ -415,11 +425,11 @@ struct WorkspaceGitHubCoordinator {
     private func emptyBatchMessage(for action: WorkspaceGitHubBatchAction) -> String {
         switch action {
         case .updateBranch:
-            return "No pull requests are available for batch update."
+            return githubL10n("github.status.batchEmpty.updateBranch")
         case .queueMerge:
-            return "No merge-ready pull requests are available."
+            return githubL10n("github.status.batchEmpty.queueMerge")
         case .copyReleaseContext:
-            return "No pull requests are available for release context."
+            return githubL10n("github.status.batchEmpty.releaseContext")
         }
     }
 
@@ -427,20 +437,20 @@ struct WorkspaceGitHubCoordinator {
         let successMessage: String
         switch action {
         case .updateBranch:
-            successMessage = "Updated PR branches."
+            successMessage = githubL10n("github.status.batchSummary.updateBranch")
         case .queueMerge:
-            successMessage = "Queued pull requests for auto-merge."
+            successMessage = githubL10n("github.status.batchSummary.queueMerge")
         case .copyReleaseContext:
-            successMessage = "Combined release context copied to clipboard."
+            successMessage = githubL10n("github.status.batchSummary.releaseContext")
         }
 
         if success == 0, failed > 0 {
-            return "Batch action failed for \(failed) pull request(s)."
+            return githubL10nFormat("github.status.batchSummary.failedFormat", failed)
         }
         if failed > 0 {
-            return "\(successMessage) \(success) succeeded, \(failed) failed."
+            return githubL10nFormat("github.status.batchSummary.partialFormat", successMessage, success, failed)
         }
-        return "\(successMessage) \(success) total."
+        return githubL10nFormat("github.status.batchSummary.totalFormat", successMessage, success)
     }
 
     private static func normalize(_ requests: [WorkspaceGitHubBatchRequest]) -> [WorkspaceGitHubBatchRequest] {

@@ -11,7 +11,16 @@ import SwiftUI
 
 struct MainWindowView: View {
     @EnvironmentObject private var store: WorkspaceStore
+    @ObservedObject private var localization = LocalizationManager.shared
     @State private var isCanvasPresented = false
+
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
+
+    private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
+        l10nFormat(localized(key), locale: Locale.current, arguments: arguments)
+    }
 
     private var hasSelectedWorkspace: Bool {
         store.selectedWorkspace != nil
@@ -42,9 +51,9 @@ struct MainWindowView: View {
 
     private var externalEditorHelpText: String {
         if let editor = effectiveExternalEditor {
-            return "Open Current Workspace in \(editor.editor.displayName)"
+            return localizedFormat("main.toolbar.openCurrentWorkspaceInFormat", editor.editor.displayName)
         }
-        return "Open Current Workspace in an External Editor"
+        return localized("main.toolbar.openCurrentWorkspaceInExternalEditor")
     }
 
     private var sleepPreventionIconName: String {
@@ -140,8 +149,8 @@ struct MainWindowView: View {
                     Image(systemName: "sidebar.leading")
                         .padding(4)
                 }
-                .accessibilityLabel("Toggle Sidebar")
-                .help("Toggle Sidebar")
+                .accessibilityLabel(localized("menu.view.toggleSidebar"))
+                .help(localized("menu.view.toggleSidebar"))
             }
 
             ToolbarItemGroup(placement: .primaryAction) {
@@ -157,12 +166,12 @@ struct MainWindowView: View {
                     },
                     isLeadingDisabled: false,
                     isTrailingDisabled: false,
-                    leadingAccessibilityLabel: "Insert Quick Command",
+                    leadingAccessibilityLabel: localized("main.toolbar.insertQuickCommand"),
                     leadingHelp: hasSelectedSession
-                        ? "Insert a Quick Command into the Focused Terminal"
-                        : "Choose a Quick Command",
-                    trailingAccessibilityLabel: "Edit Quick Commands",
-                    trailingHelp: "Edit Quick Commands",
+                        ? localized("main.toolbar.insertQuickCommandFocusedTerminal")
+                        : localized("main.toolbar.chooseQuickCommand"),
+                    trailingAccessibilityLabel: localized("main.toolbar.editQuickCommands"),
+                    trailingHelp: localized("main.toolbar.editQuickCommands"),
                     leadingContent: {
                         HStack(spacing: 6) {
                             ToolbarFeatureIcon(
@@ -194,8 +203,8 @@ struct MainWindowView: View {
                     isTrailingDisabled: !hasSelectedWorkspace,
                     leadingAccessibilityLabel: externalEditorHelpText,
                     leadingHelp: externalEditorHelpText,
-                    trailingAccessibilityLabel: "Choose External Editor",
-                    trailingHelp: "Choose an External Editor and Make It the Default",
+                    trailingAccessibilityLabel: localized("main.toolbar.chooseExternalEditor"),
+                    trailingHelp: localized("main.toolbar.chooseExternalEditorDefault"),
                     leadingContent: {
                         HStack(spacing: 6) {
                             ToolbarFeatureIcon(
@@ -248,8 +257,8 @@ struct MainWindowView: View {
                     Image(systemName: store.isOverviewPresented ? "building.2.fill" : "building.2")
                         .padding(4)
                 }
-                .accessibilityLabel("Overview")
-                .help("Overview")
+                .accessibilityLabel(localized("main.overview.title"))
+                .help(localized("main.overview.title"))
 
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -264,8 +273,8 @@ struct MainWindowView: View {
                     Image(systemName: isCanvasPresented ? "square.grid.3x2.fill" : "square.grid.3x2")
                         .padding(4)
                 }
-                .accessibilityLabel("Canvas")
-                .help(isCanvasPresented ? "Hide Canvas" : "Show Canvas")
+                .accessibilityLabel(localized("main.canvas.title"))
+                .help(isCanvasPresented ? localized("main.canvas.hide") : localized("main.canvas.show"))
 
                 Button {
                     openDiffWindow()
@@ -273,8 +282,8 @@ struct MainWindowView: View {
                     Image(systemName: "doc.text.magnifyingglass")
                         .padding(4)
                 }
-                .accessibilityLabel("Diff")
-                .help("Open Diff")
+                .accessibilityLabel(localized("menu.view.openDiff"))
+                .help(localized("menu.view.openDiff"))
 
                 Button {
                     store.dispatch(.toggleCommandPalette)
@@ -282,8 +291,8 @@ struct MainWindowView: View {
                     Image(systemName: "command")
                         .padding(4)
                 }
-                .accessibilityLabel("Command Palette")
-                .help("Command Palette")
+                .accessibilityLabel(localized("menu.view.commandPalette"))
+                .help(localized("menu.view.commandPalette"))
 
                 Button {
                     guard let workspace = store.selectedWorkspace else { return }
@@ -293,8 +302,8 @@ struct MainWindowView: View {
                         .padding(4)
                 }
                 .disabled(!hasFocusedPane)
-                .accessibilityLabel("Split Right")
-                .help("Split Right")
+                .accessibilityLabel(localized("menu.file.splitRight"))
+                .help(localized("menu.file.splitRight"))
 
                 Button {
                     guard let workspace = store.selectedWorkspace else { return }
@@ -304,8 +313,8 @@ struct MainWindowView: View {
                         .padding(4)
                 }
                 .disabled(!hasFocusedPane)
-                .accessibilityLabel("Split Down")
-                .help("Split Down")
+                .accessibilityLabel(localized("menu.file.splitDown"))
+                .help(localized("menu.file.splitDown"))
 
                 Button {
                     guard let workspace = store.selectedWorkspace else { return }
@@ -315,35 +324,35 @@ struct MainWindowView: View {
                         .padding(4)
                 }
                 .disabled(!hasSelectedWorkspace)
-                .accessibilityLabel("New Tab")
-                .help("New Tab")
+                .accessibilityLabel(localized("menu.file.newTab"))
+                .help(localized("menu.file.newTab"))
 
                 Menu {
-                    Button("Restart Focused Session") {
+                    Button(localized("main.menu.restartFocusedSession")) {
                         guard let workspace = store.selectedWorkspace else { return }
                         store.restartFocusedSession(in: workspace)
                     }
                     .disabled(!hasFocusedPane)
 
-                    Button("Restart All Sessions") {
+                    Button(localized("main.menu.restartAllSessions")) {
                         guard let workspace = store.selectedWorkspace else { return }
                         store.restartAllSessions(in: workspace)
                     }
                     .disabled(!hasSelectedWorkspace)
 
-                    Button("Run Workspace Script") {
+                    Button(localized("main.menu.runWorkspaceScript")) {
                         guard let workspace = store.selectedWorkspace else { return }
                         store.dispatch(.runWorkspaceScript(workspace.id))
                     }
                     .disabled(!(store.selectedWorkspace?.runScript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false))
 
-                    Button("Run Setup Script") {
+                    Button(localized("main.menu.runSetupScript")) {
                         guard let workspace = store.selectedWorkspace else { return }
                         store.dispatch(.runSetupScript(workspace.id))
                     }
                     .disabled(!(store.selectedWorkspace?.setupScript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false))
 
-                    Button("Run Preferred Workflow") {
+                    Button(localized("main.menu.runPreferredWorkflow")) {
                         guard let workspace = store.selectedWorkspace,
                               let workflow = workspace.preferredWorkflow else { return }
                         store.dispatch(.runWorkflow(workspace.id, workflow.id))
@@ -352,19 +361,19 @@ struct MainWindowView: View {
 
                     Divider()
 
-                    Button("Equalize Splits") {
+                    Button(localized("main.menu.equalizeSplits")) {
                         guard let workspace = store.selectedWorkspace else { return }
                         store.equalizeSplits(in: workspace)
                     }
                     .disabled(!hasSelectedWorkspace)
 
-                    Button("Toggle Zoom") {
+                    Button(localized("main.menu.toggleZoom")) {
                         guard let workspace = store.selectedWorkspace else { return }
                         store.toggleZoom(in: workspace)
                     }
                     .disabled(!hasFocusedPane)
 
-                    Button("Reset Layout") {
+                    Button(localized("main.menu.resetLayout")) {
                         guard let workspace = store.selectedWorkspace else { return }
                         store.resetLayout(in: workspace)
                     }
@@ -373,13 +382,13 @@ struct MainWindowView: View {
                     if selectedWorkspaceSupportsGit {
                         Divider()
 
-                        Button("Create Worktree") {
+                        Button(localized("sheet.worktree.title")) {
                             guard let workspace = store.selectedWorkspace else { return }
                             store.presentCreateWorktree(for: workspace)
                         }
                         .disabled(!selectedWorkspaceSupportsGit)
 
-                        Button("Refresh Repo") {
+                        Button(localized("main.menu.refreshRepo")) {
                             store.refreshSelectedWorkspace()
                         }
                         .disabled(!selectedWorkspaceSupportsGit)
@@ -387,14 +396,14 @@ struct MainWindowView: View {
 
                     Divider()
 
-                    Button(store.isOverviewPresented ? "Close Workspace Overview" : "Open Workspace Overview") {
+                    Button(store.isOverviewPresented ? localized("main.overview.close") : localized("main.overview.open")) {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             dismissCanvas(restoreFocus: false)
                             store.dispatch(.toggleOverview)
                         }
                     }
 
-                    Button(isCanvasPresented ? "Hide Canvas" : "Show Canvas") {
+                    Button(isCanvasPresented ? localized("main.canvas.hide") : localized("main.canvas.show")) {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             store.isOverviewPresented = false
                             if isCanvasPresented {
@@ -405,18 +414,18 @@ struct MainWindowView: View {
                         }
                     }
 
-                    Button("Open Diff") {
+                    Button(localized("menu.view.openDiff")) {
                         openDiffWindow()
                     }
                     Divider()
 
-                    Button("Settings") {
+                    Button(localized("menu.app.settings")) {
                         store.presentSettings(for: store.selectedWorkspace)
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
-                .help("More Actions")
+                .help(localized("main.menu.moreActions"))
             }
         }
         .onChange(of: store.selectedWorkspaceID) { _, newValue in
@@ -460,14 +469,14 @@ struct MainWindowView: View {
             Alert(
                 title: Text(error.title),
                 message: Text(error.message),
-                dismissButton: .default(Text("OK"))
+                dismissButton: .default(Text(localized("common.ok")))
             )
         }
         .alert(item: $store.pendingWorktreeSwitch) { request in
             Alert(
-                title: Text("Switch worktree and restart panes?"),
-                message: Text("Switching to \(request.targetName) restarts \(request.runningPaneCount) running pane(s) so their cwd matches the selected worktree and then \(request.requestedAction.displayLabel)."),
-                primaryButton: .destructive(Text("Switch")) {
+                title: Text(localized("main.worktreeSwitch.title")),
+                message: Text(localizedFormat("main.worktreeSwitch.messageFormat", request.targetName, request.runningPaneCount, request.requestedAction.displayLabel)),
+                primaryButton: .destructive(Text(localized("main.worktreeSwitch.confirm"))) {
                     store.confirmPendingWorktreeSwitch()
                 },
                 secondaryButton: .cancel {
@@ -476,7 +485,7 @@ struct MainWindowView: View {
             )
         }
         .confirmationDialog(
-            store.pendingWorktreeRemoval?.itemCount == 1 ? "Remove worktree?" : "Remove selected worktrees?",
+            store.pendingWorktreeRemoval?.itemCount == 1 ? localized("main.worktreeRemoval.singleTitle") : localized("main.worktreeRemoval.multiTitle"),
             isPresented: Binding(
                 get: { store.pendingWorktreeRemoval != nil },
                 set: { isPresented in
@@ -488,15 +497,15 @@ struct MainWindowView: View {
             titleVisibility: .visible,
             presenting: store.pendingWorktreeRemoval
         ) { request in
-            Button("Remove", role: .destructive) {
+            Button(localized("main.worktreeRemoval.remove"), role: .destructive) {
                 store.confirmPendingWorktreeRemoval()
             }
             if request.allowsForceRemove {
-                Button("Force Remove", role: .destructive) {
+                Button(localized("main.worktreeRemoval.forceRemove"), role: .destructive) {
                     store.confirmPendingWorktreeRemoval(force: true)
                 }
             }
-            Button("Cancel", role: .cancel) {
+            Button(localized("common.cancel"), role: .cancel) {
                 store.pendingWorktreeRemoval = nil
             }
         } message: { request in
@@ -518,12 +527,12 @@ struct MainWindowView: View {
 
     private func diffEmptyStateMessage(for workspace: WorkspaceModel?, supportsDiff: Bool) -> String {
         guard let workspace else {
-            return "Select a workspace to inspect changes."
+            return localized("main.diff.selectWorkspace")
         }
         if supportsDiff {
-            return "Working directory is clean."
+            return localized("main.diff.workingDirectoryClean")
         }
-        return "\(workspace.name) does not have a git diff context."
+        return localizedFormat("main.diff.noContextFormat", workspace.name)
     }
 
     private func present(menu: NSMenu, from anchorView: NSView?) {
@@ -541,13 +550,13 @@ struct MainWindowView: View {
         let menu = NSMenu()
 
         if !hasSelectedSession {
-            menu.addDisabledItem(title: "Focus a terminal pane to insert a quick command")
+            menu.addDisabledItem(title: localized("main.quickCommands.focusTerminal"))
             menu.addItem(.separator())
         }
 
         let recentCommands = store.recentQuickCommandPresets
         if !recentCommands.isEmpty {
-            menu.addSectionHeader("Recent")
+            menu.addSectionHeader(localized("main.quickCommands.recent"))
             for command in recentCommands {
                 menu.addActionItem(
                     title: command.normalizedTitle,
@@ -583,11 +592,11 @@ struct MainWindowView: View {
         }
 
         if store.quickCommandPresets.isEmpty {
-            menu.addDisabledItem(title: "No quick commands configured")
+            menu.addDisabledItem(title: localized("main.quickCommands.noneConfigured"))
             menu.addItem(.separator())
         }
 
-        menu.addActionItem(title: "Edit Quick Commands…", imageSystemName: "slider.horizontal.3") {
+        menu.addActionItem(title: localized("main.quickCommands.edit"), imageSystemName: "slider.horizontal.3") {
             store.presentQuickCommandEditor()
         }
 
@@ -598,9 +607,9 @@ struct MainWindowView: View {
         let menu = NSMenu()
 
         if availableExternalEditors.isEmpty {
-            menu.addDisabledItem(title: "No supported editors found")
+            menu.addDisabledItem(title: localized("main.externalEditor.noneFound"))
         } else {
-            menu.addSectionHeader("Open Workspace In")
+            menu.addSectionHeader(localized("main.externalEditor.openWorkspaceIn"))
             for editor in availableExternalEditors {
                 menu.addActionItem(
                     title: editor.editor.displayName,
@@ -612,7 +621,7 @@ struct MainWindowView: View {
             menu.addItem(.separator())
         }
 
-        menu.addActionItem(title: "Settings…", imageSystemName: "gearshape") {
+        menu.addActionItem(title: localized("menu.app.settings"), imageSystemName: "gearshape") {
             store.presentSettings(for: store.selectedWorkspace)
         }
 
@@ -623,14 +632,14 @@ struct MainWindowView: View {
         let menu = NSMenu()
 
         if let session = store.sleepPreventionSession {
-            menu.addDisabledItem(title: "Active: \(session.remainingDescription(relativeTo: store.sleepPreventionReferenceDate))")
-            menu.addActionItem(title: "Stop Do Not Sleep", imageSystemName: "xmark.circle") {
+            menu.addDisabledItem(title: localizedFormat("main.sleepPrevention.activeFormat", session.remainingDescription(relativeTo: store.sleepPreventionReferenceDate)))
+            menu.addActionItem(title: localized("main.sleepPrevention.stop"), imageSystemName: "xmark.circle") {
                 store.stopSleepPrevention()
             }
             menu.addItem(.separator())
         }
 
-        menu.addSectionHeader("Prevent Sleep For")
+        menu.addSectionHeader(localized("main.sleepPrevention.preventFor"))
         for option in store.sleepPreventionOptions {
             menu.addActionItem(
                 title: option.title,

@@ -71,19 +71,19 @@ enum CommandPaletteGroup: String, CaseIterable, Hashable, Identifiable {
     var title: String {
         switch self {
         case .recent:
-            return "Recent"
+            return LocalizationManager.shared.string("main.commandPalette.group.recent")
         case .navigation:
-            return "Navigation"
+            return LocalizationManager.shared.string("main.commandPalette.group.navigation")
         case .sessions:
-            return "Sessions"
+            return LocalizationManager.shared.string("main.commandPalette.group.sessions")
         case .automation:
-            return "Automation"
+            return LocalizationManager.shared.string("main.commandPalette.group.automation")
         case .releases:
-            return "Releases"
+            return LocalizationManager.shared.string("main.commandPalette.group.releases")
         case .workflows:
-            return "Workflows"
+            return LocalizationManager.shared.string("main.commandPalette.group.workflows")
         case .github:
-            return "GitHub"
+            return LocalizationManager.shared.string("main.commandPalette.group.github")
         }
     }
 }
@@ -154,8 +154,8 @@ enum GitHubBatchCommandPaletteFactory {
             items.append(
                 CommandPaletteItem(
                     id: "github-batch-queue-ready",
-                    title: "Queue \(readyTargets.count) Merge-Ready PRs",
-                    subtitle: "Cross-repo auto-merge batch",
+                    title: l10nFormat(LocalizationManager.shared.string("main.commandPalette.batch.queueReadyFormat"), arguments: [readyTargets.count]),
+                    subtitle: LocalizationManager.shared.string("main.commandPalette.batch.queueReadySubtitle"),
                     group: .github,
                     keywords: ["github", "batch", "merge queue", "ship"],
                     isGlobal: true,
@@ -168,8 +168,8 @@ enum GitHubBatchCommandPaletteFactory {
             items.append(
                 CommandPaletteItem(
                     id: "github-batch-update-behind",
-                    title: "Update \(behindTargets.count) Behind PRs",
-                    subtitle: "Cross-repo rebase batch",
+                    title: l10nFormat(LocalizationManager.shared.string("main.commandPalette.batch.updateBehindFormat"), arguments: [behindTargets.count]),
+                    subtitle: LocalizationManager.shared.string("main.commandPalette.batch.updateBehindSubtitle"),
                     group: .github,
                     keywords: ["github", "batch", "update branch", "rebase"],
                     isGlobal: true,
@@ -182,8 +182,8 @@ enum GitHubBatchCommandPaletteFactory {
             items.append(
                 CommandPaletteItem(
                     id: "github-batch-release-notes",
-                    title: "Copy Ship Notes for \(releasableTargets.count) PRs",
-                    subtitle: "Combined release draft bundle",
+                    title: l10nFormat(LocalizationManager.shared.string("main.commandPalette.batch.copyShipNotesFormat"), arguments: [releasableTargets.count]),
+                    subtitle: LocalizationManager.shared.string("main.commandPalette.batch.copyShipNotesSubtitle"),
                     group: .github,
                     keywords: ["github", "batch", "release notes", "changelog"],
                     isGlobal: true,

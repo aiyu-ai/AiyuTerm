@@ -7,6 +7,14 @@
 
 import Foundation
 
+private func overviewLocalized(_ key: String) -> String {
+    LocalizationManager.shared.string(key)
+}
+
+private func overviewLocalizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
+    l10nFormat(overviewLocalized(key), locale: Locale.current, arguments: arguments)
+}
+
 @MainActor
 struct OverviewWorkspaceSnapshot: Identifiable {
     let id: UUID
@@ -130,8 +138,8 @@ struct OverviewViewModel {
                 workspace: $0.workspace,
                 title: $0.workspace.name,
                 subtitle: "\($0.worktree.displayName) · \($0.failingCount) failing check(s)",
-                detail: $0.firstFailingCheckName ?? "Open the first failing check",
-                actionLabel: "Open Check",
+                detail: $0.firstFailingCheckName ?? overviewLocalized("overview.model.openFirstFailingCheck"),
+                actionLabel: overviewLocalized("overview.model.openCheck"),
                 action: .openFailingCheck($0.workspace.id, $0.worktree.path)
             )
         }
@@ -142,9 +150,9 @@ struct OverviewViewModel {
                 id: "execute:workflow:\(launcher.id)",
                 workspace: workspace,
                 title: launcher.workspaceName,
-                subtitle: "Preferred workflow",
+                subtitle: overviewLocalized("overview.model.preferredWorkflow"),
                 detail: launcher.workflowName,
-                actionLabel: "Run Workflow",
+                actionLabel: overviewLocalized("overview.model.runWorkflow"),
                 action: .runWorkflow(launcher.workspaceID, launcher.workflowID)
             )
         })
@@ -154,9 +162,9 @@ struct OverviewViewModel {
                 id: "execute:dirty:\($0.id.uuidString)",
                 workspace: $0,
                 title: $0.name,
-                subtitle: "\($0.changedFileCount) changed file(s)",
+                subtitle: overviewLocalizedFormat("overview.model.changedFilesFormat", $0.changedFileCount),
                 detail: $0.currentBranch,
-                actionLabel: "Open Workspace",
+                actionLabel: overviewLocalized("overview.model.openWorkspace"),
                 action: .openWorkspace($0.id)
             )
         })
@@ -186,7 +194,7 @@ struct OverviewViewModel {
                 title: $0.workspace.name,
                 subtitle: "#\($0.number) · \($0.worktree.displayName)",
                 detail: $0.detail,
-                actionLabel: "Queue Merge",
+                actionLabel: overviewLocalized("overview.model.queueMerge"),
                 action: .queuePullRequest($0.workspace.id, $0.worktree.path)
             )
         }
@@ -198,9 +206,9 @@ struct OverviewViewModel {
                 id: "focus:failing:\($0.id)",
                 workspace: $0.workspace,
                 priority: 0,
-                headline: "Fix failing checks",
-                detail: "\($0.workspace.name) · \($0.worktree.displayName) · \($0.failingCount) failing",
-                actionLabel: "Open Check",
+                headline: overviewLocalized("overview.model.fixFailingChecks"),
+                detail: overviewLocalizedFormat("overview.model.fixFailingChecksDetailFormat", $0.workspace.name, $0.worktree.displayName, $0.failingCount),
+                actionLabel: overviewLocalized("overview.model.openCheck"),
                 action: .openFailingCheck($0.workspace.id, $0.worktree.path)
             )
         }
@@ -210,9 +218,9 @@ struct OverviewViewModel {
                 id: "focus:ready:\($0.id)",
                 workspace: $0.workspace,
                 priority: 1,
-                headline: "Ship merge-ready PR",
+                headline: overviewLocalized("overview.model.shipMergeReadyPR"),
                 detail: "\($0.workspace.name) · #\($0.number) · \($0.title)",
-                actionLabel: "Queue Merge",
+                actionLabel: overviewLocalized("overview.model.queueMerge"),
                 action: .queuePullRequest($0.workspace.id, $0.worktree.path)
             )
         }
@@ -235,9 +243,9 @@ struct OverviewViewModel {
                 id: "focus:workflow:\(launcher.id)",
                 workspace: workspace,
                 priority: 3,
-                headline: "Run preferred workflow",
+                headline: overviewLocalized("overview.model.runPreferredWorkflow"),
                 detail: "\(launcher.workspaceName) · \(launcher.workflowName)",
-                actionLabel: "Run Workflow",
+                actionLabel: overviewLocalized("overview.model.runWorkflow"),
                 action: .runWorkflow(launcher.workspaceID, launcher.workflowID)
             )
         }
@@ -247,9 +255,9 @@ struct OverviewViewModel {
                 id: "focus:dirty:\($0.id.uuidString)",
                 workspace: $0,
                 priority: 4,
-                headline: "Review local changes",
-                detail: "\($0.name) · \($0.changedFileCount) changed file(s) on \($0.currentBranch)",
-                actionLabel: "Open Workspace",
+                headline: overviewLocalized("overview.model.reviewLocalChanges"),
+                detail: overviewLocalizedFormat("overview.model.reviewLocalChangesDetailFormat", $0.name, $0.changedFileCount, $0.currentBranch),
+                actionLabel: overviewLocalized("overview.model.openWorkspace"),
                 action: .openWorkspace($0.id)
             )
         }
@@ -281,7 +289,7 @@ struct OverviewViewModel {
                 OverviewBlockerGroup(
                     id: "blocker:failing",
                     style: .failingChecks,
-                    title: "Failing checks",
+                    title: overviewLocalized("overview.model.failingChecks"),
                     count: failingWorkspaces.count,
                     items: failingWorkspaces.map {
                         OverviewBlockerItem(
@@ -289,8 +297,8 @@ struct OverviewViewModel {
                             workspace: $0.workspace,
                             title: $0.workspace.name,
                             subtitle: "\($0.worktree.displayName) · \($0.failingCount) failing",
-                            detail: $0.firstFailingCheckName ?? "Open the failing check",
-                            actionLabel: "Open Check",
+                            detail: $0.firstFailingCheckName ?? overviewLocalized("overview.model.openFailingCheck"),
+                            actionLabel: overviewLocalized("overview.model.openCheck"),
                             action: .openFailingCheck($0.workspace.id, $0.worktree.path)
                         )
                     }
@@ -456,16 +464,16 @@ struct OverviewViewModel {
 
     private func reviewSummary(for pullRequest: GitHubPullRequestSummary) -> String? {
         if !pullRequest.changesRequestedByLogins.isEmpty {
-            return "Changes requested by \(pullRequest.changesRequestedByLogins.joined(separator: ", "))"
+            return overviewLocalizedFormat("overview.model.changesRequestedByFormat", pullRequest.changesRequestedByLogins.joined(separator: ", "))
         }
         if !pullRequest.requestedReviewerLogins.isEmpty {
-            return "Waiting on \(pullRequest.requestedReviewerLogins.joined(separator: ", "))"
+            return overviewLocalizedFormat("overview.model.waitingOnFormat", pullRequest.requestedReviewerLogins.joined(separator: ", "))
         }
         if !pullRequest.approvedByLogins.isEmpty {
-            return "Approved by \(pullRequest.approvedByLogins.joined(separator: ", "))"
+            return overviewLocalizedFormat("overview.model.approvedByFormat", pullRequest.approvedByLogins.joined(separator: ", "))
         }
         if !pullRequest.assigneeLogins.isEmpty {
-            return "Assigned to \(pullRequest.assigneeLogins.joined(separator: ", "))"
+            return overviewLocalizedFormat("overview.model.assignedToFormat", pullRequest.assigneeLogins.joined(separator: ", "))
         }
         return nil
     }
@@ -478,13 +486,13 @@ struct OverviewViewModel {
             return latestRun?.title.nilIfEmpty
         }
         if checksSummary.failingCount > 0 {
-            return checksSummary.failingChecks.first?.name ?? "\(checksSummary.failingCount) failing checks"
+            return checksSummary.failingChecks.first?.name ?? overviewLocalizedFormat("overview.model.failingChecksCountFormat", checksSummary.failingCount)
         }
         if checksSummary.pendingCount > 0 {
-            return "\(checksSummary.pendingCount) check(s) pending"
+            return overviewLocalizedFormat("overview.model.pendingChecksFormat", checksSummary.pendingCount)
         }
         if checksSummary.passingCount > 0 {
-            return "\(checksSummary.passingCount) checks passing"
+            return overviewLocalizedFormat("overview.model.passingChecksFormat", checksSummary.passingCount)
         }
         return latestRun?.title.nilIfEmpty
     }
@@ -597,13 +605,13 @@ enum OverviewPullRequestInboxCategory: String, CaseIterable {
     var title: String {
         switch self {
         case .failing:
-            return "Failing CI"
+            return overviewLocalized("overview.inbox.category.failing")
         case .behind:
-            return "Behind Base"
+            return overviewLocalized("overview.inbox.category.behind")
         case .review:
-            return "Needs Review"
+            return overviewLocalized("overview.inbox.category.review")
         case .ready:
-            return "Ready To Ship"
+            return overviewLocalized("overview.inbox.category.ready")
         }
     }
 
@@ -657,67 +665,67 @@ struct OverviewPullRequestInboxItem: Identifiable {
         switch category {
         case .failing:
             if let first = checksSummary?.failingChecks.first?.name {
-                return "Failing: \(first)"
+                return overviewLocalizedFormat("overview.inbox.detail.failingPrefixFormat", first)
             }
-            return "Fix failing checks before merge."
+            return overviewLocalized("overview.inbox.detail.fixFailingBeforeMerge")
         case .behind:
             return detailParts([
-                "Behind base branch",
+                overviewLocalized("overview.inbox.detail.behindBaseBranch"),
                 reviewStatus
-            ], fallback: "Branch is behind base. Rebase before shipping.")
+            ], fallback: overviewLocalized("overview.inbox.detail.behindFallback"))
         case .review:
             return detailParts([
                 reviewStatus,
                 checkStatus,
                 pullRequest.title
-            ], fallback: "Needs review attention before merge.")
+            ], fallback: overviewLocalized("overview.inbox.detail.reviewFallback"))
         case .ready:
             return detailParts([
                 checkStatus,
                 reviewStatus,
-                "Ready for merge queue and release context"
-            ], fallback: "Ready for merge queue and release context.")
+                overviewLocalized("overview.inbox.detail.readyForMergeQueue")
+            ], fallback: overviewLocalized("overview.inbox.detail.readyForMergeQueue"))
         }
     }
 
     var reviewLine: String? {
         detailParts([
-            !pullRequest.requestedReviewerLogins.isEmpty ? "Reviewers: \(pullRequest.requestedReviewerLogins.joined(separator: ", "))" : nil,
-            !pullRequest.changesRequestedByLogins.isEmpty ? "Changes: \(pullRequest.changesRequestedByLogins.joined(separator: ", "))" : nil,
-            !pullRequest.assigneeLogins.isEmpty ? "Assignees: \(pullRequest.assigneeLogins.joined(separator: ", "))" : nil,
-            !pullRequest.approvedByLogins.isEmpty ? "Approved: \(pullRequest.approvedByLogins.joined(separator: ", "))" : nil
+            !pullRequest.requestedReviewerLogins.isEmpty ? overviewLocalizedFormat("overview.inbox.review.reviewersFormat", pullRequest.requestedReviewerLogins.joined(separator: ", ")) : nil,
+            !pullRequest.changesRequestedByLogins.isEmpty ? overviewLocalizedFormat("overview.inbox.review.changesFormat", pullRequest.changesRequestedByLogins.joined(separator: ", ")) : nil,
+            !pullRequest.assigneeLogins.isEmpty ? overviewLocalizedFormat("overview.inbox.review.assigneesFormat", pullRequest.assigneeLogins.joined(separator: ", ")) : nil,
+            !pullRequest.approvedByLogins.isEmpty ? overviewLocalizedFormat("overview.inbox.review.approvedFormat", pullRequest.approvedByLogins.joined(separator: ", ")) : nil
         ], fallback: nil)
     }
 
     var statusBadge: String {
         switch category {
         case .failing:
-            return "\(checksSummary?.failingCount ?? 0) FAIL"
+            return overviewLocalizedFormat("overview.inbox.status.failFormat", checksSummary?.failingCount ?? 0)
         case .behind:
-            return "BEHIND"
+            return overviewLocalized("overview.inbox.status.behind")
         case .review:
             if !pullRequest.changesRequestedByLogins.isEmpty {
-                return "CHANGES"
+                return overviewLocalized("overview.inbox.status.changes")
             }
             if !pullRequest.requestedReviewerLogins.isEmpty {
-                return "REVIEW"
+                return overviewLocalized("overview.inbox.status.review")
             }
             return pullRequest.mergeReadiness.label.uppercased()
         case .ready:
-            return "READY"
+            return overviewLocalized("overview.inbox.status.ready")
         }
     }
 
     var actionLabel: String {
         switch category {
         case .failing:
-            return "Open Check"
+            return overviewLocalized("overview.model.openCheck")
         case .behind:
-            return "Update"
+            return overviewLocalized("overview.inbox.action.update")
         case .review:
-            return "Open PR"
+            return overviewLocalized("overview.inbox.action.openPR")
         case .ready:
-            return "Queue Merge"
+            return overviewLocalized("overview.model.queueMerge")
         }
     }
 
@@ -736,13 +744,13 @@ struct OverviewPullRequestInboxItem: Identifiable {
 
     private var reviewStatus: String? {
         if !pullRequest.changesRequestedByLogins.isEmpty {
-            return "Changes requested by \(pullRequest.changesRequestedByLogins.joined(separator: ", "))"
+            return overviewLocalizedFormat("overview.model.changesRequestedByFormat", pullRequest.changesRequestedByLogins.joined(separator: ", "))
         }
         if !pullRequest.requestedReviewerLogins.isEmpty {
-            return "Waiting on \(pullRequest.requestedReviewerLogins.joined(separator: ", "))"
+            return overviewLocalizedFormat("overview.model.waitingOnFormat", pullRequest.requestedReviewerLogins.joined(separator: ", "))
         }
         if !pullRequest.approvedByLogins.isEmpty {
-            return "Approved by \(pullRequest.approvedByLogins.joined(separator: ", "))"
+            return overviewLocalizedFormat("overview.model.approvedByFormat", pullRequest.approvedByLogins.joined(separator: ", "))
         }
         return nil
     }
@@ -752,13 +760,13 @@ struct OverviewPullRequestInboxItem: Identifiable {
             return latestRun?.title.nilIfEmpty
         }
         if checksSummary.failingCount > 0 {
-            return checksSummary.failingChecks.first?.name ?? "\(checksSummary.failingCount) failing checks"
+            return checksSummary.failingChecks.first?.name ?? overviewLocalizedFormat("overview.model.failingChecksCountFormat", checksSummary.failingCount)
         }
         if checksSummary.pendingCount > 0 {
-            return "\(checksSummary.pendingCount) check(s) pending"
+            return overviewLocalizedFormat("overview.model.pendingChecksFormat", checksSummary.pendingCount)
         }
         if checksSummary.passingCount > 0 {
-            return "\(checksSummary.passingCount) checks passing"
+            return overviewLocalizedFormat("overview.model.passingChecksFormat", checksSummary.passingCount)
         }
         return nil
     }
@@ -809,24 +817,24 @@ struct OverviewBlockedWorkspace: Identifiable {
     var readinessDetail: String {
         switch readiness {
         case .behind:
-            return "Behind base branch. Rebase or update before merge."
+            return overviewLocalized("overview.blocked.behindDetail")
         case .changesRequested:
             if !changesRequestedByLogins.isEmpty {
-                return "Changes requested by \(changesRequestedByLogins.joined(separator: ", "))."
+                return overviewLocalizedFormat("overview.model.changesRequestedByFormat", changesRequestedByLogins.joined(separator: ", ")) + "."
             }
-            return "Review requested changes before shipping."
+            return overviewLocalized("overview.blocked.reviewRequestedFallback")
         case .conflicted:
-            return "Resolve merge conflicts before continuing."
+            return overviewLocalized("overview.blocked.resolveConflicts")
         case .blocked:
-            return "Merge is blocked by policy or required checks."
+            return overviewLocalized("overview.blocked.mergeBlocked")
         case .draft:
-            return "Still marked as draft."
+            return overviewLocalized("overview.blocked.stillDraft")
         case .checking:
             if !requestedReviewerLogins.isEmpty {
-                return "Waiting on \(requestedReviewerLogins.joined(separator: ", "))."
+                return overviewLocalizedFormat("overview.model.waitingOnFormat", requestedReviewerLogins.joined(separator: ", ")) + "."
             }
             if let checksSummary, checksSummary.pendingCount > 0 {
-                return "\(checksSummary.pendingCount) check(s) still pending."
+                return overviewLocalizedFormat("overview.blocked.pendingChecksFormat", checksSummary.pendingCount)
             }
             return title
         case .ready, .closed:
@@ -837,24 +845,24 @@ struct OverviewBlockedWorkspace: Identifiable {
     var focusHeadline: String {
         switch readiness {
         case .behind:
-            return "Update stale PR branch"
+            return overviewLocalized("overview.blocked.focus.updateBranch")
         case .changesRequested:
-            return "Address review feedback"
+            return overviewLocalized("overview.blocked.focus.addressReviewFeedback")
         case .conflicted:
-            return "Resolve merge conflicts"
+            return overviewLocalized("overview.blocked.focus.resolveConflicts")
         case .blocked:
-            return "Clear merge blockers"
+            return overviewLocalized("overview.blocked.focus.clearBlockers")
         case .draft:
-            return "Decide whether to take draft PR live"
+            return overviewLocalized("overview.blocked.focus.decideDraft")
         case .checking:
-            return "Push review to completion"
+            return overviewLocalized("overview.blocked.focus.pushReview")
         case .ready, .closed:
             return title
         }
     }
 
     var primaryActionLabel: String {
-        readiness == .behind ? "Update Branch" : "Open PR"
+        readiness == .behind ? overviewLocalized("overview.blocked.action.updateBranch") : overviewLocalized("overview.blocked.action.openPR")
     }
 
     var primaryAction: OverviewWorkspaceAction {
@@ -868,17 +876,17 @@ extension GitHubMergeReadiness {
     var blockerTitle: String {
         switch self {
         case .behind:
-            return "Behind base branch"
+            return overviewLocalized("overview.blockerTitle.behind")
         case .changesRequested:
-            return "Changes requested"
+            return overviewLocalized("overview.blockerTitle.changesRequested")
         case .conflicted:
-            return "Merge conflicts"
+            return overviewLocalized("overview.blockerTitle.conflicted")
         case .blocked:
-            return "Blocked merge"
+            return overviewLocalized("overview.blockerTitle.blocked")
         case .draft:
-            return "Draft pull requests"
+            return overviewLocalized("overview.blockerTitle.draft")
         case .checking:
-            return "Review attention"
+            return overviewLocalized("overview.blockerTitle.checking")
         case .ready, .closed:
             return label
         }

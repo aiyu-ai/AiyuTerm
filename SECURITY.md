@@ -1,5 +1,7 @@
 # Security Policy
 
+[中文版本](./SECURITY.zh-CN.md)
+
 Please do not open public GitHub issues for suspected security vulnerabilities.
 
 Report security issues privately to the maintainer through GitHub security advisories or direct contact, and include:

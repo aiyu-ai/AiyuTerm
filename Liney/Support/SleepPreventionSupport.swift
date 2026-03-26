@@ -19,27 +19,29 @@ nonisolated enum SleepPreventionDurationOption: String, CaseIterable, Identifiab
 
     var id: String { rawValue }
 
+    @MainActor
     var title: String {
         switch self {
         case .oneHour:
-            return "1 Hour"
+            return LocalizationManager.shared.string("main.sleepPrevention.option.oneHour")
         case .twoHours:
-            return "2 Hours"
+            return LocalizationManager.shared.string("main.sleepPrevention.option.twoHours")
         case .threeHours:
-            return "3 Hours"
+            return LocalizationManager.shared.string("main.sleepPrevention.option.threeHours")
         case .sixHours:
-            return "6 Hours"
+            return LocalizationManager.shared.string("main.sleepPrevention.option.sixHours")
         case .twelveHours:
-            return "12 Hours"
+            return LocalizationManager.shared.string("main.sleepPrevention.option.twelveHours")
         case .oneDay:
-            return "1 Day"
+            return LocalizationManager.shared.string("main.sleepPrevention.option.oneDay")
         case .threeDays:
-            return "3 Days"
+            return LocalizationManager.shared.string("main.sleepPrevention.option.threeDays")
         case .forever:
-            return "Never Sleep"
+            return LocalizationManager.shared.string("main.sleepPrevention.option.forever")
         }
     }
 
+    @MainActor
     var compactTitle: String {
         switch self {
         case .oneHour:
@@ -57,7 +59,7 @@ nonisolated enum SleepPreventionDurationOption: String, CaseIterable, Identifiab
         case .threeDays:
             return "3d"
         case .forever:
-            return "Never"
+            return LocalizationManager.shared.string("main.sleepPrevention.compact.forever")
         }
     }
 
@@ -98,17 +100,25 @@ nonisolated struct SleepPreventionSession: Equatable {
         expiresAt == nil
     }
 
+    @MainActor
     func compactRemainingDescription(relativeTo now: Date) -> String {
         guard let expiresAt else {
-            return "On"
+            return LocalizationManager.shared.string("main.sleepPrevention.compact.on")
         }
         let remaining = max(0, expiresAt.timeIntervalSince(now))
         return SleepPreventionFormat.duration(remaining)
     }
 
+    @MainActor
     func remainingDescription(relativeTo now: Date) -> String {
         let compact = compactRemainingDescription(relativeTo: now)
-        return compact == "On" ? compact : "\(compact) left"
+        if compact == LocalizationManager.shared.string("main.sleepPrevention.compact.on") {
+            return compact
+        }
+        return l10nFormat(
+            LocalizationManager.shared.string("main.sleepPrevention.remaining.leftFormat"),
+            arguments: [compact]
+        )
     }
 }
 
@@ -124,6 +134,7 @@ nonisolated enum SleepPreventionControllerEvent: Equatable {
 }
 
 nonisolated enum SleepPreventionFormat {
+    @MainActor
     static func duration(_ interval: TimeInterval) -> String {
         let totalSeconds = Int(max(0, interval.rounded(.down)))
         let days = totalSeconds / 86_400
@@ -142,7 +153,7 @@ nonisolated enum SleepPreventionFormat {
         }
 
         if parts.isEmpty {
-            return "under 1m"
+            return LocalizationManager.shared.string("main.sleepPrevention.remaining.underOneMinute")
         }
         return parts.prefix(2).joined(separator: " ")
     }

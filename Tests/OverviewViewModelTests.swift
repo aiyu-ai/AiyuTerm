@@ -10,7 +10,14 @@ import XCTest
 
 @MainActor
 final class OverviewViewModelTests: XCTestCase {
+    override func setUp() {
+        super.setUp()
+        LocalizationManager.shared.updateSelectedLanguage(.automatic)
+    }
+
     func testPullRequestInboxSectionsSortAndExposeReviewMetadata() {
+        LocalizationManager.shared.updateSelectedLanguage(.english)
+
         let failing = makeWorkspace(
             name: "Failing",
             rootPath: "/tmp/failing",
@@ -68,16 +75,24 @@ final class OverviewViewModelTests: XCTestCase {
 
         let model = OverviewViewModel(snapshots: [ready, review, behind, failing])
         let sectionsByCategory = Dictionary(uniqueKeysWithValues: model.pullRequestInboxSections.map { ($0.category, $0.items) })
+        guard let reviewItem = sectionsByCategory[.review]?.first else {
+            return XCTFail("Expected review item")
+        }
+        guard let readyItem = sectionsByCategory[.ready]?.first else {
+            return XCTFail("Expected ready item")
+        }
 
         XCTAssertEqual(model.pullRequestInboxSections.map(\.category), [.failing, .behind, .review, .ready])
         XCTAssertEqual(model.readyPullRequestTargets.count, 1)
         XCTAssertEqual(model.behindPullRequestTargets.count, 1)
         XCTAssertEqual(model.releaseContextTargets.count, 1)
-        XCTAssertEqual(sectionsByCategory[.review]?.first?.reviewLine, "Reviewers: alex · Assignees: owner")
-        XCTAssertEqual(sectionsByCategory[.ready]?.first?.detail, "3 checks passing · Approved by sam · Ready for merge queue and release context")
+        XCTAssertEqual(reviewItem.reviewLine, "Reviewers: alex · Assignees: owner")
+        XCTAssertEqual(readyItem.detail, "3 checks passing · Approved by sam · Ready for merge queue and release context")
     }
 
     func testTodayFocusDeduplicatesWorkspaceAndPrioritizesFailures() {
+        LocalizationManager.shared.updateSelectedLanguage(.english)
+
         let workspace = makeWorkspace(
             name: "Alpha",
             rootPath: "/tmp/alpha",
@@ -108,10 +123,13 @@ final class OverviewViewModelTests: XCTestCase {
         )
 
         let model = OverviewViewModel(snapshots: [secondary, workspace])
+        guard let firstItem = model.todayFocusItems.first else {
+            return XCTFail("Expected first focus item")
+        }
 
         XCTAssertEqual(model.todayFocusItems.count, 2)
-        XCTAssertEqual(model.todayFocusItems.first?.workspace.id, workspace.id)
-        XCTAssertEqual(model.todayFocusItems.first?.headline, "Fix failing checks")
+        XCTAssertEqual(firstItem.workspace.id, workspace.id)
+        XCTAssertEqual(firstItem.headline, "Fix failing checks")
     }
 
     func testRecentActivitiesExcludeReleaseEntriesAndRemainSorted() {
@@ -161,6 +179,53 @@ final class OverviewViewModelTests: XCTestCase {
 
         XCTAssertEqual(model.recentActivities.map(\.entry.kind), [.workflow, .command])
         XCTAssertEqual(model.recentActivities.map(\.entry.title), ["Ran workflow", "Ran command"])
+    }
+
+    func testPullRequestInboxLocalizesDerivedCopyWhenChineseSelected() {
+        LocalizationManager.shared.updateSelectedLanguage(.simplifiedChinese)
+
+        let review = makeWorkspace(
+            name: "Review",
+            rootPath: "/tmp/review-zh",
+            pullRequest: makePullRequest(
+                number: 33,
+                title: "Need eyes",
+                mergeStateStatus: "CLEAN",
+                reviewRequests: ["alex"],
+                assignees: ["owner"]
+            )
+        )
+        let ready = makeWorkspace(
+            name: "Ready",
+            rootPath: "/tmp/ready-zh",
+            pullRequest: makePullRequest(
+                number: 44,
+                title: "Ship it",
+                mergeStateStatus: "CLEAN",
+                latestReviews: [("sam", "APPROVED")]
+            ),
+            checksSummary: GitHubPullRequestChecksSummary(
+                passingCount: 3,
+                failingCount: 0,
+                pendingCount: 0,
+                skippedCount: 0,
+                failingChecks: []
+            )
+        )
+
+        let model = OverviewViewModel(snapshots: [review, ready])
+        let sectionsByCategory = Dictionary(uniqueKeysWithValues: model.pullRequestInboxSections.map { ($0.category, $0.items) })
+        guard let reviewItem = sectionsByCategory[.review]?.first else {
+            return XCTFail("Expected localized review item")
+        }
+        guard let readyItem = sectionsByCategory[.ready]?.first else {
+            return XCTFail("Expected localized ready item")
+        }
+
+        XCTAssertEqual(reviewItem.reviewLine, "评审人：alex · 指派给：owner")
+        XCTAssertEqual(reviewItem.actionLabel, "打开 PR")
+        XCTAssertEqual(readyItem.detail, "3 个检查已通过 · 已获 sam 批准 · 已可加入合并队列并复制发布上下文")
+        XCTAssertEqual(readyItem.statusBadge, "可发布")
     }
 }
 
