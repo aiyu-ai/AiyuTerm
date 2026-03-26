@@ -16,33 +16,33 @@ private enum SettingsSheetSection: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var title: String {
+    var titleKey: String {
         switch self {
         case .general:
-            return "General"
+            return "settings.section.general.title"
         case .sidebar:
-            return "Sidebar"
+            return "settings.section.sidebar.title"
         case .shortcuts:
-            return "Shortcuts"
+            return "settings.section.shortcuts.title"
         case .updates:
-            return "Updates"
+            return "settings.section.updates.title"
         case .workspace:
-            return "Workspace"
+            return "settings.section.workspace.title"
         }
     }
 
-    var subtitle: String {
+    var subtitleKey: String {
         switch self {
         case .general:
-            return "App behavior and integrations"
+            return "settings.section.general.subtitle"
         case .sidebar:
-            return "Navigation density and default icons"
+            return "settings.section.sidebar.subtitle"
         case .shortcuts:
-            return "Customize Liney app shortcuts"
+            return "settings.section.shortcuts.subtitle"
         case .updates:
-            return "Automatic update checks"
+            return "settings.section.updates.subtitle"
         case .workspace:
-            return "Per-workspace scripts, presets, and overrides"
+            return "settings.section.workspace.subtitle"
         }
     }
 
@@ -72,6 +72,8 @@ struct SettingsSheet: View {
     @State private var selection: SettingsSheetSection = .general
     @State private var selectedWorkspaceID: UUID?
     @State private var workspaceSettings = WorkspaceSettings()
+    @State private var localizationVersion = 0
+    @State private var originalAppLanguage: AppLanguage = .automatic
 
     private var availableExternalEditors: [ExternalEditorDescriptor] {
         store.availableExternalEditors
@@ -84,10 +86,20 @@ struct SettingsSheet: View {
         )
     }
 
+    private func localized(_ key: String) -> String {
+        LocalizationManager.shared.string(key)
+    }
+
+    private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
+        l10nFormat(localized(key), locale: Locale.current, arguments: arguments)
+    }
+
     var body: some View {
+        let _ = localizationVersion
+
         HStack(spacing: 0) {
             List(SettingsSheetSection.allCases, selection: $selection) { section in
-                Label(section.title, systemImage: section.systemImage)
+                Label(localized(section.titleKey), systemImage: section.systemImage)
                     .tag(section)
             }
             .listStyle(.sidebar)
@@ -97,9 +109,9 @@ struct SettingsSheet: View {
 
             VStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(selection.title)
+                    Text(localized(selection.titleKey))
                         .font(.system(size: 20, weight: .semibold))
-                    Text(selection.subtitle)
+                    Text(localized(selection.subtitleKey))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
                 }
@@ -120,10 +132,11 @@ struct SettingsSheet: View {
 
                 HStack {
                     Spacer()
-                    Button("Cancel") {
+                    Button(localized("settings.button.cancel")) {
+                        LocalizationManager.shared.updateSelectedLanguage(originalAppLanguage)
                         dismiss()
                     }
-                    Button("Save") {
+                    Button(localized("settings.button.save")) {
                         save()
                     }
                     .buttonStyle(.borderedProminent)
@@ -134,6 +147,12 @@ struct SettingsSheet: View {
         .frame(width: 980, height: 720)
         .task(id: request.id) {
             reloadFromStore()
+        }
+        .onChange(of: appSettings.appLanguage) { _, newLanguage in
+            LocalizationManager.shared.updateSelectedLanguage(newLanguage)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .lineyLocalizationDidChange)) { _ in
+            localizationVersion += 1
         }
     }
 
@@ -155,23 +174,43 @@ struct SettingsSheet: View {
 
     private var generalSettingsView: some View {
         VStack(alignment: .leading, spacing: 18) {
-            GroupBox("Behavior") {
+            GroupBox(localized("settings.general.language.group")) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Toggle("Enable automatic refresh", isOn: $appSettings.autoRefreshEnabled)
-                    Toggle("Close terminal panes automatically after process exit", isOn: $appSettings.autoClosePaneOnProcessExit)
-                    Toggle("Confirm before quitting if commands are still running", isOn: $appSettings.confirmQuitWhenCommandsRunning)
-                    Toggle("Enable hot key window", isOn: $appSettings.hotKeyWindowEnabled)
-                    Toggle("Enable file watchers", isOn: $appSettings.fileWatcherEnabled)
-                    Toggle("Allow system notifications", isOn: $appSettings.systemNotificationsEnabled)
-                    Toggle("Show archived workspaces in sidebar", isOn: $appSettings.showArchivedWorkspaces)
+                    Picker(localized("settings.general.language.title"), selection: $appSettings.appLanguage) {
+                        ForEach(AppLanguage.allCases) { language in
+                            Text(language.displayName)
+                                .tag(language)
+                        }
+                    }
+
+                    Text(localized("settings.general.language.appliesImmediately"))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+
+                    Text(localized("settings.general.language.fallback"))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.top, 8)
+            }
+
+            GroupBox(localized("settings.general.behavior.group")) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Toggle(localized("settings.general.behavior.autoRefresh"), isOn: $appSettings.autoRefreshEnabled)
+                    Toggle(localized("settings.general.behavior.autoClosePaneOnExit"), isOn: $appSettings.autoClosePaneOnProcessExit)
+                    Toggle(localized("settings.general.behavior.confirmQuitRunningCommands"), isOn: $appSettings.confirmQuitWhenCommandsRunning)
+                    Toggle(localized("settings.general.behavior.enableHotKeyWindow"), isOn: $appSettings.hotKeyWindowEnabled)
+                    Toggle(localized("settings.general.behavior.enableFileWatchers"), isOn: $appSettings.fileWatcherEnabled)
+                    Toggle(localized("settings.general.behavior.allowSystemNotifications"), isOn: $appSettings.systemNotificationsEnabled)
+                    Toggle(localized("settings.general.behavior.showArchivedWorkspaces"), isOn: $appSettings.showArchivedWorkspaces)
 
                     HStack {
-                        Text("Refresh interval")
+                        Text(localized("settings.general.behavior.refreshInterval"))
                         Spacer()
                         TextField("30", value: $appSettings.autoRefreshIntervalSeconds, format: .number)
                             .frame(width: 72)
                             .textFieldStyle(.roundedBorder)
-                        Text("seconds")
+                        Text(localized("settings.general.behavior.seconds"))
                             .foregroundStyle(.secondary)
                     }
 
@@ -179,40 +218,40 @@ struct SettingsSheet: View {
                 .padding(.top, 8)
             }
 
-            GroupBox("Hot Key Window") {
+            GroupBox(localized("settings.general.hotKeyWindow.group")) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("When enabled, the configured global shortcut toggles the main Liney window even while another app is active.")
+                    Text(localized("settings.general.hotKeyWindow.description"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
 
                     HStack(alignment: .center, spacing: 12) {
-                        Text("Global shortcut")
+                        Text(localized("settings.general.hotKeyWindow.globalShortcut"))
                         Spacer()
                         ShortcutRecorderField(
                             shortcut: hotKeyWindowShortcutBinding,
                             fallbackShortcut: StoredShortcut(key: " ", command: true, shift: true, option: false, control: false),
-                            emptyTitle: "Not Set",
+                            emptyTitle: localized("settings.general.hotKeyWindow.notSet"),
                             displayString: { $0.displayString },
                             transformRecordedShortcut: { $0 }
                         )
                         .frame(width: 132)
                     }
 
-                    Text(appSettings.hotKeyWindowEnabled ? "The window stays available from the global shortcut until you turn this off." : "Disabled by default. Turn it on explicitly if you want iTerm-style summon/hide behavior.")
+                    Text(appSettings.hotKeyWindowEnabled ? localized("settings.general.hotKeyWindow.enabledHint") : localized("settings.general.hotKeyWindow.disabledHint"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
                 }
                 .padding(.top, 8)
             }
 
-            GroupBox("External Editor") {
+            GroupBox(localized("settings.general.externalEditor.group")) {
                 VStack(alignment: .leading, spacing: 12) {
                     if availableExternalEditors.isEmpty {
-                        Text("Install Cursor, Zed, VS Code, Windsurf, Xcode, Fleet, Nova, or Sublime Text to enable one-click open from the toolbar.")
+                        Text(localized("settings.general.externalEditor.installHint"))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(.secondary)
                     } else {
-                        Picker("Default editor", selection: $appSettings.preferredExternalEditor) {
+                        Picker(localized("settings.general.externalEditor.defaultEditor"), selection: $appSettings.preferredExternalEditor) {
                             ForEach(availableExternalEditors) { editor in
                                 Text(editor.editor.displayName)
                                     .tag(editor.editor)
@@ -221,11 +260,17 @@ struct SettingsSheet: View {
 
                         if let resolvedExternalEditor,
                            resolvedExternalEditor.editor != appSettings.preferredExternalEditor {
-                            Text("\(appSettings.preferredExternalEditor.displayName) is not installed. Toolbar actions will fall back to \(resolvedExternalEditor.editor.displayName).")
+                            Text(
+                                localizedFormat(
+                                    "settings.general.externalEditor.fallbackFormat",
+                                    appSettings.preferredExternalEditor.displayName,
+                                    resolvedExternalEditor.editor.displayName
+                                )
+                            )
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundStyle(.secondary)
                         } else {
-                            Text("The toolbar split button uses this editor for one-click open and remembers your choice across launches.")
+                            Text(localized("settings.general.externalEditor.activeHint"))
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundStyle(.secondary)
                         }
@@ -234,13 +279,19 @@ struct SettingsSheet: View {
                 .padding(.top, 8)
             }
 
-            GroupBox("Quick Commands") {
+            GroupBox(localized("settings.general.quickCommands.group")) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Toolbar shortcuts insert reusable command snippets into the focused terminal without running them.")
+                    Text(localized("settings.general.quickCommands.description"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
 
-                    Text("\(appSettings.quickCommandPresets.count) commands configured, \(appSettings.quickCommandRecentIDs.count) recent shortcuts remembered.")
+                    Text(
+                        localizedFormat(
+                            "settings.general.quickCommands.countFormat",
+                            appSettings.quickCommandPresets.count,
+                            appSettings.quickCommandRecentIDs.count
+                        )
+                    )
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
                 }
@@ -251,33 +302,33 @@ struct SettingsSheet: View {
 
     private var sidebarSettingsView: some View {
         VStack(alignment: .leading, spacing: 18) {
-            GroupBox("Sidebar") {
+            GroupBox(localized("settings.sidebar.visibility.group")) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Toggle("Show branch or path subtitles", isOn: $appSettings.sidebarShowsSecondaryLabels)
-                    Toggle("Show workspace badges", isOn: $appSettings.sidebarShowsWorkspaceBadges)
-                    Toggle("Show worktree badges", isOn: $appSettings.sidebarShowsWorktreeBadges)
+                    Toggle(localized("settings.sidebar.visibility.showSecondaryLabels"), isOn: $appSettings.sidebarShowsSecondaryLabels)
+                    Toggle(localized("settings.sidebar.visibility.showWorkspaceBadges"), isOn: $appSettings.sidebarShowsWorkspaceBadges)
+                    Toggle(localized("settings.sidebar.visibility.showWorktreeBadges"), isOn: $appSettings.sidebarShowsWorktreeBadges)
                 }
                 .padding(.top, 8)
             }
 
-            GroupBox("Default Icons") {
+            GroupBox(localized("settings.sidebar.defaultIcons.group")) {
                 VStack(alignment: .leading, spacing: 12) {
                     SidebarIconEditorCard(
-                        title: "Repository",
-                        subtitle: "Top-level repo workspaces",
+                        title: localized("settings.sidebar.defaultIcons.repository.title"),
+                        subtitle: localized("settings.sidebar.defaultIcons.repository.subtitle"),
                         icon: $appSettings.defaultRepositoryIcon,
                         randomizer: SidebarItemIcon.randomRepository
                     )
 
                     SidebarIconEditorCard(
-                        title: "Terminal",
-                        subtitle: "Local shell workspaces",
+                        title: localized("settings.sidebar.defaultIcons.terminal.title"),
+                        subtitle: localized("settings.sidebar.defaultIcons.terminal.subtitle"),
                         icon: $appSettings.defaultLocalTerminalIcon
                     )
 
                     SidebarIconEditorCard(
-                        title: "Worktree",
-                        subtitle: "Shared fallback icon. Leave it at default to auto-randomize rows.",
+                        title: localized("settings.sidebar.defaultIcons.worktree.title"),
+                        subtitle: localized("settings.sidebar.defaultIcons.worktree.subtitle"),
                         icon: $appSettings.defaultWorktreeIcon,
                         randomizer: SidebarItemIcon.randomRepository
                     )
@@ -288,21 +339,27 @@ struct SettingsSheet: View {
     }
 
     private var updatesSettingsView: some View {
-        GroupBox("Automatic Updates") {
+        GroupBox(localized("settings.updates.group")) {
             VStack(alignment: .leading, spacing: 12) {
-                Toggle("Check for app updates automatically", isOn: $appSettings.autoCheckForUpdates)
-                Toggle("Download and install updates automatically", isOn: $appSettings.autoDownloadUpdates)
+                Toggle(localized("settings.updates.autoCheck"), isOn: $appSettings.autoCheckForUpdates)
+                Toggle(localized("settings.updates.autoDownload"), isOn: $appSettings.autoDownloadUpdates)
                     .disabled(!appSettings.autoCheckForUpdates)
 
-                Text("Current app: \(store.currentReleaseVersion)\(store.currentReleaseBuild.map { " (\($0))" } ?? "")")
+                Text(
+                    localizedFormat(
+                        "settings.updates.currentAppFormat",
+                        store.currentReleaseVersion,
+                        store.currentReleaseBuild.map { " (\($0))" } ?? ""
+                    )
+                )
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.secondary)
 
-                Text("Signed app updates are delivered through Sparkle.")
+                Text(localized("settings.updates.sparkleHint"))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.secondary)
 
-                Button("Check for Updates Now") {
+                Button(localized("settings.updates.checkNow")) {
                     store.dispatch(.checkForUpdates)
                 }
             }
@@ -314,15 +371,15 @@ struct SettingsSheet: View {
         VStack(alignment: .leading, spacing: 18) {
             GroupBox {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Liney shortcuts are routed through the app menu so they continue to work while a terminal pane has focus.")
+                    Text(localized("settings.shortcuts.intro"))
                         .font(.system(size: 12, weight: .medium))
-                    Text("When you assign a shortcut to a new action, Liney automatically clears it from the previous action to avoid collisions.")
+                    Text(localized("settings.shortcuts.conflictHint"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
 
                     HStack {
                         Spacer()
-                        Button("Reset All to Defaults") {
+                        Button(localized("settings.shortcuts.resetAll")) {
                             LineyKeyboardShortcuts.resetAll(in: &appSettings)
                         }
                         .disabled(appSettings.keyboardShortcutOverrides.isEmpty)
@@ -357,9 +414,9 @@ struct SettingsSheet: View {
     }
 
     private var workspaceSettingsView: some View {
-        GroupBox("Workspace") {
+        GroupBox(localized("settings.workspace.group")) {
             VStack(alignment: .leading, spacing: 12) {
-                Picker("Workspace", selection: Binding(
+                Picker(localized("settings.workspace.selector"), selection: Binding(
                     get: { selectedWorkspaceID ?? store.selectedWorkspace?.id },
                     set: { newValue in
                         selectedWorkspaceID = newValue
@@ -379,11 +436,11 @@ struct SettingsSheet: View {
                         workspaceSettings: $workspaceSettings
                     )
 
-                    Toggle("Pinned in sidebar", isOn: $workspaceSettings.isPinned)
-                    Toggle("Archived", isOn: $workspaceSettings.isArchived)
+                    Toggle(localized("settings.workspace.pinned"), isOn: $workspaceSettings.isPinned)
+                    Toggle(localized("settings.workspace.archived"), isOn: $workspaceSettings.isArchived)
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Run script")
+                        Text(localized("settings.workspace.runScript"))
                             .font(.system(size: 12, weight: .semibold))
                         TextEditor(text: $workspaceSettings.runScript)
                             .font(.system(size: 12, design: .monospaced))
@@ -392,7 +449,7 @@ struct SettingsSheet: View {
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Setup script")
+                        Text(localized("settings.workspace.setupScript"))
                             .font(.system(size: 12, weight: .semibold))
                         TextEditor(text: $workspaceSettings.setupScript)
                             .font(.system(size: 12, design: .monospaced))
@@ -402,12 +459,16 @@ struct SettingsSheet: View {
 
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Text("Agent presets")
+                            Text(localized("settings.workspace.agentPresets"))
                                 .font(.system(size: 12, weight: .semibold))
                             Spacer()
-                            Button("Add Preset") {
+                            Button(localized("settings.workspace.addPreset")) {
                                 workspaceSettings.agentPresets.append(
-                                    AgentPreset(name: "Agent", launchPath: "/usr/bin/env", arguments: ["codex", "resume"])
+                                    AgentPreset(
+                                        name: localized("defaults.agent.name"),
+                                        launchPath: "/usr/bin/env",
+                                        arguments: ["codex", "resume"]
+                                    )
                                 )
                             }
                         }
@@ -415,8 +476,8 @@ struct SettingsSheet: View {
                         ForEach($workspaceSettings.agentPresets) { $preset in
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack {
-                                    TextField("Name", text: $preset.name)
-                                    TextField("Launch path", text: $preset.launchPath)
+                                    TextField(localized("settings.workspace.agentPreset.name"), text: $preset.name)
+                                    TextField(localized("settings.workspace.agentPreset.launchPath"), text: $preset.launchPath)
                                     Button(role: .destructive) {
                                         workspaceSettings.agentPresets.removeAll { $0.id == preset.id }
                                         if workspaceSettings.preferredAgentPresetID == preset.id {
@@ -428,7 +489,7 @@ struct SettingsSheet: View {
                                 }
 
                                 TextField(
-                                    "Arguments",
+                                    localized("settings.workspace.agentPreset.arguments"),
                                     text: Binding(
                                         get: { preset.arguments.joined(separator: "\n") },
                                         set: { preset.arguments = $0.split(whereSeparator: \.isNewline).map(String.init) }
@@ -438,7 +499,7 @@ struct SettingsSheet: View {
                                 .lineLimit(2...5)
 
                                 TextField(
-                                    "Environment",
+                                    localized("settings.workspace.agentPreset.environment"),
                                     text: Binding(
                                         get: {
                                             preset.environment
@@ -468,7 +529,7 @@ struct SettingsSheet: View {
                         }
 
                         if !workspaceSettings.agentPresets.isEmpty {
-                            Picker("Preferred preset", selection: Binding(
+                            Picker(localized("settings.workspace.agentPreset.preferred"), selection: Binding(
                                 get: { workspaceSettings.preferredAgentPresetID ?? workspaceSettings.agentPresets.first?.id },
                                 set: { workspaceSettings.preferredAgentPresetID = $0 }
                             )) {
@@ -480,13 +541,13 @@ struct SettingsSheet: View {
 
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
-                                Text("Remote targets")
+                                Text(localized("settings.workspace.remoteTargets"))
                                     .font(.system(size: 12, weight: .semibold))
                                 Spacer()
-                                Button("Add Remote Target") {
+                                Button(localized("settings.workspace.addRemoteTarget")) {
                                     workspaceSettings.remoteTargets.append(
                                         RemoteWorkspaceTarget(
-                                            name: "Remote",
+                                            name: localized("defaults.remote.name"),
                                             ssh: SSHSessionConfiguration(
                                                 host: "",
                                                 user: nil,
@@ -502,7 +563,7 @@ struct SettingsSheet: View {
                             }
 
                             if workspaceSettings.remoteTargets.isEmpty {
-                                Text("Define reusable remote hosts and optionally bind an agent preset for remote execution.")
+                                Text(localized("settings.workspace.remoteTargetsHint"))
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundStyle(.secondary)
                             }
@@ -510,8 +571,8 @@ struct SettingsSheet: View {
                             ForEach($workspaceSettings.remoteTargets) { $target in
                                 VStack(alignment: .leading, spacing: 8) {
                                     HStack {
-                                        TextField("Target name", text: $target.name)
-                                        TextField("Host", text: $target.ssh.host)
+                                        TextField(localized("settings.workspace.remoteTarget.name"), text: $target.name)
+                                        TextField(localized("settings.workspace.remoteTarget.host"), text: $target.ssh.host)
                                         Button(role: .destructive) {
                                             workspaceSettings.remoteTargets.removeAll { $0.id == target.id }
                                         } label: {
@@ -520,31 +581,31 @@ struct SettingsSheet: View {
                                     }
 
                                     HStack {
-                                        TextField("User", text: Binding(
+                                        TextField(localized("settings.workspace.remoteTarget.user"), text: Binding(
                                             get: { target.ssh.user ?? "" },
                                             set: { target.ssh.user = $0.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty }
                                         ))
-                                        TextField("Port", text: Binding(
+                                        TextField(localized("settings.workspace.remoteTarget.port"), text: Binding(
                                             get: { target.ssh.port.map(String.init) ?? "" },
                                             set: { target.ssh.port = Int($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
                                         ))
                                         .frame(width: 90)
-                                        TextField("Identity file", text: Binding(
+                                        TextField(localized("settings.workspace.remoteTarget.identityFile"), text: Binding(
                                             get: { target.ssh.identityFilePath ?? "" },
                                             set: { target.ssh.identityFilePath = $0.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty }
                                         ))
                                     }
 
-                                    TextField("Remote workspace path", text: Binding(
+                                    TextField(localized("settings.workspace.remoteTarget.workspacePath"), text: Binding(
                                         get: { target.ssh.remoteWorkingDirectory ?? "" },
                                         set: { target.ssh.remoteWorkingDirectory = $0.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty }
                                     ))
 
-                                    Picker("Remote agent preset", selection: Binding(
+                                    Picker(localized("settings.workspace.remoteTarget.agentPreset"), selection: Binding(
                                         get: { target.agentPresetID },
                                         set: { target.agentPresetID = $0 }
                                     )) {
-                                        Text("No remote agent").tag(Optional<UUID>.none)
+                                        Text(localized("settings.workspace.remoteTarget.noAgent")).tag(Optional<UUID>.none)
                                         ForEach(workspaceSettings.agentPresets) { preset in
                                             Text(preset.name).tag(Optional(preset.id))
                                         }
@@ -557,13 +618,13 @@ struct SettingsSheet: View {
 
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
-                                Text("Workflows")
+                                Text(localized("settings.workspace.workflows"))
                                     .font(.system(size: 12, weight: .semibold))
                                 Spacer()
-                                Button("Add Workflow") {
+                                Button(localized("settings.workspace.addWorkflow")) {
                                     workspaceSettings.workflows.append(
                                         WorkspaceWorkflow(
-                                            name: "Ship",
+                                            name: localized("defaults.workflow.name"),
                                             localSessionMode: .reuseFocused,
                                             runSetupScript: !workspaceSettings.setupScript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                                             runWorkspaceScript: !workspaceSettings.runScript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -575,7 +636,7 @@ struct SettingsSheet: View {
                             }
 
                             if workspaceSettings.workflows.isEmpty {
-                                Text("Create reusable playbooks that chain setup, run, and agent launch.")
+                                Text(localized("settings.workspace.workflowsHint"))
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundStyle(.secondary)
                             }
@@ -583,7 +644,7 @@ struct SettingsSheet: View {
                             ForEach($workspaceSettings.workflows) { $workflow in
                                 VStack(alignment: .leading, spacing: 10) {
                                     HStack {
-                                        TextField("Workflow name", text: $workflow.name)
+                                        TextField(localized("settings.workspace.workflow.name"), text: $workflow.name)
                                         Button(role: .destructive) {
                                             workspaceSettings.workflows.removeAll { $0.id == workflow.id }
                                             if workspaceSettings.preferredWorkflowID == workflow.id {
@@ -594,26 +655,26 @@ struct SettingsSheet: View {
                                         }
                                     }
 
-                                    Picker("Local shell", selection: $workflow.localSessionMode) {
+                                    Picker(localized("settings.workspace.workflow.localShell"), selection: $workflow.localSessionMode) {
                                         ForEach(WorkspaceWorkflowLocalSessionMode.allCases) { mode in
                                             Text(mode.title).tag(mode)
                                         }
                                     }
 
-                                    Toggle("Run setup script", isOn: $workflow.runSetupScript)
-                                    Toggle("Run workspace script", isOn: $workflow.runWorkspaceScript)
+                                    Toggle(localized("settings.workspace.workflow.runSetupScript"), isOn: $workflow.runSetupScript)
+                                    Toggle(localized("settings.workspace.workflow.runWorkspaceScript"), isOn: $workflow.runWorkspaceScript)
 
-                                    Picker("Agent preset", selection: Binding(
+                                    Picker(localized("settings.workspace.workflow.agentPreset"), selection: Binding(
                                         get: { workflow.agentPresetID },
                                         set: { workflow.agentPresetID = $0 }
                                     )) {
-                                        Text("No agent").tag(Optional<UUID>.none)
+                                        Text(localized("settings.workspace.workflow.noAgent")).tag(Optional<UUID>.none)
                                         ForEach(workspaceSettings.agentPresets) { preset in
                                             Text(preset.name).tag(Optional(preset.id))
                                         }
                                     }
 
-                                    Picker("Agent launch", selection: $workflow.agentMode) {
+                                    Picker(localized("settings.workspace.workflow.agentLaunch"), selection: $workflow.agentMode) {
                                         ForEach(WorkspaceWorkflowAgentMode.allCases) { mode in
                                             Text(mode.title).tag(mode)
                                         }
@@ -624,7 +685,7 @@ struct SettingsSheet: View {
                             }
 
                             if !workspaceSettings.workflows.isEmpty {
-                                Picker("Preferred workflow", selection: Binding(
+                                Picker(localized("settings.workspace.workflow.preferred"), selection: Binding(
                                     get: { workspaceSettings.preferredWorkflowID ?? workspaceSettings.workflows.first?.id },
                                     set: { workspaceSettings.preferredWorkflowID = $0 }
                                 )) {
@@ -636,7 +697,7 @@ struct SettingsSheet: View {
                         }
                     }
                 } else {
-                    Text("Select a workspace to edit repository-specific settings.")
+                    Text(localized("settings.workspace.emptyState"))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
                 }
@@ -660,6 +721,7 @@ struct SettingsSheet: View {
 
     private func reloadFromStore() {
         appSettings = store.appSettings
+        originalAppLanguage = store.appSettings.appLanguage
         selectedWorkspaceID = request.workspaceID ?? store.selectedWorkspace?.id
         loadWorkspaceSettings()
     }
@@ -709,6 +771,14 @@ private struct WorkspaceSidebarAppearanceSection: View {
     let appSettings: AppSettings
     @Binding var workspaceSettings: WorkspaceSettings
 
+    private func localized(_ key: String) -> String {
+        LocalizationManager.shared.string(key)
+    }
+
+    private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
+        l10nFormat(localized(key), locale: Locale.current, arguments: arguments)
+    }
+
     private var workspaceIconFallback: SidebarItemIcon {
         guard let workspace else { return .repositoryDefault }
         return workspace.supportsRepositoryFeatures ? appSettings.defaultRepositoryIcon : appSettings.defaultLocalTerminalIcon
@@ -751,11 +821,11 @@ private struct WorkspaceSidebarAppearanceSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Sidebar appearance")
+            Text(localized("settings.sidebarAppearance.title"))
                 .font(.system(size: 12, weight: .semibold))
 
             Toggle(
-                "Use custom workspace icon",
+                localized("settings.sidebarAppearance.customWorkspaceIcon"),
                 isOn: Binding(
                     get: { workspaceSettings.workspaceIcon != nil },
                     set: { isEnabled in
@@ -766,8 +836,8 @@ private struct WorkspaceSidebarAppearanceSection: View {
 
             if workspaceSettings.workspaceIcon != nil {
                 SidebarIconEditorCard(
-                    title: "Workspace icon",
-                    subtitle: "Overrides the app default for this workspace",
+                    title: localized("settings.sidebarAppearance.workspaceIcon.title"),
+                    subtitle: localized("settings.sidebarAppearance.workspaceIcon.subtitle"),
                     icon: workspaceIconBinding,
                     randomizer: workspaceIconRandomizer
                 )
@@ -775,7 +845,7 @@ private struct WorkspaceSidebarAppearanceSection: View {
 
             if let activeWorktree {
                 Toggle(
-                    "Use custom icon for active worktree (\(activeWorktree.displayName))",
+                    localizedFormat("settings.sidebarAppearance.customActiveWorktreeIconFormat", activeWorktree.displayName),
                     isOn: Binding(
                         get: { workspaceSettings.worktreeIconOverrides[activeWorktree.path] != nil },
                         set: { isEnabled in
@@ -791,15 +861,15 @@ private struct WorkspaceSidebarAppearanceSection: View {
 
                 if workspaceSettings.worktreeIconOverrides[activeWorktree.path] != nil {
                     SidebarIconEditorCard(
-                        title: "Active worktree icon",
-                        subtitle: "For other branches, use the sidebar context menu",
+                        title: localized("settings.sidebarAppearance.activeWorktreeIcon.title"),
+                        subtitle: localized("settings.sidebarAppearance.activeWorktreeIcon.subtitle"),
                         icon: activeWorktreeIconBinding,
                         randomizer: SidebarItemIcon.randomRepository
                     )
                 }
 
                 if workspaceSettings.worktreeIconOverrides.count > 0 {
-                    Text("\(workspaceSettings.worktreeIconOverrides.count) worktree icon overrides configured")
+                    Text(localizedFormat("settings.sidebarAppearance.overrideCountFormat", workspaceSettings.worktreeIconOverrides.count))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
                 }
@@ -815,6 +885,10 @@ private struct SidebarIconEditorCard: View {
     let subtitle: String?
     @Binding var icon: SidebarItemIcon
     var randomizer: () -> SidebarItemIcon = SidebarItemIcon.random
+
+    private func localized(_ key: String) -> String {
+        LocalizationManager.shared.string(key)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -833,18 +907,18 @@ private struct SidebarIconEditorCard: View {
 
                 Spacer()
 
-                Button("Random") {
+                Button(localized("settings.sidebarIconEditor.random")) {
                     icon = randomizer()
                 }
             }
 
-            Picker("Symbol", selection: $icon.symbolName) {
+            Picker(localized("settings.sidebarIconEditor.symbol"), selection: $icon.symbolName) {
                 ForEach(SidebarIconCatalog.symbols, id: \.systemName) { symbol in
                     Label(symbol.title, systemImage: symbol.systemName).tag(symbol.systemName)
                 }
             }
 
-            Picker("Style", selection: $icon.fillStyle) {
+            Picker(localized("settings.sidebarIconEditor.style"), selection: $icon.fillStyle) {
                 ForEach(SidebarIconFillStyle.allCases) { style in
                     Text(style.title).tag(style)
                 }
@@ -852,7 +926,7 @@ private struct SidebarIconEditorCard: View {
             .pickerStyle(.segmented)
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Palette")
+                Text(localized("settings.sidebarIconEditor.palette"))
                     .font(.system(size: 11, weight: .semibold))
 
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 34), spacing: 8)], spacing: 8) {
@@ -892,6 +966,10 @@ private struct ShortcutSettingsRow: View {
     let onReset: () -> Void
     let onDisable: () -> Void
 
+    private func localized(_ key: String) -> String {
+        LocalizationManager.shared.string(key)
+    }
+
     private var stateLabel: String {
         switch state {
         case .default:
@@ -904,7 +982,7 @@ private struct ShortcutSettingsRow: View {
     }
 
     private var disableButtonTitle: String {
-        action.defaultShortcut == nil ? "Clear" : "Disable"
+        action.defaultShortcut == nil ? localized("common.clear") : localized("common.disable")
     }
 
     private var canDisable: Bool {
@@ -942,7 +1020,7 @@ private struct ShortcutSettingsRow: View {
             ShortcutRecorderField(
                 shortcut: $shortcut,
                 fallbackShortcut: action.defaultShortcut ?? StoredShortcut(key: "k", command: true, shift: false, option: false, control: false),
-                emptyTitle: "Not Set",
+                emptyTitle: localized("common.notSet"),
                 displayString: { action.displayedShortcutString(for: $0) },
                 transformRecordedShortcut: action.normalizedRecordedShortcut
             )
@@ -951,7 +1029,7 @@ private struct ShortcutSettingsRow: View {
             Button(disableButtonTitle, action: onDisable)
                 .disabled(!canDisable)
 
-            Button("Reset", action: onReset)
+            Button(localized("common.reset"), action: onReset)
                 .disabled(!canReset)
         }
         .padding(.vertical, 2)
@@ -1019,7 +1097,7 @@ private final class ShortcutRecorderNSButton: NSButton {
 
     func updateTitle() {
         if isRecording {
-            title = "Press shortcut…"
+            title = LocalizationManager.shared.string("shortcuts.recorder.pressShortcut")
         } else if let shortcut {
             title = displayString(shortcut)
         } else {
@@ -1098,9 +1176,13 @@ struct SidebarIconCustomizationSheet: View {
         store.sidebarIconRequestTitle(request)
     }
 
+    private func localized(_ key: String) -> String {
+        LocalizationManager.shared.string(key)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Customize Sidebar Icon")
+            Text(localized("settings.sidebarIconCustomization.title"))
                 .font(.system(size: 20, weight: .semibold))
 
             Text(title)
@@ -1108,8 +1190,8 @@ struct SidebarIconCustomizationSheet: View {
                 .foregroundStyle(.secondary)
 
             SidebarIconEditorCard(
-                title: "Icon",
-                subtitle: "Choose a symbol, palette, and fill treatment",
+                title: localized("settings.sidebarIconCustomization.icon.title"),
+                subtitle: localized("settings.sidebarIconCustomization.icon.subtitle"),
                 icon: $icon,
                 randomizer: randomizer
             )
@@ -1117,15 +1199,15 @@ struct SidebarIconCustomizationSheet: View {
             HStack {
                 Spacer()
                 if resetSupported {
-                    Button("Reset") {
+                    Button(localized("settings.sidebarIconCustomization.reset")) {
                         store.resetSidebarIcon(for: request.target)
                         dismiss()
                     }
                 }
-                Button("Cancel") {
+                Button(localized("settings.button.cancel")) {
                     dismiss()
                 }
-                Button("Save") {
+                Button(localized("settings.button.save")) {
                     store.updateSidebarIcon(icon, for: request.target)
                     dismiss()
                 }

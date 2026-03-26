@@ -300,12 +300,12 @@ public final class LineyDesktopApplication: NSObject {
 
     private func diffEmptyStateMessage(for workspace: WorkspaceModel?, supportsDiff: Bool) -> String {
         guard let workspace else {
-            return "Select a workspace to inspect changes."
+            return LocalizationManager.shared.string("main.diff.selectWorkspace")
         }
         if supportsDiff {
-            return "Working directory is clean."
+            return LocalizationManager.shared.string("main.diff.workingDirectoryClean")
         }
-        return "\(workspace.name) does not have a git diff context."
+        return l10nFormat(LocalizationManager.shared.string("main.diff.noContextFormat"), arguments: [workspace.name])
     }
 
     static var sharedWindowTabbingIdentifier: String {

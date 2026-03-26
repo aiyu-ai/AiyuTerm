@@ -30,6 +30,8 @@ private final class SparkleUpdaterDelegate: NSObject, SPUUpdaterDelegate {
 
 @MainActor
 final class AppUpdaterController {
+    static let shared = AppUpdaterController()
+
     nonisolated static let repository = "wuwenrui/liney"
     nonisolated static let releasesURL = URL(string: "https://github.com/\(repository)/releases")!
     nonisolated static let feedURLInfoPlistKey = "SUFeedURL"

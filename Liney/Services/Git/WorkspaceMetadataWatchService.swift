@@ -10,6 +10,8 @@ import Darwin
 
 @MainActor
 final class WorkspaceMetadataWatchService {
+    static let shared = WorkspaceMetadataWatchService()
+
     private struct WatchHandle {
         let workspaceID: UUID
         let path: String

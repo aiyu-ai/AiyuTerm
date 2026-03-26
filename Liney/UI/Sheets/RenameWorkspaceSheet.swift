@@ -14,20 +14,24 @@ struct RenameWorkspaceSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name: String = ""
 
+    private func localized(_ key: String) -> String {
+        LocalizationManager.shared.string(key)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Rename Workspace")
+            Text(localized("sheet.renameWorkspace.title"))
                 .font(.title2.weight(.semibold))
 
-            TextField("Workspace Name", text: $name)
+            TextField(localized("sheet.renameWorkspace.placeholder"), text: $name)
                 .textFieldStyle(.roundedBorder)
 
             HStack {
                 Spacer()
-                Button("Cancel") {
+                Button(localized("common.cancel")) {
                     dismiss()
                 }
-                Button("Save") {
+                Button(localized("common.save")) {
                     onSubmit(name)
                     dismiss()
                 }

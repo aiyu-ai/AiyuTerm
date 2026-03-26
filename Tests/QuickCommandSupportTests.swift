@@ -31,6 +31,21 @@ final class QuickCommandSupportTests: XCTestCase {
         )
     }
 
+    func testLegacySettingsDecodeDefaultsAppLanguageToAutomatic() throws {
+        let settings = try JSONDecoder().decode(AppSettings.self, from: Data("{}".utf8))
+
+        XCTAssertEqual(settings.appLanguage, .automatic)
+    }
+
+    func testSettingsEncodingPreservesAppLanguage() throws {
+        let settings = AppSettings(appLanguage: .simplifiedChinese)
+
+        let data = try JSONEncoder().encode(settings)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+
+        XCTAssertEqual(object["appLanguage"] as? String, "simplifiedChinese")
+    }
+
     func testSettingsEncodingPreservesHotKeyWindowFields() throws {
         let settings = AppSettings(
             confirmQuitWhenCommandsRunning: false,
@@ -221,11 +236,15 @@ final class QuickCommandSupportTests: XCTestCase {
     }
 
     func testHotKeyWindowKeepsAppRunningWhenLastWindowCloses() {
-        XCTAssertFalse(lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: true))
+        XCTAssertFalse(lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: true, isRunningTests: false))
     }
 
     func testStandardWindowModeTerminatesAfterLastWindowCloses() {
-        XCTAssertTrue(lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: false))
+        XCTAssertTrue(lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: false, isRunningTests: false))
+    }
+
+    func testRunningTestsKeepsAppAliveAfterLastWindowCloses() {
+        XCTAssertFalse(lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: false, isRunningTests: true))
     }
 
     func testLastWindowCloseInterceptsTerminationWhenQuitNeedsConfirmation() {
@@ -286,6 +305,7 @@ final class QuickCommandSupportTests: XCTestCase {
     }
 
     func testQuitConfirmationCopyUsesSingularAndPluralText() {
+        LocalizationManager.shared.updateSelectedLanguage(.english)
         XCTAssertEqual(
             lineyQuitConfirmationCopy(quitConfirmationSessionCount: 1).message,
             "1 terminal session still has a running command. Quitting now will stop it. You can turn this confirmation off in Settings > General."
@@ -294,6 +314,22 @@ final class QuickCommandSupportTests: XCTestCase {
             lineyQuitConfirmationCopy(quitConfirmationSessionCount: 3).message,
             "3 terminal sessions still have running commands. Quitting now will stop them. You can turn this confirmation off in Settings > General."
         )
+
+        LocalizationManager.shared.updateSelectedLanguage(.simplifiedChinese)
+        XCTAssertEqual(
+            lineyQuitConfirmationCopy(quitConfirmationSessionCount: 1).title,
+            "要退出 Liney 吗？"
+        )
+        XCTAssertEqual(
+            lineyQuitConfirmationCopy(quitConfirmationSessionCount: 1).message,
+            "仍有 1 个终端会话在运行命令。 现在退出会停止它。 你可以在“设置 > 通用”中关闭此确认。"
+        )
+        XCTAssertEqual(
+            lineyQuitConfirmationCopy(quitConfirmationSessionCount: 3).message,
+            "仍有 3 个终端会话在运行命令。 现在退出会停止它们。 你可以在“设置 > 通用”中关闭此确认。"
+        )
+
+        LocalizationManager.shared.updateSelectedLanguage(.automatic)
     }
 
     func testGhosttyLogFilterSuppressesOnlyKnownMailboxSpam() {

@@ -14,31 +14,39 @@ struct CreateSSHSessionSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var draft = CreateSSHSessionDraft()
 
+    private func localized(_ key: String) -> String {
+        LocalizationManager.shared.string(key)
+    }
+
+    private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
+        l10nFormat(localized(key), locale: Locale.current, arguments: arguments)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("New SSH Session")
+            Text(localized("sheet.ssh.title"))
                 .font(.system(size: 18, weight: .semibold))
 
-            Text("Create a remote session attached to \(request.workspaceName).")
+            Text(localizedFormat("sheet.ssh.descriptionFormat", request.workspaceName))
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
 
-            GroupBox("Connection") {
+            GroupBox(localized("sheet.ssh.connection")) {
                 VStack(alignment: .leading, spacing: 12) {
-                    TextField("Host", text: $draft.host)
-                    TextField("User (optional)", text: $draft.user)
-                    TextField("Port (optional)", text: $draft.port)
-                    TextField("Identity file (optional)", text: $draft.identityFilePath)
-                    TextField("Remote working directory (optional)", text: $draft.remoteWorkingDirectory)
+                    TextField(localized("sheet.ssh.host"), text: $draft.host)
+                    TextField(localized("sheet.ssh.user"), text: $draft.user)
+                    TextField(localized("sheet.ssh.port"), text: $draft.port)
+                    TextField(localized("sheet.ssh.identityFile"), text: $draft.identityFilePath)
+                    TextField(localized("sheet.ssh.remoteWorkingDirectory"), text: $draft.remoteWorkingDirectory)
                 }
                 .textFieldStyle(.roundedBorder)
                 .padding(.top, 8)
             }
 
-            GroupBox("Command") {
+            GroupBox(localized("sheet.ssh.command")) {
                 VStack(alignment: .leading, spacing: 12) {
-                    TextField("Remote command (optional)", text: $draft.remoteCommand, axis: .vertical)
-                    LabeledContent("Engine", value: TerminalEngineKind.libghosttyPreferred.displayName)
+                    TextField(localized("sheet.ssh.remoteCommand"), text: $draft.remoteCommand, axis: .vertical)
+                    LabeledContent(localized("sheet.shared.engine"), value: TerminalEngineKind.libghosttyPreferred.displayName)
                 }
                 .textFieldStyle(.roundedBorder)
                 .padding(.top, 8)
@@ -46,10 +54,10 @@ struct CreateSSHSessionSheet: View {
 
             HStack {
                 Spacer()
-                Button("Cancel") {
+                Button(localized("common.cancel")) {
                     dismiss()
                 }
-                Button("Create Session") {
+                Button(localized("sheet.ssh.create")) {
                     onCreate(draft)
                     dismiss()
                 }
