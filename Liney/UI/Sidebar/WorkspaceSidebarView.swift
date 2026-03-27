@@ -1384,11 +1384,15 @@ private struct WorktreeRowContent: View {
         store?.sidebarIcon(for: worktree, in: workspace) ?? .worktreeDefault
     }
 
+    private let iconSize: CGFloat = 16
+    private let leadingInset: CGFloat = 5
+
     var body: some View {
         HStack(spacing: 6) {
             SidebarItemIconView(
                 icon: icon,
-                size: 18,
+                size: iconSize,
+                usesCircularShape: true,
                 isActive: workspace.activeWorktreePath == worktree.path
             )
             Text(worktree.displayName)
@@ -1414,7 +1418,7 @@ private struct WorktreeRowContent: View {
             }
         }
         .padding(.vertical, 1)
-        .padding(.leading, 1)
+        .padding(.leading, leadingInset)
         .padding(.trailing, 4)
         .frame(maxWidth: .infinity, minHeight: 24, alignment: .leading)
         .background(
@@ -1430,6 +1434,7 @@ private struct WorktreeRowContent: View {
 struct SidebarItemIconView: View {
     let icon: SidebarItemIcon
     let size: CGFloat
+    var usesCircularShape: Bool = false
     var isActive: Bool = false
 
     private var palette: SidebarIconPaletteDescriptor {
@@ -1437,7 +1442,10 @@ struct SidebarItemIconView: View {
     }
 
     private var backgroundShape: some InsettableShape {
-        RoundedRectangle(cornerRadius: max(7, size * 0.34), style: .continuous)
+        RoundedRectangle(
+            cornerRadius: usesCircularShape ? size / 2 : max(7, size * 0.34),
+            style: .continuous
+        )
     }
 
     var body: some View {
