@@ -129,6 +129,8 @@ private enum SettingsSheetSection: String, CaseIterable, Identifiable {
 }
 
 private enum LineyTerminalFontCatalog {
+    static let defaultVisibleCount = 50
+
     private static let prioritizedFamilies = [
         "SF Mono",
         "Menlo",
@@ -142,18 +144,19 @@ private enum LineyTerminalFontCatalog {
         "IBM Plex Mono",
     ]
 
-    static func availableFamilies(fontManager: NSFontManager = .shared) -> [String] {
-        let families = Set(
-            fontManager.availableFonts.compactMap { fontName -> String? in
-                guard let font = NSFont(name: fontName, size: 13), font.isFixedPitch else {
-                    return nil
-                }
-                let familyName = font.familyName ?? fontName
-                return familyName.hasPrefix(".") ? nil : familyName
+    static func availableFamilies(
+        fontManager: NSFontManager = .shared,
+        limit: Int? = nil
+    ) -> [String] {
+        let sortedFamilies = fontManager.availableFontFamilies
+            .filter { !$0.hasPrefix(".") }
+            .sorted { lhs, rhs in
+            let leftFixedPitch = isTerminalFriendlyFamily(lhs, fontManager: fontManager)
+            let rightFixedPitch = isTerminalFriendlyFamily(rhs, fontManager: fontManager)
+            if leftFixedPitch != rightFixedPitch {
+                return leftFixedPitch && !rightFixedPitch
             }
-        )
 
-        return families.sorted { lhs, rhs in
             let leftPriority = prioritizedFamilies.firstIndex(of: lhs) ?? .max
             let rightPriority = prioritizedFamilies.firstIndex(of: rhs) ?? .max
             if leftPriority != rightPriority {
@@ -161,6 +164,9 @@ private enum LineyTerminalFontCatalog {
             }
             return lhs.localizedCaseInsensitiveCompare(rhs) == .orderedAscending
         }
+
+        guard let limit else { return sortedFamilies }
+        return Array(sortedFamilies.prefix(limit))
     }
 
     static func previewFont(
@@ -179,6 +185,34 @@ private enum LineyTerminalFontCatalog {
         }
 
         return .monospacedSystemFont(ofSize: size, weight: .regular)
+    }
+
+    private static func isTerminalFriendlyFamily(
+        _ family: String,
+        fontManager: NSFontManager
+    ) -> Bool {
+        if let members = fontManager.availableMembers(ofFontFamily: family) {
+            for member in members {
+                guard let fontName = member.first as? String,
+                      let font = NSFont(name: fontName, size: 13) else {
+                    continue
+                }
+                if font.isFixedPitch {
+                    return true
+                }
+            }
+        }
+
+        if let font = fontManager.font(
+            withFamily: family,
+            traits: .fixedPitchFontMask,
+            weight: 5,
+            size: 13
+        ) {
+            return font.isFixedPitch
+        }
+
+        return false
     }
 }
 
@@ -215,8 +249,14 @@ struct SettingsSheet: View {
         l10nFormat(localized(key), locale: Locale.current, arguments: arguments)
     }
 
+    private var allTerminalFontFamilies: [String] {
+        LineyTerminalFontCatalog.availableFamilies(limit: nil)
+    }
+
     private var terminalFontFamilies: [String] {
-        let availableFamilies = LineyTerminalFontCatalog.availableFamilies()
+        let availableFamilies = LineyTerminalFontCatalog.availableFamilies(
+            limit: LineyTerminalFontCatalog.defaultVisibleCount
+        )
         guard let selectedFamily = appSettings.terminalFontFamily,
               !selectedFamily.isEmpty,
               !availableFamilies.contains(selectedFamily) else {
@@ -228,9 +268,20 @@ struct SettingsSheet: View {
     private var filteredTerminalFontFamilies: [String] {
         let query = terminalFontSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return terminalFontFamilies }
-        return terminalFontFamilies.filter { family in
+        let filtered = allTerminalFontFamilies.filter { family in
             family.localizedCaseInsensitiveContains(query)
         }
+        guard let selectedFamily = appSettings.terminalFontFamily,
+              !selectedFamily.isEmpty,
+              !filtered.contains(selectedFamily) else {
+            return filtered
+        }
+        return [selectedFamily] + filtered
+    }
+
+    private var terminalFontSummaryCount: Int {
+        let query = terminalFontSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return query.isEmpty ? min(allTerminalFontFamilies.count, LineyTerminalFontCatalog.defaultVisibleCount) : filteredTerminalFontFamilies.count
     }
 
     var body: some View {
@@ -456,6 +507,12 @@ struct SettingsSheet: View {
                                 .foregroundStyle(.secondary)
                         } else {
                             TextField(
+                                localized("settings.general.terminal.font"),
+                                text: terminalFontFamilyBinding
+                            )
+                            .textFieldStyle(.roundedBorder)
+
+                            TextField(
                                 localized("settings.general.terminal.fontSearchPlaceholder"),
                                 text: $terminalFontSearchText
                             )
@@ -464,7 +521,8 @@ struct SettingsSheet: View {
                             Text(
                                 localizedFormat(
                                     "settings.general.terminal.availableFontsFormat",
-                                    filteredTerminalFontFamilies.count
+                                    terminalFontSummaryCount,
+                                    allTerminalFontFamilies.count
                                 )
                             )
                                 .font(.system(size: 11, weight: .medium))
