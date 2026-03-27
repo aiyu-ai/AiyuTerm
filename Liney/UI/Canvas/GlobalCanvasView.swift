@@ -10,6 +10,7 @@ import SwiftUI
 
 struct GlobalCanvasView: View {
     @EnvironmentObject private var store: WorkspaceStore
+    @ObservedObject private var localization = LocalizationManager.shared
     let onDismiss: () -> Void
 
     @State private var query = ""
@@ -31,6 +32,14 @@ struct GlobalCanvasView: View {
     private let gridSpacing: CGFloat = 18
     private let gridTopInset: CGFloat = 128
     private let gridSideInset: CGFloat = 32
+
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
+
+    private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
+        l10nFormat(localized(key), locale: Locale.current, arguments: arguments)
+    }
 
     private var allCards: [GlobalCanvasCardSnapshot] {
         store.workspaces.flatMap { workspace in
@@ -146,13 +155,13 @@ struct GlobalCanvasView: View {
 
                 if allCards.isEmpty {
                     emptyState(
-                        title: "No live terminal views yet",
-                        message: "Open a session in any workspace and it will appear here as a live canvas card."
+                        title: localized("canvas.empty.noLiveTerminalViews"),
+                        message: localized("canvas.empty.noLiveTerminalViewsMessage")
                     )
                 } else if visibleCards.isEmpty {
                     emptyState(
-                        title: "No matching canvas cards",
-                        message: "Adjust the search or workspace filters to bring cards back into view."
+                        title: localized("canvas.empty.noMatchingCards"),
+                        message: localized("canvas.empty.noMatchingCardsMessage")
                     )
                 } else {
                     ZStack {
@@ -247,20 +256,26 @@ struct GlobalCanvasView: View {
 
     private var headerPanel: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Canvas")
+            Text(localized("main.canvas.title"))
                 .font(.system(size: 24, weight: .bold, design: .rounded))
 
             HStack(spacing: 8) {
                 WorkspaceCanvasBadge(
-                    text: "\(workspaceFilters.count) workspace\(workspaceFilters.count == 1 ? "" : "s")",
+                    text: localizedFormat("canvas.header.workspaceCountFormat", workspaceFilters.count, workspaceFilters.count == 1 ? "" : "s"),
                     tint: LineyTheme.accent
                 )
                 WorkspaceCanvasBadge(
-                    text: isFiltering ? "\(visibleCards.count) visible / \(allCards.count) live" : "\(allCards.count) live tab\(allCards.count == 1 ? "" : "s")",
+                    text: isFiltering
+                        ? localizedFormat("canvas.header.visibleLiveFormat", visibleCards.count, allCards.count)
+                        : localizedFormat("canvas.header.liveTabsFormat", allCards.count, allCards.count == 1 ? "" : "s"),
                     tint: LineyTheme.secondaryText
                 )
                 WorkspaceCanvasBadge(
-                    text: "\(allCards.reduce(0) { $0 + $1.activeSessionCount }) active session\(allCards.reduce(0) { $0 + $1.activeSessionCount } == 1 ? "" : "s")",
+                    text: localizedFormat(
+                        "canvas.header.activeSessionsFormat",
+                        allCards.reduce(0) { $0 + $1.activeSessionCount },
+                        allCards.reduce(0) { $0 + $1.activeSessionCount } == 1 ? "" : "s"
+                    ),
                     tint: LineyTheme.success
                 )
                 if let activeCard = allCards.first(where: { $0.id == activeCardID }) {
@@ -270,7 +285,7 @@ struct GlobalCanvasView: View {
                     )
                 }
                 WorkspaceCanvasBadge(
-                    text: "\(allCards.filter { layout(for: $0).isPinned }.count) pinned",
+                    text: localizedFormat("canvas.header.pinnedCountFormat", allCards.filter { layout(for: $0).isPinned }.count),
                     tint: LineyTheme.tertiaryText
                 )
                 WorkspaceCanvasBadge(text: "\(Int(canvasScale * 100))%", tint: LineyTheme.tertiaryText)
@@ -283,7 +298,7 @@ struct GlobalCanvasView: View {
 
                 TextField(
                     text: $query,
-                    prompt: Text("Search workspaces, worktrees, tabs, or paths")
+                    prompt: Text(localized("canvas.search.placeholder"))
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(LineyTheme.mutedText)
                 ) {
@@ -309,7 +324,7 @@ struct GlobalCanvasView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
                     GlobalCanvasFilterChip(
-                        title: "All",
+                        title: localized("canvas.filter.all"),
                         subtitle: "\(allCards.count)",
                         isSelected: selectedWorkspaceFilters.isEmpty
                     ) {
@@ -319,7 +334,7 @@ struct GlobalCanvasView: View {
                     ForEach(workspaceFilters) { workspace in
                         GlobalCanvasFilterChip(
                             title: workspace.workspaceName,
-                            subtitle: workspace.pinnedCardCount > 0 ? "\(workspace.liveCardCount) · \(workspace.pinnedCardCount) pin" : "\(workspace.liveCardCount)",
+                            subtitle: workspace.pinnedCardCount > 0 ? "\(workspace.liveCardCount) · \(workspace.pinnedCardCount) \(localized("canvas.filter.pinSuffix"))" : "\(workspace.liveCardCount)",
                             isSelected: selectedWorkspaceFilters.contains(workspace.workspaceID)
                         ) {
                             toggleWorkspaceFilter(workspace.workspaceID)
@@ -346,7 +361,7 @@ struct GlobalCanvasView: View {
                 onDismiss()
             }
         } label: {
-            Label("Exit Canvas", systemImage: "xmark.circle.fill")
+            Label(localized("canvas.exit"), systemImage: "xmark.circle.fill")
         }
         .labelStyle(.titleAndIcon)
         .buttonStyle(.borderedProminent)
@@ -365,14 +380,14 @@ struct GlobalCanvasView: View {
                 .foregroundStyle(LineyTheme.mutedText)
             HStack(spacing: 10) {
                 if isFiltering {
-                    Button("Clear Filters") {
+                    Button(localized("canvas.clearFilters")) {
                         query = ""
                         selectedWorkspaceFilters.removeAll()
                     }
                     .buttonStyle(.bordered)
                 }
 
-                Button("Exit Canvas") {
+                Button(localized("canvas.exit")) {
                     onDismiss()
                 }
                 .buttonStyle(.borderedProminent)
@@ -384,14 +399,14 @@ struct GlobalCanvasView: View {
     private var canvasToolbar: some View {
         HStack(spacing: 8) {
             Menu {
-                Button("Arrange by Workspace") {
+                Button(localized("canvas.organize.byWorkspace")) {
                     organizeCardsByWorkspace()
                 }
-                Button("Arrange as Grid") {
+                Button(localized("canvas.organize.asGrid")) {
                     organizeCardsAsGrid()
                 }
             } label: {
-                Label("Organize", systemImage: "square.grid.3x3")
+                Label(localized("canvas.organize.label"), systemImage: "square.grid.3x3")
             }
             .menuStyle(.borderlessButton)
             .buttonStyle(.bordered)
@@ -399,28 +414,28 @@ struct GlobalCanvasView: View {
             Button {
                 fitToView(canvasSize: viewportSize)
             } label: {
-                Label("Fit", systemImage: "arrow.up.left.and.arrow.down.right")
+                Label(localized("canvas.fit"), systemImage: "arrow.up.left.and.arrow.down.right")
             }
             .buttonStyle(.bordered)
 
             Button {
                 zoomOut()
             } label: {
-                Label("Zoom Out", systemImage: "minus.magnifyingglass")
+                Label(localized("canvas.zoomOut"), systemImage: "minus.magnifyingglass")
             }
             .buttonStyle(.bordered)
 
             Button {
                 resetZoom()
             } label: {
-                Label("Reset Zoom", systemImage: "1.magnifyingglass")
+                Label(localized("canvas.resetZoom"), systemImage: "1.magnifyingglass")
             }
             .buttonStyle(.bordered)
 
             Button {
                 zoomIn()
             } label: {
-                Label("Zoom In", systemImage: "plus.magnifyingglass")
+                Label(localized("canvas.zoomIn"), systemImage: "plus.magnifyingglass")
             }
             .buttonStyle(.bordered)
         }
@@ -986,6 +1001,7 @@ private struct GlobalCanvasScrollWheelMonitor: NSViewRepresentable {
 }
 
 private struct GlobalCanvasCardView: View {
+    @ObservedObject private var localization = LocalizationManager.shared
     let card: GlobalCanvasCardSnapshot
     let layout: GlobalCanvasCardLayout
     let canvasScale: CGFloat
@@ -998,6 +1014,14 @@ private struct GlobalCanvasCardView: View {
     let onDragCommit: (CGSize) -> Void
 
     @GestureState private var dragTranslation: CGSize = .zero
+
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
+
+    private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
+        l10nFormat(localized(key), locale: Locale.current, arguments: arguments)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1066,7 +1090,7 @@ private struct GlobalCanvasCardView: View {
                     .foregroundStyle(.white)
                     .lineLimit(1)
 
-                Text(card.primaryPath.isEmpty ? "\(card.worktreeTitle) worktree" : card.primaryPath)
+                Text(card.primaryPath.isEmpty ? "\(card.worktreeTitle) \(localized("canvas.card.worktreeSuffix"))" : card.primaryPath)
                     .font(.system(size: 9, weight: .medium, design: .monospaced))
                     .foregroundStyle(LineyTheme.mutedText)
                     .lineLimit(1)
@@ -1083,15 +1107,15 @@ private struct GlobalCanvasCardView: View {
                 tint: card.isSelected ? LineyTheme.warning : LineyTheme.secondaryText
             )
             WorkspaceCanvasBadge(
-                text: "\(card.paneCount) pane\(card.paneCount == 1 ? "" : "s")",
+                text: localizedFormat("canvas.card.panesFormat", card.paneCount, card.paneCount == 1 ? "" : "s"),
                 tint: card.isSelected ? accentTint : LineyTheme.secondaryText
             )
 
             Menu {
-                Button(layout.isPinned ? "Unpin Card" : "Pin Card") {
+                Button(layout.isPinned ? localized("canvas.card.unpin") : localized("canvas.card.pin")) {
                     onTogglePin()
                 }
-                Button(layout.isMinimized ? "Expand Card" : "Minimize Card") {
+                Button(layout.isMinimized ? localized("canvas.card.expand") : localized("canvas.card.minimize")) {
                     onToggleMinimize()
                 }
 
@@ -1116,7 +1140,7 @@ private struct GlobalCanvasCardView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(card.isSelected ? .white : LineyTheme.secondaryText)
-            .help("Open Tab")
+            .help(localized("canvas.card.openTab"))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
@@ -1134,8 +1158,8 @@ private struct GlobalCanvasCardView: View {
 
     private var minimizedSummary: some View {
         HStack(spacing: 10) {
-            WorkspaceCanvasBadge(text: "\(card.activeSessionCount) active", tint: LineyTheme.success)
-            Text(card.tab.layout == nil ? "No live layout" : "Collapsed live view")
+            WorkspaceCanvasBadge(text: localizedFormat("canvas.card.activeCountFormat", card.activeSessionCount), tint: LineyTheme.success)
+            Text(card.tab.layout == nil ? localized("canvas.card.noLiveLayout") : localized("canvas.card.collapsedLiveView"))
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(LineyTheme.mutedText)
             Spacer(minLength: 0)
@@ -1169,7 +1193,7 @@ private struct GlobalCanvasCardView: View {
             VStack(spacing: 10) {
                 Image(systemName: "terminal")
                     .font(.system(size: 18, weight: .semibold))
-                Text("No live terminal available")
+                Text(localized("canvas.card.noLiveTerminal"))
                     .font(.system(size: 12, weight: .semibold))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1182,7 +1206,7 @@ private struct GlobalCanvasCardView: View {
         RoundedRectangle(cornerRadius: 12, style: .continuous)
             .fill(Color.black.opacity(0.12))
             .overlay(alignment: .bottomTrailing) {
-                Text("Click to focus")
+                Text(localized("canvas.card.clickToFocus"))
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(LineyTheme.secondaryText)
                     .padding(.horizontal, 10)

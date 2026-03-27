@@ -15,6 +15,7 @@ struct TerminalPaneView: View {
     }
 
     @EnvironmentObject private var store: WorkspaceStore
+    @ObservedObject private var localization = LocalizationManager.shared
     @ObservedObject var workspace: WorkspaceModel
     @ObservedObject var sessionController: WorkspaceSessionController
     @ObservedObject var session: ShellSession
@@ -30,6 +31,14 @@ struct TerminalPaneView: View {
         sessionController.focusedPaneID == paneID
     }
 
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
+
+    private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
+        l10nFormat(localized(key), locale: Locale.current, arguments: arguments)
+    }
+
     private var directoryLabel: String {
         session.effectiveWorkingDirectory.lastPathComponentValue
     }
@@ -38,7 +47,7 @@ struct TerminalPaneView: View {
         guard let total = session.surfaceStatus.searchTotal else { return nil }
         let selected = max(session.surfaceStatus.searchSelected ?? 0, 0)
         if total <= 0 {
-            return "0 matches"
+            return localized("terminal.search.matchesZero")
         }
         return "\(selected + 1)/\(total)"
     }
@@ -46,20 +55,20 @@ struct TerminalPaneView: View {
     private var viewportLabel: String? {
         guard let progress = session.surfaceStatus.viewport?.progress else { return nil }
         if progress <= 0.02 {
-            return "top"
+            return localized("terminal.viewport.top")
         }
         if progress >= 0.98 {
-            return "bottom"
+            return localized("terminal.viewport.bottom")
         }
         return "\(Int(progress * 100))%"
     }
 
     private var paneHeaderStatusTag: (text: String, tone: PaneTag.Tone)? {
         if let exitCode = session.exitCode, session.lifecycle == .exited {
-            return ("exit \(exitCode)", .warning)
+            return (localizedFormat("terminal.status.exitFormat", exitCode), .warning)
         }
         if isFocused {
-            return ("active", .accent)
+            return (localized("terminal.status.active"), .accent)
         }
         return nil
     }
@@ -115,41 +124,41 @@ struct TerminalPaneView: View {
         .background(LineyTheme.paneBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .shadow(color: Color.black.opacity(isFocused ? 0.12 : 0.05), radius: isFocused ? 5 : 2, y: 2)
         .contextMenu {
-            Button("Split Right") {
+            Button(localized("terminal.menu.splitRight")) {
                 workspace.focusPane(paneID)
                 store.splitFocusedPane(in: workspace, axis: .vertical)
             }
-            Button("Split Down") {
+            Button(localized("terminal.menu.splitDown")) {
                 workspace.focusPane(paneID)
                 store.splitFocusedPane(in: workspace, axis: .horizontal)
             }
             Divider()
-            Button("Duplicate Pane") {
+            Button(localized("terminal.menu.duplicatePane")) {
                 workspace.focusPane(paneID)
                 store.duplicateFocusedPane(in: workspace)
             }
-            Button(workspace.zoomedPaneID == paneID ? "Unzoom Pane" : "Zoom Pane") {
+            Button(workspace.zoomedPaneID == paneID ? localized("terminal.menu.unzoomPane") : localized("terminal.menu.zoomPane")) {
                 workspace.focusPane(paneID)
                 store.toggleZoom(in: workspace, paneID: paneID)
             }
-            Button("Restart Session") {
+            Button(localized("terminal.menu.restartSession")) {
                 workspace.focusPane(paneID)
                 session.restart()
             }
-            Button("Find") {
+            Button(localized("terminal.menu.find")) {
                 workspace.focusPane(paneID)
                 presentSearch()
             }
-            Button(session.surfaceStatus.isReadOnly ? "Disable Read Only" : "Enable Read Only") {
+            Button(session.surfaceStatus.isReadOnly ? localized("terminal.menu.disableReadOnly") : localized("terminal.menu.enableReadOnly")) {
                 workspace.focusPane(paneID)
                 session.toggleReadOnly()
             }
-            Button("Clear") {
+            Button(localized("terminal.menu.clear")) {
                 workspace.focusPane(paneID)
                 session.clear()
             }
             Divider()
-            Button("Close Pane") {
+            Button(localized("terminal.menu.closePane")) {
                 store.closePane(in: workspace, paneID: paneID)
             }
         }
@@ -216,7 +225,7 @@ struct TerminalPaneView: View {
             }
 
             if density == .full, session.surfaceStatus.isReadOnly {
-                PaneTag(text: "read only", tone: .warning)
+                PaneTag(text: localized("terminal.tag.readOnly"), tone: .warning)
             }
 
             Spacer(minLength: 6)
@@ -362,6 +371,7 @@ private struct PaneHeaderButton: View {
 }
 
 private struct PaneSearchBar: View {
+    @ObservedObject private var localization = LocalizationManager.shared
     @Binding var text: String
     var isFocused: FocusState<Bool>.Binding
     let resultLabel: String?
@@ -369,9 +379,13 @@ private struct PaneSearchBar: View {
     let onPrevious: () -> Void
     let onClose: () -> Void
 
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
+
     var body: some View {
         HStack(spacing: 8) {
-            TextField("Search terminal", text: $text)
+            TextField(localized("terminal.search.placeholder"), text: $text)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12, weight: .medium, design: .monospaced))
                 .focused(isFocused)
@@ -400,11 +414,16 @@ private struct PaneSearchBar: View {
 }
 
 private struct PaneStatusStrip: View {
+    @ObservedObject private var localization = LocalizationManager.shared
     let backendLabel: String
     let sizeLabel: String
     let viewportLabel: String?
     let rendererHealthy: Bool
     let searchLabel: String?
+
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
 
     var body: some View {
         HStack(spacing: 8) {
@@ -420,7 +439,7 @@ private struct PaneStatusStrip: View {
             }
 
             if !rendererHealthy {
-                PaneTag(text: "renderer", tone: .warning)
+                PaneTag(text: localized("terminal.status.renderer"), tone: .warning)
             }
 
             Spacer()

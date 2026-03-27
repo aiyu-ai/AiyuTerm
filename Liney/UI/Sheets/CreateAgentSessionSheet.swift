@@ -15,17 +15,25 @@ struct CreateAgentSessionSheet: View {
     @State private var draft = CreateAgentSessionDraft()
     @State private var selectedPresetID: UUID?
 
+    private func localized(_ key: String) -> String {
+        LocalizationManager.shared.string(key)
+    }
+
+    private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
+        l10nFormat(localized(key), locale: Locale.current, arguments: arguments)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("New Agent Session")
+            Text(localized("sheet.agent.title"))
                 .font(.system(size: 18, weight: .semibold))
 
-            Text("Launch an AI agent command inside \(request.workspaceName). Use one argument per line.")
+            Text(localizedFormat("sheet.agent.descriptionFormat", request.workspaceName))
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
 
             if !request.presets.isEmpty {
-                Picker("Preset", selection: Binding(
+                Picker(localized("sheet.agent.preset"), selection: Binding(
                     get: { selectedPresetID ?? request.preferredPresetID ?? request.presets.first?.id },
                     set: { newValue in
                         selectedPresetID = newValue
@@ -41,17 +49,17 @@ struct CreateAgentSessionSheet: View {
                 }
             }
 
-            GroupBox("Executable") {
+            GroupBox(localized("sheet.agent.executable")) {
                 VStack(alignment: .leading, spacing: 12) {
-                    TextField("Display name", text: $draft.name)
-                    TextField("Launch path", text: $draft.launchPath)
-                    TextField("Working directory override (optional)", text: $draft.workingDirectory)
+                    TextField(localized("sheet.agent.displayName"), text: $draft.name)
+                    TextField(localized("sheet.agent.launchPath"), text: $draft.launchPath)
+                    TextField(localized("sheet.agent.workingDirectory"), text: $draft.workingDirectory)
                 }
                 .textFieldStyle(.roundedBorder)
                 .padding(.top, 8)
             }
 
-            GroupBox("Arguments") {
+            GroupBox(localized("sheet.agent.arguments")) {
                 TextEditor(text: $draft.argumentsText)
                     .font(.system(size: 12, design: .monospaced))
                     .frame(height: 110)
@@ -59,7 +67,7 @@ struct CreateAgentSessionSheet: View {
                     .padding(.top, 8)
             }
 
-            GroupBox("Environment") {
+            GroupBox(localized("sheet.agent.environment")) {
                 TextEditor(text: $draft.environmentText)
                     .font(.system(size: 12, design: .monospaced))
                     .frame(height: 90)
@@ -67,14 +75,14 @@ struct CreateAgentSessionSheet: View {
                     .padding(.top, 8)
             }
 
-            LabeledContent("Engine", value: TerminalEngineKind.libghosttyPreferred.displayName)
+            LabeledContent(localized("sheet.shared.engine"), value: TerminalEngineKind.libghosttyPreferred.displayName)
 
             HStack {
                 Spacer()
-                Button("Cancel") {
+                Button(localized("common.cancel")) {
                     dismiss()
                 }
-                Button("Create Session") {
+                Button(localized("sheet.agent.create")) {
                     onCreate(draft)
                     dismiss()
                 }

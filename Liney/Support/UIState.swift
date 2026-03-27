@@ -109,9 +109,12 @@ struct PendingWorktreeRemoval: Identifiable {
 
     var summaryName: String {
         if itemCount == 1 {
-            return worktreeNames.first ?? "worktree"
+            return worktreeNames.first ?? LocalizationManager.shared.string("main.worktreeRemoval.summaryFallback")
         }
-        return "\(itemCount) worktrees"
+        return l10nFormat(
+            LocalizationManager.shared.string("main.worktreeRemoval.summaryFormat"),
+            arguments: [itemCount]
+        )
     }
 
     var allowsForceRemove: Bool {
@@ -120,20 +123,38 @@ struct PendingWorktreeRemoval: Identifiable {
 
     var detailMessage: String {
         var parts = [
-            "This removes \(summaryName) from disk with `git worktree remove`."
+            l10nFormat(
+                LocalizationManager.shared.string("main.worktreeRemoval.detail.removeFormat"),
+                arguments: [summaryName]
+            )
         ]
 
         if includesActiveWorktree {
-            parts.append("Liney will switch back to the main checkout first.")
+            parts.append(LocalizationManager.shared.string("main.worktreeRemoval.detail.switchBack"))
         }
         if activePaneCount > 0 {
-            parts.append("\(activePaneCount) running pane(s) in the selected worktree path(s) will be terminated first.")
+            parts.append(
+                l10nFormat(
+                    LocalizationManager.shared.string("main.worktreeRemoval.detail.terminatePanesFormat"),
+                    arguments: [activePaneCount]
+                )
+            )
         }
         if dirtyFileCount > 0 {
-            parts.append("Uncommitted changes detected in \(formattedNames(dirtyWorktreeNames)) (\(dirtyFileCount) file(s)).")
+            parts.append(
+                l10nFormat(
+                    LocalizationManager.shared.string("main.worktreeRemoval.detail.dirtyFormat"),
+                    arguments: [formattedNames(dirtyWorktreeNames), dirtyFileCount]
+                )
+            )
         }
         if aheadCommitCount > 0 {
-            parts.append("Unpushed commits detected in \(formattedNames(aheadWorktreeNames)) (\(aheadCommitCount) commit(s) ahead).")
+            parts.append(
+                l10nFormat(
+                    LocalizationManager.shared.string("main.worktreeRemoval.detail.aheadFormat"),
+                    arguments: [formattedNames(aheadWorktreeNames), aheadCommitCount]
+                )
+            )
         }
 
         return parts.joined(separator: " ")
@@ -142,15 +163,21 @@ struct PendingWorktreeRemoval: Identifiable {
     private func formattedNames(_ names: [String]) -> String {
         let uniqueNames = Array(Set(names)).sorted()
         if uniqueNames.isEmpty {
-            return "the selected worktree(s)"
+            return LocalizationManager.shared.string("main.worktreeRemoval.names.selected")
         }
         if uniqueNames.count == 1 {
             return uniqueNames[0]
         }
         if uniqueNames.count == 2 {
-            return "\(uniqueNames[0]) and \(uniqueNames[1])"
+            return l10nFormat(
+                LocalizationManager.shared.string("main.worktreeRemoval.names.twoFormat"),
+                arguments: [uniqueNames[0], uniqueNames[1]]
+            )
         }
-        return "\(uniqueNames[0]), \(uniqueNames[1]), and \(uniqueNames.count - 2) more"
+        return l10nFormat(
+            LocalizationManager.shared.string("main.worktreeRemoval.names.moreFormat"),
+            arguments: [uniqueNames[0], uniqueNames[1], uniqueNames.count - 2]
+        )
     }
 }
 
@@ -194,13 +221,13 @@ struct CreateSSHSessionDraft {
 }
 
 struct CreateAgentSessionDraft {
-    var name: String = "Agent"
+    var name: String = LocalizationManager.shared.string("defaults.agent.name")
     var launchPath: String = "/usr/bin/env"
     var argumentsText: String = "codex\nresume"
     var environmentText: String = ""
     var workingDirectory: String = ""
     var normalizedName: String {
-        name.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? "Agent"
+        name.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? LocalizationManager.shared.string("defaults.agent.name")
     }
 
     var normalizedLaunchPath: String {
@@ -264,13 +291,13 @@ enum PendingWorktreeAction: String, Codable {
     var displayLabel: String {
         switch self {
         case .none:
-            return "switch worktree"
+            return LocalizationManager.shared.string("main.worktreeAction.none")
         case .newSession:
-            return "open a new session"
+            return LocalizationManager.shared.string("main.worktreeAction.newSession")
         case .splitVertical:
-            return "split right"
+            return LocalizationManager.shared.string("main.worktreeAction.splitVertical")
         case .splitHorizontal:
-            return "split down"
+            return LocalizationManager.shared.string("main.worktreeAction.splitHorizontal")
         }
     }
 }

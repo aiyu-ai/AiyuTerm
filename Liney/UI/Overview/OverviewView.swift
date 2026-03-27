@@ -9,10 +9,19 @@ import SwiftUI
 
 struct OverviewView: View {
     @EnvironmentObject private var store: WorkspaceStore
+    @ObservedObject private var localization = LocalizationManager.shared
     let onDismiss: () -> Void
 
     private let columns = [GridItem(.adaptive(minimum: 260, maximum: 340), spacing: 16)]
     private var model: OverviewViewModel { OverviewViewModel(workspaces: store.workspaces) }
+
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
+
+    private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
+        l10nFormat(localized(key), locale: Locale.current, arguments: arguments)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -97,11 +106,11 @@ struct OverviewView: View {
     }
 
     private var overviewHeader: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Overview")
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                Text(localized("main.overview.title"))
                     .font(.system(size: 16, weight: .bold))
-                Text("\(model.totalWorkspaces) desks · \(model.totalSessions) active sessions")
+                Text(localizedFormat("overview.header.sessionsAndDesksFormat", model.totalWorkspaces, model.totalSessions))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(LineyTheme.mutedText)
             }
@@ -163,17 +172,22 @@ struct OverviewView: View {
 }
 
 private struct OverviewSummaryCards: View {
+    @ObservedObject private var localization = LocalizationManager.shared
     let totalWorkspaces: Int
     let dirtyRepositories: Int
     let failingPullRequests: Int
     let activeSessions: Int
 
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
+
     var body: some View {
         HStack(spacing: 14) {
-            OverviewMetricCard(title: "Workspaces", value: "\(totalWorkspaces)", subtitle: "tracked desks", tone: .neutral)
-            OverviewMetricCard(title: "Dirty", value: "\(dirtyRepositories)", subtitle: "repositories", tone: .warning)
-            OverviewMetricCard(title: "Failing", value: "\(failingPullRequests)", subtitle: "items need attention", tone: .danger)
-            OverviewMetricCard(title: "Active", value: "\(activeSessions)", subtitle: "running sessions", tone: .success)
+            OverviewMetricCard(title: localized("overview.summary.workspaces"), value: "\(totalWorkspaces)", subtitle: localized("overview.summary.trackedDesks"), tone: .neutral)
+            OverviewMetricCard(title: localized("overview.summary.dirty"), value: "\(dirtyRepositories)", subtitle: localized("overview.summary.repositories"), tone: .warning)
+            OverviewMetricCard(title: localized("overview.summary.failing"), value: "\(failingPullRequests)", subtitle: localized("overview.summary.needAttention"), tone: .danger)
+            OverviewMetricCard(title: localized("overview.summary.active"), value: "\(activeSessions)", subtitle: localized("overview.summary.runningSessions"), tone: .success)
         }
     }
 }
@@ -226,12 +240,17 @@ private struct OverviewMetricCard: View {
 }
 
 private struct OverviewWorkflowStrip: View {
+    @ObservedObject private var localization = LocalizationManager.shared
     let items: [OverviewWorkflowLauncher]
     let onRun: (OverviewWorkflowLauncher) -> Void
 
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Quick Workflows")
+            Text(localized("overview.quickWorkflows"))
                 .font(.system(size: 13, weight: .semibold))
 
             ScrollView(.horizontal, showsIndicators: false) {
@@ -260,27 +279,36 @@ private struct OverviewWorkflowStrip: View {
 }
 
 private struct OverviewTimelinePanel: View {
+    @ObservedObject private var localization = LocalizationManager.shared
     let items: [OverviewTimelineItem]
     let onOpenWorkspace: (UUID) -> Void
     let onClear: () -> Void
     let onReplay: (OverviewTimelineItem) -> Void
 
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
+
+    private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
+        l10nFormat(localized(key), locale: Locale.current, arguments: arguments)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Task Timeline")
+                    Text(localized("overview.timeline.title"))
                         .font(.system(size: 13, weight: .semibold))
-                    Text("Recent workflow, command, agent, and remote actions.")
+                    Text(localized("overview.timeline.subtitle"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(LineyTheme.mutedText)
                 }
                 Spacer()
-                Button("Clear Timeline", action: onClear)
+                Button(localized("overview.timeline.clear"), action: onClear)
                     .buttonStyle(.plain)
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(LineyTheme.danger)
-                Text("\(items.count) recent")
+                Text(localizedFormat("overview.timeline.recentCountFormat", items.count))
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundStyle(LineyTheme.mutedText)
             }
@@ -305,22 +333,31 @@ private struct OverviewTimelinePanel: View {
 }
 
 private struct OverviewTodayFocusPanel: View {
+    @ObservedObject private var localization = LocalizationManager.shared
     let items: [OverviewFocusItem]
     let onOpenWorkspace: (UUID) -> Void
     let onAction: (OverviewWorkspaceAction) -> Void
+
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
+
+    private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
+        l10nFormat(localized(key), locale: Locale.current, arguments: arguments)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Today Focus")
+                    Text(localized("overview.todayFocus.title"))
                         .font(.system(size: 13, weight: .semibold))
-                    Text("One next step per workspace, ranked for forward progress.")
+                    Text(localized("overview.todayFocus.subtitle"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(LineyTheme.mutedText)
                 }
                 Spacer()
-                Text("\(items.count) active")
+                Text(localizedFormat("overview.todayFocus.activeCountFormat", items.count))
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundStyle(LineyTheme.mutedText)
             }
@@ -373,38 +410,43 @@ private struct OverviewTodayFocusPanel: View {
 }
 
 private struct OverviewTaskBoard: View {
+    @ObservedObject private var localization = LocalizationManager.shared
     let executionCards: [OverviewTaskCard]
     let waitingCards: [OverviewTaskCard]
     let shippingCards: [OverviewTaskCard]
     let onOpenWorkspace: (UUID) -> Void
     let onAction: (OverviewWorkspaceAction) -> Void
 
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
             OverviewTaskLane(
-                title: "Execute",
+                title: localized("overview.taskBoard.execute"),
                 systemName: "bolt.fill",
                 tint: LineyTheme.accent,
                 items: executionCards,
-                emptyText: "No active execution items.",
+                emptyText: localized("overview.taskBoard.executeEmpty"),
                 onOpenWorkspace: onOpenWorkspace,
                 onAction: onAction
             )
             OverviewTaskLane(
-                title: "Waiting",
+                title: localized("overview.taskBoard.waiting"),
                 systemName: "pause.circle.fill",
                 tint: LineyTheme.warning,
                 items: waitingCards,
-                emptyText: "No blocked PRs.",
+                emptyText: localized("overview.taskBoard.waitingEmpty"),
                 onOpenWorkspace: onOpenWorkspace,
                 onAction: onAction
             )
             OverviewTaskLane(
-                title: "Ship",
+                title: localized("overview.taskBoard.ship"),
                 systemName: "paperplane.fill",
                 tint: LineyTheme.success,
                 items: shippingCards,
-                emptyText: "Nothing is ready to ship.",
+                emptyText: localized("overview.taskBoard.shipEmpty"),
                 onOpenWorkspace: onOpenWorkspace,
                 onAction: onAction
             )
@@ -471,6 +513,7 @@ private struct OverviewTaskLane: View {
 }
 
 private struct OverviewPullRequestInboxPanel: View {
+    @ObservedObject private var localization = LocalizationManager.shared
     let sections: [OverviewPullRequestInboxSection]
     let readyTargets: [WorkspaceGitHubTarget]
     let behindTargets: [WorkspaceGitHubTarget]
@@ -478,35 +521,43 @@ private struct OverviewPullRequestInboxPanel: View {
     let onOpenWorkspace: (UUID) -> Void
     let onAction: (OverviewWorkspaceAction) -> Void
 
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
+
+    private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
+        l10nFormat(localized(key), locale: Locale.current, arguments: arguments)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("PR Inbox")
+                    Text(localized("overview.inbox.title"))
                         .font(.system(size: 13, weight: .semibold))
-                    Text("Cross-repo review, merge, and release-note queue.")
+                    Text(localized("overview.inbox.subtitle"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(LineyTheme.mutedText)
                 }
                 Spacer()
-                Text("\(sections.reduce(0) { $0 + $1.items.count }) open")
+                Text(localizedFormat("overview.inbox.openCountFormat", sections.reduce(0) { $0 + $1.items.count }))
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundStyle(LineyTheme.mutedText)
             }
 
             HStack(spacing: 10) {
                 if !readyTargets.isEmpty {
-                    Button("Queue Ready (\(readyTargets.count))") {
+                    Button(localizedFormat("overview.inbox.queueReadyFormat", readyTargets.count)) {
                         onAction(.queuePullRequests(readyTargets))
                     }
                 }
                 if !behindTargets.isEmpty {
-                    Button("Update Behind (\(behindTargets.count))") {
+                    Button(localizedFormat("overview.inbox.updateBehindFormat", behindTargets.count)) {
                         onAction(.updatePullRequestBranches(behindTargets))
                     }
                 }
                 if !releaseContextTargets.isEmpty {
-                    Button("Copy Release Context") {
+                    Button(localized("overview.inbox.copyReleaseContext")) {
                         onAction(.copyPullRequestReleaseNotesBatch(releaseContextTargets))
                     }
                 }
@@ -592,22 +643,31 @@ private struct OverviewPullRequestInboxPanel: View {
 }
 
 private struct OverviewBlockerPanel: View {
+    @ObservedObject private var localization = LocalizationManager.shared
     let groups: [OverviewBlockerGroup]
     let onOpenWorkspace: (UUID) -> Void
     let onAction: (OverviewWorkspaceAction) -> Void
+
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
+
+    private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
+        l10nFormat(localized(key), locale: Locale.current, arguments: arguments)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Blocker Rollup")
+                    Text(localized("overview.blockers.title"))
                         .font(.system(size: 13, weight: .semibold))
-                    Text("Grouped by blocker type across repositories.")
+                    Text(localized("overview.blockers.subtitle"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(LineyTheme.mutedText)
                 }
                 Spacer()
-                Text("\(groups.reduce(0) { $0 + $1.count }) blockers")
+                Text(localizedFormat("overview.blockers.countFormat", groups.reduce(0) { $0 + $1.count }))
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
                     .foregroundStyle(LineyTheme.mutedText)
             }
@@ -672,9 +732,14 @@ private struct OverviewBlockerPanel: View {
 }
 
 private struct OverviewTimelineRow: View {
+    @ObservedObject private var localization = LocalizationManager.shared
     let item: OverviewTimelineItem
     let onOpenWorkspace: () -> Void
     let onReplay: (() -> Void)?
+
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
 
     private var timestampLabel: String {
         let formatter = RelativeDateTimeFormatter()
@@ -741,7 +806,7 @@ private struct OverviewTimelineRow: View {
                     Spacer()
 
                     if let onReplay {
-                        Button("Replay", action: onReplay)
+                        Button(localized("overview.timeline.replay"), action: onReplay)
                             .font(.system(size: 10, weight: .semibold))
                             .buttonStyle(.plain)
                             .foregroundStyle(accent)

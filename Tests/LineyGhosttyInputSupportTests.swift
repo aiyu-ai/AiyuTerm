@@ -561,4 +561,37 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
         XCTAssertEqual(resolved.intersection([.shift, .option, .command, .capsLock]), [.shift, .option, .capsLock])
     }
+
+    func testModifierActionReleasesControlEvenWhenAnotherModifierRemainsPressed() {
+        XCTAssertEqual(
+            lineyGhosttyModifierAction(
+                keyCode: UInt16(kVK_Control),
+                modifierFlags: [.command]
+            ),
+            GHOSTTY_ACTION_RELEASE
+        )
+    }
+
+    func testModifierActionPressesRightControlOnlyWhenDirectionalBitIsSet() {
+        let flags = NSEvent.ModifierFlags(
+            rawValue: NSEvent.ModifierFlags.control.rawValue | UInt(NX_DEVICERCTLKEYMASK)
+        )
+
+        XCTAssertEqual(
+            lineyGhosttyModifierAction(
+                keyCode: UInt16(kVK_RightControl),
+                modifierFlags: flags
+            ),
+            GHOSTTY_ACTION_PRESS
+        )
+    }
+
+    func testModifierActionIgnoresNonModifierKeys() {
+        XCTAssertNil(
+            lineyGhosttyModifierAction(
+                keyCode: UInt16(kVK_ANSI_C),
+                modifierFlags: [.control]
+            )
+        )
+    }
 }

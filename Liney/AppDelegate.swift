@@ -9,6 +9,14 @@ import Cocoa
 import GhosttyKit
 import Sentry
 
+private func lineyLocalizedAppString(_ key: String) -> String {
+    LocalizationManager.shared.string(key)
+}
+
+private func lineyLocalizedAppFormat(_ key: String, _ arguments: CVarArg...) -> String {
+    l10nFormat(lineyLocalizedAppString(key), locale: .current, arguments: arguments)
+}
+
 class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private let websiteURL = URL(string: "https://liney.dev")!
     private let repositoryURL = URL(string: "https://github.com/wuwenrui/liney")!
@@ -17,10 +25,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     @MainActor private var desktopApplication: LineyDesktopApplication?
     @MainActor private let applicationMenuController = ApplicationMenuController()
     private var appSettingsObserver: NSObjectProtocol?
+    private var localizationObserver: NSObjectProtocol?
     private var isPresentingQuitConfirmation = false
     private var suppressQuitConfirmationUntil: Date?
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
+        if lineyIsRunningTests() {
+            return
+        }
+
         let releaseVersion = applicationReleaseVersion()
 
         SentrySDK.start { options in
@@ -64,14 +77,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                     self.desktopApplication?.updateHotKeyWindowSettings(settings)
                 }
             }
+            localizationObserver = NotificationCenter.default.addObserver(
+                forName: .lineyLocalizationDidChange,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                guard let self else { return }
+                Task { @MainActor in
+                    self.refreshMainMenu()
+                }
+            }
             desktopApplication.launch()
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
-                self.applicationMenuController.installMainMenu(
-                    appName: self.applicationName(),
-                    target: self,
-                    settings: AppSettings()
-                )
+                self.refreshMainMenu()
             }
         }
     }
@@ -80,6 +99,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         if let appSettingsObserver {
             NotificationCenter.default.removeObserver(appSettingsObserver)
             self.appSettingsObserver = nil
+        }
+        if let localizationObserver {
+            NotificationCenter.default.removeObserver(localizationObserver)
+            self.localizationObserver = nil
         }
         guard Thread.isMainThread else { return }
         MainActor.assumeIsolated {
@@ -91,7 +114,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         guard Thread.isMainThread else { return true }
         return MainActor.assumeIsolated {
             lineyShouldTerminateAfterLastWindowClosed(
-                hotKeyWindowEnabled: desktopApplication?.isHotKeyWindowEnabled ?? false
+                hotKeyWindowEnabled: desktopApplication?.isHotKeyWindowEnabled ?? false,
+                isRunningTests: lineyIsRunningTests()
             )
         }
     }
@@ -122,8 +146,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             alert.alertStyle = .warning
             alert.messageText = copy.title
             alert.informativeText = copy.message
-            alert.addButton(withTitle: "Quit")
-            alert.addButton(withTitle: "Cancel")
+            alert.addButton(withTitle: lineyLocalizedAppString("app.quit.confirm"))
+            alert.addButton(withTitle: lineyLocalizedAppString("app.quit.cancel"))
             NSApp.activate(ignoringOtherApps: true)
             isPresentingQuitConfirmation = true
             defer { isPresentingQuitConfirmation = false }
@@ -381,6 +405,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     @MainActor
+    private func refreshMainMenu() {
+        applicationMenuController.installMainMenu(
+            appName: applicationName(),
+            target: self,
+            settings: desktopApplication?.currentAppSettings ?? AppSettings()
+        )
+    }
+
+    @MainActor
     private func formattedApplicationVersion() -> String {
         let shortVersion = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -389,13 +422,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
         switch (shortVersion?.isEmpty == false ? shortVersion : nil, buildVersion?.isEmpty == false ? buildVersion : nil) {
         case let (shortVersion?, buildVersion?) where shortVersion != buildVersion:
-            return "Version \(shortVersion) (\(buildVersion))"
+            return lineyLocalizedAppFormat("app.about.version.versionBuildFormat", shortVersion, buildVersion)
         case let (shortVersion?, _):
-            return "Version \(shortVersion)"
+            return lineyLocalizedAppFormat("app.about.version.versionOnlyFormat", shortVersion)
         case let (_, buildVersion?):
-            return "Build \(buildVersion)"
+            return lineyLocalizedAppFormat("app.about.version.buildOnlyFormat", buildVersion)
         default:
-            return "Version 1.0.0"
+            return lineyLocalizedAppString("app.about.version.default")
         }
     }
 
@@ -432,18 +465,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         ]
 
         let credits = NSMutableAttributedString(
-            string: "Native macOS terminal workspace.\n\n",
+            string: "\(lineyLocalizedAppString("app.about.description"))\n\n",
             attributes: baseAttributes
         )
         credits.append(
             NSAttributedString(
-                string: "Website: \(websiteURL.absoluteString)\n",
+                string: "\(lineyLocalizedAppFormat("app.about.websiteFormat", websiteURL.absoluteString))\n",
                 attributes: linkAttributes.merging([.link: websiteURL]) { _, newValue in newValue }
             )
         )
         credits.append(
             NSAttributedString(
-                string: "GitHub: \(repositoryURL.absoluteString)",
+                string: lineyLocalizedAppFormat("app.about.githubFormat", repositoryURL.absoluteString),
                 attributes: linkAttributes.merging([.link: repositoryURL]) { _, newValue in newValue }
             )
         )
@@ -451,8 +484,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 }
 
-func lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: Bool) -> Bool {
-    !hotKeyWindowEnabled
+func lineyIsRunningTests(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
+    environment["XCTestConfigurationFilePath"] != nil
+}
+
+func lineyShouldTerminateAfterLastWindowClosed(
+    hotKeyWindowEnabled: Bool,
+    isRunningTests: Bool = false
+) -> Bool {
+    !hotKeyWindowEnabled && !isRunningTests
 }
 
 func lineyShouldReopenMainWindow(hasVisibleWindows: Bool) -> Bool {
@@ -469,11 +509,21 @@ func lineyShouldConfirmTermination(
 func lineyQuitConfirmationCopy(quitConfirmationSessionCount: Int) -> (title: String, message: String) {
     let count = max(quitConfirmationSessionCount, 0)
     let subject = count == 1
-        ? "1 terminal session still has a running command."
-        : "\(count) terminal sessions still have running commands."
-    let impact = count == 1 ? "Quitting now will stop it." : "Quitting now will stop them."
+        ? String(
+            format: LocalizationManager.shared.string("quitConfirmation.subjectSingularFormat"),
+            locale: Locale.current,
+            count
+        )
+        : String(
+            format: LocalizationManager.shared.string("quitConfirmation.subjectPluralFormat"),
+            locale: Locale.current,
+            count
+        )
+    let impact = count == 1
+        ? LocalizationManager.shared.string("quitConfirmation.impactSingular")
+        : LocalizationManager.shared.string("quitConfirmation.impactPlural")
     return (
-        title: "Quit Liney?",
-        message: "\(subject) \(impact) You can turn this confirmation off in Settings > General."
+        title: LocalizationManager.shared.string("quitConfirmation.title"),
+        message: "\(subject) \(impact) \(LocalizationManager.shared.string("quitConfirmation.settingsHint"))"
     )
 }

@@ -10,6 +10,11 @@ import SwiftUI
 
 struct WorkspaceDetailView: View {
     @EnvironmentObject private var store: WorkspaceStore
+    @ObservedObject private var localization = LocalizationManager.shared
+
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
 
     var body: some View {
         ZStack {
@@ -20,9 +25,9 @@ struct WorkspaceDetailView: View {
                     WorkspaceSessionDetailView(workspace: workspace)
                 } else {
                     ContentUnavailableView(
-                        "Open a Workspace",
+                        localized("main.workspace.openWorkspace"),
                         systemImage: "folder.badge.plus",
-                        description: Text("Add a repo or pick a workspace to start a terminal.")
+                        description: Text(localized("main.workspace.openWorkspaceDescription"))
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
@@ -35,7 +40,12 @@ struct WorkspaceDetailView: View {
 
 private struct WorkspaceSessionDetailView: View {
     @EnvironmentObject private var store: WorkspaceStore
+    @ObservedObject private var localization = LocalizationManager.shared
     @ObservedObject var workspace: WorkspaceModel
+
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
 
     var body: some View {
         VStack(spacing: 8) {
@@ -51,9 +61,9 @@ private struct WorkspaceSessionDetailView: View {
                         Image(systemName: "terminal")
                             .font(.system(size: 22, weight: .semibold))
                             .foregroundStyle(LineyTheme.mutedText)
-                        Text("No terminal open")
+                        Text(localized("main.workspace.noTerminalOpen"))
                             .font(.system(size: 14, weight: .semibold))
-                        Button("New Session") {
+                        Button(localized("main.workspace.newSession")) {
                             store.createSession(in: workspace)
                         }
                         .buttonStyle(.borderedProminent)
@@ -183,6 +193,7 @@ private struct WorkspaceTabBarView: View {
 }
 
 private struct WorkspaceTabButton: View {
+    @ObservedObject private var localization = LocalizationManager.shared
     let title: String
     let paneCount: Int
     let isSelected: Bool
@@ -198,27 +209,28 @@ private struct WorkspaceTabButton: View {
     @State private var isHovered = false
     @State private var isCloseHovered = false
 
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
+
     var body: some View {
-        Button(action: onSelect) {
-            HStack(spacing: 8) {
-                Text(title)
-                    .font(.system(size: 11, weight: .semibold))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Text("\(paneCount)")
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                    .foregroundStyle(isSelected ? LineyTheme.accent : LineyTheme.mutedText)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2)
-                    .background(LineyTheme.subtleFill, in: Capsule())
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, 12)
-            .padding(.trailing, canClose ? 34 : 12)
-            .padding(.vertical, 8)
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text("\(paneCount)")
+                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .foregroundStyle(isSelected ? LineyTheme.accent : LineyTheme.mutedText)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(LineyTheme.subtleFill, in: Capsule())
         }
-        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.leading, 12)
+        .padding(.trailing, canClose ? 34 : 12)
+        .padding(.vertical, 8)
         .frame(width: WorkspaceTabSizing.width(for: title, paneCount: paneCount, canClose: canClose))
         .foregroundStyle(labelColor)
         .background(
@@ -257,6 +269,11 @@ private struct WorkspaceTabButton: View {
         .offset(y: isHovered ? -1 : 0)
         .animation(.easeInOut(duration: 0.12), value: isHovered)
         .animation(.easeInOut(duration: 0.12), value: isSelected)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(title))
+        .accessibilityValue(Text("\(paneCount) panes"))
+        .accessibilityAddTraits(.isButton)
+        .onTapGesture(perform: onSelect)
         .onHover { hovering in
             isHovered = hovering
             if !hovering {
@@ -264,19 +281,19 @@ private struct WorkspaceTabButton: View {
             }
         }
         .contextMenu {
-            Button("Rename Tab") {
+            Button(localized("main.tab.rename")) {
                 onRename()
             }
-            Button("Move Tab Left") {
+            Button(localized("main.tab.moveLeft")) {
                 onMoveLeft()
             }
             .disabled(!canMoveLeft)
-            Button("Move Tab Right") {
+            Button(localized("main.tab.moveRight")) {
                 onMoveRight()
             }
             .disabled(!canMoveRight)
             Divider()
-            Button("Close Tab") {
+            Button(localized("main.tab.close")) {
                 onClose()
             }
             .disabled(!canClose)
@@ -285,19 +302,20 @@ private struct WorkspaceTabButton: View {
 }
 
 private struct WorkspaceTabRenameField: View {
+    @ObservedObject private var localization = LocalizationManager.shared
     @Binding var title: String
     var isFocused: FocusState<Bool>.Binding
     let onCommit: () -> Void
     let onCancel: () -> Void
 
     var body: some View {
-        TextField("Tab name", text: $title)
+        TextField(localization.string("main.tab.namePlaceholder"), text: $title)
             .textFieldStyle(.plain)
             .font(.system(size: 11, weight: .semibold))
             .onExitCommand(perform: onCancel)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .frame(width: WorkspaceTabSizing.width(for: title.isEmpty ? "Tab name" : title, paneCount: 1, canClose: false))
+            .frame(width: WorkspaceTabSizing.width(for: title.isEmpty ? localization.string("main.tab.namePlaceholder") : title, paneCount: 1, canClose: false))
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(LineyTheme.panelRaised)

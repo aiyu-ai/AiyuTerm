@@ -40,15 +40,16 @@ final class WorkspaceStore: ObservableObject {
     @Published var sleepPreventionSession: SleepPreventionSession?
     @Published private(set) var sleepPreventionQuickActionOption: SleepPreventionDurationOption = .oneHour
     @Published private(set) var sleepPreventionReferenceDate = Date()
+    @Published private(set) var hapiIntegrationState: HAPIIntegrationState = .unavailable
 
     private let persistence = WorkspaceStatePersistence()
     private let appSettingsPersistence = AppSettingsPersistence()
     private let initialWorkspaceState: PersistedWorkspaceState?
     private let initialAppSettings: AppSettings?
     private let gitRepositoryService = GitRepositoryService()
-    private let updaterController = AppUpdaterController()
+    private let updaterController = AppUpdaterController.shared
     private let remoteSessionCoordinator = RemoteSessionCoordinator()
-    private let metadataWatchService = WorkspaceMetadataWatchService()
+    private let metadataWatchService = WorkspaceMetadataWatchService.shared
     private let sleepPreventionController = SleepPreventionController()
     private var persistsWorkspaceState: Bool
     private var hasLoaded = false
@@ -56,6 +57,14 @@ final class WorkspaceStore: ObservableObject {
     private var autoRefreshTask: Task<Void, Never>?
     private var statusMessageTask: Task<Void, Never>?
     private var sleepPreventionTickerTask: Task<Void, Never>?
+
+    private func localized(_ key: String) -> String {
+        LocalizationManager.shared.string(key)
+    }
+
+    private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
+        l10nFormat(localized(key), locale: Locale.current, arguments: arguments)
+    }
 
     init(
         initialWorkspaceState: PersistedWorkspaceState? = nil,
@@ -67,6 +76,18 @@ final class WorkspaceStore: ObservableObject {
         self.persistsWorkspaceState = persistsWorkspaceState
         sleepPreventionController.onEvent = { [weak self] event in
             self?.handleSleepPreventionEvent(event)
+        }
+    }
+
+    deinit {
+        autoRefreshTask?.cancel()
+        statusMessageTask?.cancel()
+        sleepPreventionTickerTask?.cancel()
+        guard Thread.isMainThread else { return }
+        MainActor.assumeIsolated {
+            metadataWatchService.stop()
+            sleepPreventionController.onEvent = nil
+            sleepPreventionController.stop()
         }
     }
 
@@ -107,6 +128,13 @@ final class WorkspaceStore: ObservableObject {
         )
     }
 
+    var availableHAPIInstallation: HAPIInstallationStatus? {
+        guard case .available(let installation) = hapiIntegrationState else {
+            return nil
+        }
+        return installation
+    }
+
     var quickCommandPresets: [QuickCommandPreset] {
         appSettings.quickCommandPresets
     }
@@ -126,20 +154,26 @@ final class WorkspaceStore: ObservableObject {
 
     var sleepPreventionStatusText: String {
         guard let sleepPreventionSession else {
-            return "Do Not Sleep"
+            return localized("main.sleepPrevention.status")
         }
-        return "Do Not Sleep: \(sleepPreventionSession.remainingDescription(relativeTo: sleepPreventionReferenceDate))"
+        return localizedFormat(
+            "main.sleepPrevention.statusActiveFormat",
+            sleepPreventionSession.remainingDescription(relativeTo: sleepPreventionReferenceDate)
+        )
     }
 
     var sleepPreventionPrimaryActionLabel: String {
-        sleepPreventionSession == nil ? "Start Do Not Sleep" : "Stop Do Not Sleep"
+        sleepPreventionSession == nil ? localized("main.sleepPrevention.start") : localized("main.sleepPrevention.stop")
     }
 
     var sleepPreventionPrimaryActionHelpText: String {
         if let sleepPreventionSession {
-            return "Stop macOS sleep prevention (\(sleepPreventionSession.remainingDescription(relativeTo: sleepPreventionReferenceDate)))"
+            return localizedFormat(
+                "main.sleepPrevention.helpStopFormat",
+                sleepPreventionSession.remainingDescription(relativeTo: sleepPreventionReferenceDate)
+            )
         }
-        return "Prevent macOS sleep for \(sleepPreventionQuickActionOption.title)"
+        return localizedFormat("main.sleepPrevention.helpStartFormat", sleepPreventionQuickActionOption.title)
     }
 
     var commandPaletteItems: [CommandPaletteItem] {
@@ -199,8 +233,8 @@ final class WorkspaceStore: ObservableObject {
         var items: [CommandPaletteItem] = [
             CommandPaletteItem(
                 id: "overview",
-                title: isOverviewPresented ? "Close Workspace Overview" : "Open Workspace Overview",
-                subtitle: "\(workspaces.count) workspaces",
+                title: isOverviewPresented ? localized("main.commandPalette.overview.close") : localized("main.commandPalette.overview.open"),
+                subtitle: localizedFormat("main.commandPalette.workspacesCountFormat", workspaces.count),
                 group: .navigation,
                 keywords: ["overview", "dashboard", "summary"],
                 isGlobal: true,
@@ -208,7 +242,7 @@ final class WorkspaceStore: ObservableObject {
             ),
             CommandPaletteItem(
                 id: "settings",
-                title: "Open Settings",
+                title: localized("main.commandPalette.openSettings"),
                 subtitle: nil,
                 group: .navigation,
                 keywords: ["preferences", "configuration"],
@@ -217,7 +251,7 @@ final class WorkspaceStore: ObservableObject {
             ),
             CommandPaletteItem(
                 id: "refresh-all",
-                title: "Refresh All Repositories",
+                title: localized("main.commandPalette.refreshAllRepositories"),
                 subtitle: nil,
                 group: .automation,
                 keywords: ["reload", "sync", "repositories"],
@@ -226,7 +260,7 @@ final class WorkspaceStore: ObservableObject {
             ),
             CommandPaletteItem(
                 id: "toggle-archived",
-                title: appSettings.showArchivedWorkspaces ? "Hide Archived Workspaces" : "Show Archived Workspaces",
+                title: appSettings.showArchivedWorkspaces ? localized("main.commandPalette.hideArchivedWorkspaces") : localized("main.commandPalette.showArchivedWorkspaces"),
                 subtitle: nil,
                 group: .navigation,
                 keywords: ["archive", "sidebar"],
@@ -235,8 +269,8 @@ final class WorkspaceStore: ObservableObject {
             ),
             CommandPaletteItem(
                 id: "check-updates",
-                title: "Check for Liney Updates",
-                subtitle: "Sparkle automatic updates",
+                title: localized("main.commandPalette.checkForUpdates"),
+                subtitle: localized("main.commandPalette.checkForUpdatesSubtitle"),
                 group: .releases,
                 keywords: ["release", "update", "version", "sparkle"],
                 isGlobal: true,
@@ -244,8 +278,8 @@ final class WorkspaceStore: ObservableObject {
             ),
             CommandPaletteItem(
                 id: "open-latest-release",
-                title: "Open Latest Release",
-                subtitle: "Release notes and download details",
+                title: localized("main.commandPalette.openLatestRelease"),
+                subtitle: localized("main.commandPalette.openLatestReleaseSubtitle"),
                 group: .releases,
                 keywords: ["release", "notes", "download"],
                 isGlobal: true,
@@ -257,7 +291,7 @@ final class WorkspaceStore: ObservableObject {
             items.append(
                 CommandPaletteItem(
                     id: "workspace-selected-session:\(selectedWorkspace.id.uuidString)",
-                    title: "New Session in \(selectedWorkspace.name)",
+                    title: localizedFormat("main.commandPalette.newSessionInFormat", selectedWorkspace.name),
                     subtitle: selectedWorkspace.activeWorktreePath,
                     group: .sessions,
                     keywords: ["terminal", "pane", "shell"],
@@ -268,7 +302,7 @@ final class WorkspaceStore: ObservableObject {
             items.append(
                 CommandPaletteItem(
                     id: "workspace-selected-split-right:\(selectedWorkspace.id.uuidString)",
-                    title: "Split Right in \(selectedWorkspace.name)",
+                    title: localizedFormat("main.commandPalette.splitRightInFormat", selectedWorkspace.name),
                     subtitle: selectedWorkspace.currentBranch,
                     group: .sessions,
                     keywords: ["pane", "vertical", "split"],
@@ -279,7 +313,7 @@ final class WorkspaceStore: ObservableObject {
             items.append(
                 CommandPaletteItem(
                     id: "workspace-selected-split-down:\(selectedWorkspace.id.uuidString)",
-                    title: "Split Down in \(selectedWorkspace.name)",
+                    title: localizedFormat("main.commandPalette.splitDownInFormat", selectedWorkspace.name),
                     subtitle: selectedWorkspace.currentBranch,
                     group: .sessions,
                     keywords: ["pane", "horizontal", "split"],
@@ -291,7 +325,7 @@ final class WorkspaceStore: ObservableObject {
                 items.append(
                     CommandPaletteItem(
                         id: "workspace-selected-setup:\(selectedWorkspace.id.uuidString)",
-                        title: "Run Setup Script in \(selectedWorkspace.name)",
+                        title: localizedFormat("main.commandPalette.runSetupScriptInFormat", selectedWorkspace.name),
                         subtitle: selectedWorkspace.setupScript,
                         group: .automation,
                         keywords: ["bootstrap", "install", "setup"],
@@ -304,12 +338,36 @@ final class WorkspaceStore: ObservableObject {
                 items.append(
                     CommandPaletteItem(
                         id: "workspace-selected-workflow:\(selectedWorkspace.id.uuidString)",
-                        title: "Run Preferred Workflow in \(selectedWorkspace.name)",
+                        title: localizedFormat("main.commandPalette.runPreferredWorkflowInFormat", selectedWorkspace.name),
                         subtitle: workflow.name,
                         group: .workflows,
                         keywords: ["playbook", "workflow", "automation"],
                         isGlobal: false,
                         kind: .command(.runWorkflow(selectedWorkspace.id, workflow.id))
+                    )
+                )
+            }
+            if availableHAPIInstallation != nil {
+                items.append(
+                    CommandPaletteItem(
+                        id: "workspace-selected-hapi:\(selectedWorkspace.id.uuidString)",
+                        title: "Launch HAPI in \(selectedWorkspace.name)",
+                        subtitle: selectedWorkspace.activeWorktreePath,
+                        group: .sessions,
+                        keywords: ["hapi", "remote", "quick start", "phone", "claude"],
+                        isGlobal: false,
+                        kind: .command(.launchHAPISession(selectedWorkspace.id))
+                    )
+                )
+                items.append(
+                    CommandPaletteItem(
+                        id: "workspace-selected-hapi-hub:\(selectedWorkspace.id.uuidString)",
+                        title: "Start HAPI Hub in \(selectedWorkspace.name)",
+                        subtitle: "hapi hub --relay",
+                        group: .automation,
+                        keywords: ["hapi", "hub", "relay", "remote", "quick start"],
+                        isGlobal: false,
+                        kind: .command(.startHAPIHub(selectedWorkspace.id))
                     )
                 )
             }
@@ -319,7 +377,7 @@ final class WorkspaceStore: ObservableObject {
             items.append(
                 CommandPaletteItem(
                     id: "workspace:\(workspace.id.uuidString)",
-                    title: "Open \(workspace.name)",
+                    title: localizedFormat("main.commandPalette.openWorkspaceFormat", workspace.name),
                     subtitle: workspace.activeWorktreePath,
                     group: .navigation,
                     keywords: ["workspace", "focus", "select"],
@@ -330,7 +388,7 @@ final class WorkspaceStore: ObservableObject {
             items.append(
                 CommandPaletteItem(
                     id: "workspace-refresh:\(workspace.id.uuidString)",
-                    title: "Refresh \(workspace.name)",
+                    title: localizedFormat("main.commandPalette.refreshWorkspaceFormat", workspace.name),
                     subtitle: workspace.currentBranch,
                     group: .automation,
                     keywords: ["reload", "fetch", "sync"],
@@ -341,7 +399,7 @@ final class WorkspaceStore: ObservableObject {
             items.append(
                 CommandPaletteItem(
                     id: "workspace-session:\(workspace.id.uuidString)",
-                    title: "New Session in \(workspace.name)",
+                    title: localizedFormat("main.commandPalette.newSessionInFormat", workspace.name),
                     subtitle: workspace.activeWorktreePath,
                     group: .sessions,
                     keywords: ["terminal", "pane", "shell"],
@@ -353,7 +411,7 @@ final class WorkspaceStore: ObservableObject {
                 items.append(
                     CommandPaletteItem(
                         id: "remote-shell:\(workspace.id.uuidString):\(remoteTarget.id.uuidString)",
-                        title: "Open Remote Shell: \(remoteTarget.name)",
+                        title: localizedFormat("main.commandPalette.openRemoteShellFormat", remoteTarget.name),
                         subtitle: remoteTarget.ssh.destination,
                         group: .sessions,
                         keywords: ["ssh", "remote", "shell", workspace.name],
@@ -366,7 +424,7 @@ final class WorkspaceStore: ObservableObject {
                     items.append(
                         CommandPaletteItem(
                             id: "remote-agent:\(workspace.id.uuidString):\(remoteTarget.id.uuidString)",
-                            title: "Launch Remote Agent: \(remoteTarget.name)",
+                            title: localizedFormat("main.commandPalette.launchRemoteAgentFormat", remoteTarget.name),
                             subtitle: preset.name,
                             group: .sessions,
                             keywords: ["ssh", "remote", "agent", "codex", workspace.name],
@@ -379,7 +437,7 @@ final class WorkspaceStore: ObservableObject {
             items.append(
                 CommandPaletteItem(
                     id: "workspace-pin:\(workspace.id.uuidString)",
-                    title: workspace.isPinned ? "Unpin \(workspace.name)" : "Pin \(workspace.name)",
+                    title: workspace.isPinned ? localizedFormat("main.commandPalette.unpinWorkspaceFormat", workspace.name) : localizedFormat("main.commandPalette.pinWorkspaceFormat", workspace.name),
                     subtitle: nil,
                     group: .navigation,
                     keywords: ["sidebar", "favorite"],
@@ -390,7 +448,7 @@ final class WorkspaceStore: ObservableObject {
             items.append(
                 CommandPaletteItem(
                     id: "workspace-archive:\(workspace.id.uuidString)",
-                    title: workspace.isArchived ? "Unarchive \(workspace.name)" : "Archive \(workspace.name)",
+                    title: workspace.isArchived ? localizedFormat("main.commandPalette.unarchiveWorkspaceFormat", workspace.name) : localizedFormat("main.commandPalette.archiveWorkspaceFormat", workspace.name),
                     subtitle: nil,
                     group: .navigation,
                     keywords: ["hide", "archive"],
@@ -402,7 +460,7 @@ final class WorkspaceStore: ObservableObject {
                 items.append(
                     CommandPaletteItem(
                         id: "workspace-worktree:\(workspace.id.uuidString)",
-                        title: "Create Worktree in \(workspace.name)",
+                        title: localizedFormat("main.commandPalette.createWorktreeInFormat", workspace.name),
                         subtitle: workspace.repositoryRoot,
                         group: .sessions,
                         keywords: ["branch", "git", "worktree"],
@@ -415,7 +473,7 @@ final class WorkspaceStore: ObservableObject {
                 items.append(
                     CommandPaletteItem(
                         id: "workspace-ssh:\(workspace.id.uuidString)",
-                        title: "New SSH Session in \(workspace.name)",
+                        title: localizedFormat("main.commandPalette.newSSHSessionInFormat", workspace.name),
                         subtitle: nil,
                         group: .sessions,
                         keywords: ["remote", "server", "ssh"],
@@ -426,7 +484,7 @@ final class WorkspaceStore: ObservableObject {
                 items.append(
                     CommandPaletteItem(
                         id: "workspace-agent:\(workspace.id.uuidString)",
-                        title: "New Agent Session in \(workspace.name)",
+                        title: localizedFormat("main.commandPalette.newAgentSessionInFormat", workspace.name),
                         subtitle: workspace.agentPresets.first?.name,
                         group: .sessions,
                         keywords: ["ai", "agent", "codex"],
@@ -435,11 +493,35 @@ final class WorkspaceStore: ObservableObject {
                     )
                 )
             }
+            if availableHAPIInstallation != nil {
+                items.append(
+                    CommandPaletteItem(
+                        id: "workspace-hapi:\(workspace.id.uuidString)",
+                        title: "Launch HAPI in \(workspace.name)",
+                        subtitle: workspace.activeWorktreePath,
+                        group: .sessions,
+                        keywords: ["hapi", "remote", "quick start", "phone", workspace.name],
+                        isGlobal: false,
+                        kind: .command(.launchHAPISession(workspace.id))
+                    )
+                )
+                items.append(
+                    CommandPaletteItem(
+                        id: "workspace-hapi-hub:\(workspace.id.uuidString)",
+                        title: "Start HAPI Hub in \(workspace.name)",
+                        subtitle: "hapi hub --relay",
+                        group: .automation,
+                        keywords: ["hapi", "hub", "relay", "remote", workspace.name],
+                        isGlobal: false,
+                        kind: .command(.startHAPIHub(workspace.id))
+                    )
+                )
+            }
             if !workspace.setupScript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 items.append(
                     CommandPaletteItem(
                         id: "workspace-setup:\(workspace.id.uuidString)",
-                        title: "Run Setup Script in \(workspace.name)",
+                        title: localizedFormat("main.commandPalette.runSetupScriptInFormat", workspace.name),
                         subtitle: workspace.setupScript,
                         group: .automation,
                         keywords: ["bootstrap", "install", "prepare"],
@@ -452,7 +534,7 @@ final class WorkspaceStore: ObservableObject {
                 items.append(
                     CommandPaletteItem(
                         id: "workspace-run:\(workspace.id.uuidString)",
-                        title: "Run Script in \(workspace.name)",
+                        title: localizedFormat("main.commandPalette.runScriptInFormat", workspace.name),
                         subtitle: workspace.runScript,
                         group: .automation,
                         keywords: ["build", "start", "run"],
@@ -465,7 +547,7 @@ final class WorkspaceStore: ObservableObject {
                 items.append(
                     CommandPaletteItem(
                         id: "workflow:\(workspace.id.uuidString):\(workflow.id.uuidString)",
-                        title: "Run Workflow: \(workflow.name)",
+                        title: localizedFormat("main.commandPalette.runWorkflowFormat", workflow.name),
                         subtitle: workspace.name,
                         group: .workflows,
                         keywords: ["playbook", "workflow", workspace.name],
@@ -485,6 +567,7 @@ final class WorkspaceStore: ObservableObject {
 
         appSettings = initialAppSettings ?? appSettingsPersistence.load()
         appSettings.githubIntegrationEnabled = false
+        LocalizationManager.shared.updateSelectedLanguage(appSettings.appLanguage)
         NotificationCenter.default.post(name: .lineyAppSettingsDidChange, object: appSettings)
         let state = normalizeLaunchState(initialWorkspaceState ?? persistence.load())
         workspaces = state.workspaces.map(WorkspaceModel.init(record:))
@@ -511,8 +594,8 @@ final class WorkspaceStore: ObservableObject {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.prompt = "Open Folder"
-        panel.message = "Choose a local folder. Git repositories keep repository features; other folders open as local terminals."
+        panel.prompt = localized("main.openPanel.prompt")
+        panel.message = localized("main.openPanel.message")
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
         Task { @MainActor in
@@ -528,7 +611,7 @@ final class WorkspaceStore: ObservableObject {
         } catch GitServiceError.notAGitRepository {
             addLocalWorkspace(atPath: normalizedPath)
         } catch {
-            presentError(title: "Unable to Open Repository", message: error.localizedDescription)
+            presentError(title: localized("main.error.openRepository.title"), message: error.localizedDescription)
         }
     }
 
@@ -538,7 +621,7 @@ final class WorkspaceStore: ObservableObject {
             do {
                 try await openWorkspaceAsRepository(workspace, persistAfterChange: true)
             } catch {
-                presentError(title: "Unable to Open Repository", message: error.localizedDescription)
+                presentError(title: localized("main.error.openRepository.title"), message: error.localizedDescription)
             }
         }
     }
@@ -641,6 +724,7 @@ final class WorkspaceStore: ObservableObject {
     func updateAppSettings(_ settings: AppSettings) {
         let wasAutoCheckEnabled = appSettings.autoCheckForUpdates
         appSettings = AppSettings(
+            appLanguage: settings.appLanguage,
             autoRefreshEnabled: settings.autoRefreshEnabled,
             autoRefreshIntervalSeconds: settings.autoRefreshIntervalSeconds,
             autoClosePaneOnProcessExit: settings.autoClosePaneOnProcessExit,
@@ -667,6 +751,7 @@ final class WorkspaceStore: ObservableObject {
             commandPaletteRecents: settings.commandPaletteRecents,
             keyboardShortcutOverrides: settings.keyboardShortcutOverrides
         )
+        LocalizationManager.shared.updateSelectedLanguage(appSettings.appLanguage)
         for workspace in workspaces {
             workspace.gitHubStatuses = [:]
         }
@@ -724,7 +809,7 @@ final class WorkspaceStore: ObservableObject {
     func sidebarIconRequestTitle(_ request: SidebarIconCustomizationRequest) -> String {
         switch request.target {
         case .workspace(let workspaceID):
-            return workspace(for: workspaceID)?.name ?? "Workspace"
+            return workspace(for: workspaceID)?.name ?? localized("main.sidebarIcon.workspaceFallback")
         case .worktree(let workspaceID, let worktreePath):
             guard let workspace = workspace(for: workspaceID),
                   let worktree = workspace.worktrees.first(where: { $0.path == worktreePath }) else {
@@ -732,11 +817,11 @@ final class WorkspaceStore: ObservableObject {
             }
             return "\(workspace.name) / \(worktree.displayName)"
         case .appDefaultRepository:
-            return "Default Repository Icon"
+            return localized("main.sidebarIcon.defaultRepository")
         case .appDefaultLocalTerminal:
-            return "Default Terminal Icon"
+            return localized("main.sidebarIcon.defaultTerminal")
         case .appDefaultWorktree:
-            return "Default Worktree Icon"
+            return localized("main.sidebarIcon.defaultWorktree")
         }
     }
 
@@ -835,7 +920,7 @@ final class WorkspaceStore: ObservableObject {
         } catch {
             receive(
                 .statusMessage(
-                    "Unable to start macOS sleep prevention: \(error.localizedDescription)",
+                    localizedFormat("main.sleepPrevention.error.startFormat", error.localizedDescription),
                     .warning,
                     deliverSystemNotification: false
                 )
@@ -883,14 +968,14 @@ final class WorkspaceStore: ObservableObject {
 
     func insertQuickCommand(_ preset: QuickCommandPreset) {
         guard let workspace = selectedWorkspace else {
-            receive(.statusMessage("Select a workspace before inserting a quick command.", .warning, deliverSystemNotification: false))
+            receive(.statusMessage(localized("main.status.quickCommand.selectWorkspace"), .warning, deliverSystemNotification: false))
             return
         }
 
         let targetPaneID = workspace.sessionController.focusedPaneID ?? workspace.paneOrder.first
         guard let targetPaneID,
               let session = workspace.sessionController.session(for: targetPaneID) else {
-            receive(.statusMessage("Focus a terminal pane before inserting a quick command.", .warning, deliverSystemNotification: false))
+            receive(.statusMessage(localized("main.status.quickCommand.focusPane"), .warning, deliverSystemNotification: false))
             return
         }
 
@@ -899,7 +984,7 @@ final class WorkspaceStore: ObservableObject {
         recordQuickCommandUse(preset.id)
         receive(
             .statusMessage(
-                "Inserted \(preset.normalizedTitle). Press Return to run it.",
+                localizedFormat("main.status.quickCommand.insertedFormat", preset.normalizedTitle),
                 .neutral,
                 deliverSystemNotification: false
             )
@@ -941,7 +1026,7 @@ final class WorkspaceStore: ObservableObject {
                 persist()
             }
         } catch {
-            presentError(title: "Unable to Refresh Repository", message: error.localizedDescription)
+            presentError(title: localized("main.error.refreshRepository.title"), message: error.localizedDescription)
         }
     }
 
@@ -952,7 +1037,7 @@ final class WorkspaceStore: ObservableObject {
                 try await gitRepositoryService.fetch(for: workspace.repositoryRoot)
                 await refreshWorkspace(workspace)
             } catch {
-                presentError(title: "git fetch Failed", message: error.localizedDescription)
+                presentError(title: localized("main.error.gitFetchFailed.title"), message: error.localizedDescription)
             }
         }
     }
@@ -1233,6 +1318,113 @@ final class WorkspaceStore: ObservableObject {
         )
     }
 
+    func refreshHAPIIntegrationStatus() async {
+        hapiIntegrationState = await HAPIIntegrationCatalog.detect()
+    }
+
+    func performPrimaryHAPIAction() {
+        guard let installation = availableHAPIInstallation else {
+            receive(.statusMessage("Install hapi to enable this shortcut.", .warning, deliverSystemNotification: false))
+            return
+        }
+        guard let workspace = selectedWorkspace else {
+            receive(.statusMessage("Select a workspace before using HAPI.", .warning, deliverSystemNotification: false))
+            return
+        }
+
+        switch installation.primaryAction {
+        case .launchSession:
+            launchHAPISession(in: workspace)
+        case .startHub:
+            startHAPIHub(in: workspace)
+        }
+    }
+
+    func launchHAPISession(workspaceID: UUID) {
+        guard let workspace = workspaces.first(where: { $0.id == workspaceID }) else { return }
+        launchHAPISession(in: workspace)
+    }
+
+    func startHAPIHub(workspaceID: UUID) {
+        guard let workspace = workspaces.first(where: { $0.id == workspaceID }) else { return }
+        startHAPIHub(in: workspace)
+    }
+
+    func openHAPIQuickStart() {
+        guard let url = URL(string: "https://hapi.run/docs/guide/quick-start") else { return }
+        NSWorkspace.shared.open(url)
+    }
+
+    private func launchHAPISession(in workspace: WorkspaceModel) {
+        guard let installation = availableHAPIInstallation else {
+            receive(.statusMessage("Install hapi to launch it from Liney.", .warning, deliverSystemNotification: false))
+            return
+        }
+
+        let configuration = AgentSessionConfiguration(
+            name: "HAPI",
+            launchPath: installation.executablePath,
+            arguments: [],
+            environment: [:],
+            workingDirectory: workspace.activeWorktreePath
+        )
+
+        createSession(
+            in: workspace,
+            backendConfiguration: .agent(configuration),
+            workingDirectory: workspace.activeWorktreePath
+        )
+        recordActivity(
+            in: workspace,
+            kind: .agent,
+            title: "Launched HAPI",
+            detail: workspace.activeWorktreePath,
+            worktreePath: workspace.activeWorktreePath,
+            replayAction: .createSession(
+                backendConfiguration: .agent(configuration),
+                workingDirectory: workspace.activeWorktreePath
+            )
+        )
+    }
+
+    private func startHAPIHub(in workspace: WorkspaceModel) {
+        guard let installation = availableHAPIInstallation else {
+            receive(.statusMessage("Install hapi to start the hub from Liney.", .warning, deliverSystemNotification: false))
+            return
+        }
+
+        let workingDirectory = NSHomeDirectory()
+        let configuration = AgentSessionConfiguration(
+            name: "HAPI Hub",
+            launchPath: installation.executablePath,
+            arguments: ["hub", "--relay"],
+            environment: [:],
+            workingDirectory: workingDirectory
+        )
+
+        createSession(
+            in: workspace,
+            backendConfiguration: .agent(configuration),
+            workingDirectory: workingDirectory
+        )
+        recordActivity(
+            in: workspace,
+            kind: .command,
+            title: "Started HAPI hub",
+            detail: "hapi hub --relay",
+            worktreePath: workspace.activeWorktreePath,
+            replayAction: .createSession(
+                backendConfiguration: .agent(configuration),
+                workingDirectory: workingDirectory
+            )
+        )
+
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            await refreshHAPIIntegrationStatus()
+        }
+    }
+
     @discardableResult
     func createWorktree(workspaceID: UUID, draft: CreateWorktreeDraft) -> Bool {
         guard let workspace = workspaces.first(where: { $0.id == workspaceID }),
@@ -1244,19 +1436,19 @@ final class WorkspaceStore: ObservableObject {
         let normalizedBranchName = draft.normalizedBranchName
 
         guard !normalizedDirectoryPath.isEmpty else {
-            presentError(title: "Unable to Create Worktree", message: "Directory path is required.")
+            presentError(title: localized("main.error.createWorktree.title"), message: localized("main.error.createWorktree.directoryRequired"))
             return false
         }
         guard !normalizedBranchName.isEmpty else {
-            presentError(title: "Unable to Create Worktree", message: "Branch name is required.")
+            presentError(title: localized("main.error.createWorktree.title"), message: localized("main.error.createWorktree.branchRequired"))
             return false
         }
         guard !normalizedBranchName.contains(" ") else {
-            presentError(title: "Unable to Create Worktree", message: "Branch names cannot contain spaces.")
+            presentError(title: localized("main.error.createWorktree.title"), message: localized("main.error.createWorktree.branchNoSpaces"))
             return false
         }
         guard !FileManager.default.fileExists(atPath: normalizedDirectoryPath) else {
-            presentError(title: "Unable to Create Worktree", message: "This path already exists. Please keep adding to the branch name.")
+            presentError(title: localized("main.error.createWorktree.title"), message: localized("main.error.createWorktree.pathExists"))
             return false
         }
 
@@ -1278,7 +1470,7 @@ final class WorkspaceStore: ObservableObject {
                     runSetupScriptIfNeeded(in: workspace)
                 }
             } catch {
-                presentError(title: "Unable to Create Worktree", message: error.localizedDescription)
+                presentError(title: localized("main.error.createWorktree.title"), message: error.localizedDescription)
             }
         }
 
@@ -1327,7 +1519,7 @@ final class WorkspaceStore: ObservableObject {
         guard !uniqueWorktrees.isEmpty else { return }
 
         if uniqueWorktrees.contains(where: \.isMainWorktree) {
-            presentError(title: "Cannot Remove Main Worktree", message: "The primary repository checkout cannot be removed from the sidebar.")
+            presentError(title: localized("main.error.removeMainWorktree.title"), message: localized("main.error.removeMainWorktree.message"))
             return
         }
 
@@ -1377,7 +1569,7 @@ final class WorkspaceStore: ObservableObject {
                 await refreshWorkspace(workspace)
             } catch {
                 await refreshWorkspace(workspace)
-                presentError(title: "Unable to Remove Worktree", message: error.localizedDescription)
+                presentError(title: localized("main.error.removeWorktree.title"), message: error.localizedDescription)
             }
         }
     }
@@ -1462,6 +1654,14 @@ final class WorkspaceStore: ObservableObject {
             } else if let workspace = workspace(for: id) {
                 presentCreateAgentSession(for: workspace)
             }
+
+        case .launchHAPISession(let id):
+            dismissCommandPalette()
+            launchHAPISession(workspaceID: id)
+
+        case .startHAPIHub(let id):
+            dismissCommandPalette()
+            startHAPIHub(workspaceID: id)
 
         case .openRemoteTargetShell(let workspaceID, let targetID):
             dismissCommandPalette()
@@ -1664,7 +1864,7 @@ final class WorkspaceStore: ObservableObject {
             }
             persistAppSettings()
         } catch {
-            presentedError = PresentedError(title: "Unable to Save State", message: error.localizedDescription)
+            presentedError = PresentedError(title: localized("main.error.saveState.title"), message: error.localizedDescription)
         }
     }
 
@@ -1695,7 +1895,7 @@ final class WorkspaceStore: ObservableObject {
             workspace.clearActivityLog()
         }
         persist()
-        receive(.statusMessage("Cleared task timeline.", .neutral, deliverSystemNotification: false))
+        receive(.statusMessage(localized("main.status.timelineCleared"), .neutral, deliverSystemNotification: false))
     }
 
     private func command(for item: CommandPaletteItem) -> WorkspaceCommand {
@@ -1737,8 +1937,8 @@ final class WorkspaceStore: ObservableObject {
             receive(
                 .statusMessage(
                     session.option == .forever
-                        ? "macOS sleep prevention is active until you stop it."
-                        : "macOS sleep prevention is active for \(session.option.title.lowercased()).",
+                        ? localized("main.sleepPrevention.started.forever")
+                        : localizedFormat("main.sleepPrevention.started.timedFormat", session.option.title.lowercased()),
                     .success,
                     deliverSystemNotification: false
                 )
@@ -1752,10 +1952,10 @@ final class WorkspaceStore: ObservableObject {
 
             switch reason {
             case .userInitiated:
-                receive(.statusMessage("macOS sleep prevention stopped.", .neutral, deliverSystemNotification: false))
+                receive(.statusMessage(localized("main.sleepPrevention.stopped"), .neutral, deliverSystemNotification: false))
             case .completed:
                 guard previousSession != nil else { return }
-                receive(.statusMessage("macOS sleep prevention finished.", .neutral, deliverSystemNotification: false))
+                receive(.statusMessage(localized("main.sleepPrevention.finished"), .neutral, deliverSystemNotification: false))
             case .failed(let message):
                 receive(.statusMessage(message, .warning, deliverSystemNotification: false))
             }
@@ -1807,7 +2007,7 @@ final class WorkspaceStore: ObservableObject {
         ) else {
             receive(
                 .statusMessage(
-                    "Install Cursor, Zed, VS Code, Windsurf, Xcode, Fleet, Nova, or Sublime Text to open workspaces from the toolbar.",
+                    localized("main.status.externalEditor.installHint"),
                     .warning,
                     deliverSystemNotification: false
                 )
@@ -1818,7 +2018,7 @@ final class WorkspaceStore: ObservableObject {
         if editor.editor != preferredEditor {
             receive(
                 .statusMessage(
-                    "\(preferredEditor.displayName) is not installed. Opening in \(editor.editor.displayName) instead.",
+                    localizedFormat("main.status.externalEditor.fallbackFormat", preferredEditor.displayName, editor.editor.displayName),
                     .warning,
                     deliverSystemNotification: false
                 )
@@ -1832,7 +2032,7 @@ final class WorkspaceStore: ObservableObject {
             guard case .failure(let error) = result else { return }
             self.receive(
                 .statusMessage(
-                    "Unable to open \(workspaceName) in \(editor.editor.displayName): \(error.localizedDescription)",
+                    self.localizedFormat("main.status.externalEditor.openFailedFormat", workspaceName, editor.editor.displayName, error.localizedDescription),
                     .warning,
                     deliverSystemNotification: false
                 )
@@ -1877,7 +2077,7 @@ final class WorkspaceStore: ObservableObject {
             try appSettingsPersistence.save(appSettings)
             NotificationCenter.default.post(name: .lineyAppSettingsDidChange, object: appSettings)
         } catch {
-            presentedError = PresentedError(title: "Unable to Save Settings", message: error.localizedDescription)
+            presentedError = PresentedError(title: localized("main.error.saveSettings.title"), message: error.localizedDescription)
         }
     }
 
@@ -2024,87 +2224,87 @@ final class WorkspaceStore: ObservableObject {
     private func openPullRequest(workspaceID: UUID, worktreePath: String) async {
         _ = workspaceID
         _ = worktreePath
-        notifyGitHubFeatureRemoval("Opening pull requests")
+        notifyGitHubFeatureRemoval(localized("main.github.removed.openPullRequests"))
     }
 
     private func markPullRequestReady(workspaceID: UUID, worktreePath: String) async {
         _ = workspaceID
         _ = worktreePath
-        notifyGitHubFeatureRemoval("Marking pull requests ready")
+        notifyGitHubFeatureRemoval(localized("main.github.removed.markPullRequestsReady"))
     }
 
     private func updatePullRequestBranch(workspaceID: UUID, worktreePath: String) async {
         _ = workspaceID
         _ = worktreePath
-        notifyGitHubFeatureRemoval("Updating pull request branches")
+        notifyGitHubFeatureRemoval(localized("main.github.removed.updatePullRequestBranches"))
     }
 
     private func queuePullRequest(workspaceID: UUID, worktreePath: String) async {
         _ = workspaceID
         _ = worktreePath
-        notifyGitHubFeatureRemoval("Queueing pull requests")
+        notifyGitHubFeatureRemoval(localized("main.github.removed.queuePullRequests"))
     }
 
     private func updatePullRequestBranches(_ targets: [WorkspaceGitHubTarget]) async {
         _ = targets
-        notifyGitHubFeatureRemoval("Batch pull request updates")
+        notifyGitHubFeatureRemoval(localized("main.github.removed.batchUpdatePullRequests"))
     }
 
     private func queuePullRequests(_ targets: [WorkspaceGitHubTarget]) async {
         _ = targets
-        notifyGitHubFeatureRemoval("Batch pull request queueing")
+        notifyGitHubFeatureRemoval(localized("main.github.removed.batchQueuePullRequests"))
     }
 
     private func copyPullRequestReleaseNotes(workspaceID: UUID, worktreePath: String) async {
         _ = workspaceID
         _ = worktreePath
-        notifyGitHubFeatureRemoval("Release note drafting")
+        notifyGitHubFeatureRemoval(localized("main.github.removed.releaseNoteDrafting"))
     }
 
     private func copyPullRequestReleaseNotesBatch(_ targets: [WorkspaceGitHubTarget]) async {
         _ = targets
-        notifyGitHubFeatureRemoval("Batch release note drafting")
+        notifyGitHubFeatureRemoval(localized("main.github.removed.batchReleaseNoteDrafting"))
     }
 
     private func openLatestRun(workspaceID: UUID, worktreePath: String) async {
         _ = workspaceID
         _ = worktreePath
-        notifyGitHubFeatureRemoval("Opening CI runs")
+        notifyGitHubFeatureRemoval(localized("main.github.removed.openCIRuns"))
     }
 
     private func openFailingCheckDetails(workspaceID: UUID, worktreePath: String) async {
         _ = workspaceID
         _ = worktreePath
-        notifyGitHubFeatureRemoval("Opening failing checks")
+        notifyGitHubFeatureRemoval(localized("main.github.removed.openFailingChecks"))
     }
 
     private func copyFailingCheckURL(workspaceID: UUID, worktreePath: String) async {
         _ = workspaceID
         _ = worktreePath
-        notifyGitHubFeatureRemoval("Copying failing check URLs")
+        notifyGitHubFeatureRemoval(localized("main.github.removed.copyFailingCheckURLs"))
     }
 
     private func rerunLatestFailedJobs(workspaceID: UUID, worktreePath: String) async {
         _ = workspaceID
         _ = worktreePath
-        notifyGitHubFeatureRemoval("Rerunning CI jobs")
+        notifyGitHubFeatureRemoval(localized("main.github.removed.rerunCIJobs"))
     }
 
     private func copyLatestRunLogs(workspaceID: UUID, worktreePath: String) async {
         _ = workspaceID
         _ = worktreePath
-        notifyGitHubFeatureRemoval("Copying CI logs")
+        notifyGitHubFeatureRemoval(localized("main.github.removed.copyCILogs"))
     }
 
     private func openLatestRelease() {
         NSWorkspace.shared.open(AppUpdaterController.releasesURL)
-        receive(.statusMessage("Opened Liney release notes.", .neutral, deliverSystemNotification: false))
+        receive(.statusMessage(localized("main.status.releaseNotesOpened"), .neutral, deliverSystemNotification: false))
     }
 
     private func checkForUpdates() {
         configureUpdater(checkInBackground: false)
         updaterController.checkForUpdates()
-        receive(.statusMessage("Checking for updates…", .neutral, deliverSystemNotification: false))
+        receive(.statusMessage(localized("main.status.checkingForUpdates"), .neutral, deliverSystemNotification: false))
     }
 
     private func openRemoteTargetShell(workspaceID: UUID, targetID: UUID) {
@@ -2146,7 +2346,7 @@ final class WorkspaceStore: ObservableObject {
     private func runWorkspaceScript(in workspace: WorkspaceModel) {
         let script = workspace.runScript.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !script.isEmpty else {
-            receive(.statusMessage("No run script configured for this workspace.", .warning, deliverSystemNotification: false))
+            receive(.statusMessage(localized("main.status.workspace.runScriptMissing"), .warning, deliverSystemNotification: false))
             return
         }
         selectWorkspace(workspace)
@@ -2155,7 +2355,7 @@ final class WorkspaceStore: ObservableObject {
             recordActivity(
                 in: workspace,
                 kind: .command,
-                title: "Ran workspace script",
+                title: localized("main.activity.workspaceScriptRan"),
                 detail: summarizeCommand(script),
                 worktreePath: workspace.activeWorktreePath,
                 replayAction: WorkspaceReplayAction(
@@ -2166,7 +2366,7 @@ final class WorkspaceStore: ObservableObject {
                     workingDirectory: nil
                 )
             )
-            receive(.statusMessage("Sent run script to the focused session.", .success, deliverSystemNotification: false))
+            receive(.statusMessage(localized("main.status.workspace.runScriptSent"), .success, deliverSystemNotification: false))
         }
     }
 
@@ -2178,7 +2378,7 @@ final class WorkspaceStore: ObservableObject {
             recordActivity(
                 in: workspace,
                 kind: .command,
-                title: "Ran setup script",
+                title: localized("main.activity.setupScriptRan"),
                 detail: summarizeCommand(script),
                 worktreePath: workspace.activeWorktreePath,
                 replayAction: WorkspaceReplayAction(
@@ -2189,7 +2389,7 @@ final class WorkspaceStore: ObservableObject {
                     workingDirectory: nil
                 )
             )
-            receive(.statusMessage("Ran workspace setup script.", .success, deliverSystemNotification: false))
+            receive(.statusMessage(localized("main.status.workspace.setupScriptRan"), .success, deliverSystemNotification: false))
         }
     }
 
@@ -2198,7 +2398,7 @@ final class WorkspaceStore: ObservableObject {
 
         if workflow.runSetupScript || workflow.runWorkspaceScript || workflow.localSessionMode != .reuseFocused {
             guard let session = localShellSession(in: workspace, mode: workflow.localSessionMode) else {
-                receive(.statusMessage("Unable to prepare a local shell session for the workflow.", .warning, deliverSystemNotification: false))
+                receive(.statusMessage(localized("main.status.workflow.localShellUnavailable"), .warning, deliverSystemNotification: false))
                 return
             }
             if workflow.runSetupScript {
@@ -2224,12 +2424,12 @@ final class WorkspaceStore: ObservableObject {
         recordActivity(
             in: workspace,
             kind: .workflow,
-            title: "Ran workflow",
+            title: localized("main.activity.workflowRan"),
             detail: workflow.name,
             worktreePath: workspace.activeWorktreePath,
             replayAction: .runWorkflow(workflow.id)
         )
-        receive(.statusMessage("Ran workflow \(workflow.name).", .success, deliverSystemNotification: false))
+        receive(.statusMessage(localizedFormat("main.status.workflow.ranFormat", workflow.name), .success, deliverSystemNotification: false))
     }
 
     private func localShellSession(in workspace: WorkspaceModel, mode: WorkspaceWorkflowLocalSessionMode) -> ShellSession? {
@@ -2294,7 +2494,7 @@ final class WorkspaceStore: ObservableObject {
         recordActivity(
             in: workspace,
             kind: .agent,
-            title: "Launched workflow agent",
+            title: localized("main.activity.workflowAgentLaunched"),
             detail: preset.name,
             worktreePath: workspace.activeWorktreePath,
             replayAction: .createSession(
@@ -2307,7 +2507,7 @@ final class WorkspaceStore: ObservableObject {
 
     private func replayActivity(_ entry: WorkspaceActivityEntry, in workspace: WorkspaceModel) {
         guard let action = entry.replayAction else {
-            receive(.statusMessage("This activity cannot be replayed yet.", .neutral, deliverSystemNotification: false))
+            receive(.statusMessage(localized("main.status.activity.replayUnavailable"), .neutral, deliverSystemNotification: false))
             return
         }
 
@@ -2321,13 +2521,13 @@ final class WorkspaceStore: ObservableObject {
         case .runWorkflow:
             guard let workflowID = action.workflowID,
                   let workflow = workspace.workflows.first(where: { $0.id == workflowID }) else {
-                receive(.statusMessage("The saved workflow is no longer available.", .warning, deliverSystemNotification: false))
+                receive(.statusMessage(localized("main.status.activity.savedWorkflowMissing"), .warning, deliverSystemNotification: false))
                 return
             }
             runWorkflow(workflow, in: workspace)
         case .createSession:
             guard let backendConfiguration = action.backendConfiguration else {
-                receive(.statusMessage("The saved session configuration is incomplete.", .warning, deliverSystemNotification: false))
+                receive(.statusMessage(localized("main.status.activity.savedSessionIncomplete"), .warning, deliverSystemNotification: false))
                 return
             }
             createSession(
@@ -2335,13 +2535,13 @@ final class WorkspaceStore: ObservableObject {
                 backendConfiguration: backendConfiguration,
                 workingDirectory: action.workingDirectory ?? workspace.activeWorktreePath
             )
-            receive(.statusMessage("Replayed \(entry.title.lowercased()).", .success, deliverSystemNotification: false))
+            receive(.statusMessage(localizedFormat("main.status.activity.replayedFormat", entry.title.lowercased()), .success, deliverSystemNotification: false))
         case .openPullRequest:
-            notifyGitHubFeatureRemoval("Opening pull requests")
+            notifyGitHubFeatureRemoval(localized("main.github.removed.openPullRequests"))
         case .markPullRequestReady:
-            notifyGitHubFeatureRemoval("Marking pull requests ready")
+            notifyGitHubFeatureRemoval(localized("main.github.removed.markPullRequestsReady"))
         case .openLatestRun:
-            notifyGitHubFeatureRemoval("Opening CI runs")
+            notifyGitHubFeatureRemoval(localized("main.github.removed.openCIRuns"))
         }
     }
 
@@ -2401,7 +2601,7 @@ final class WorkspaceStore: ObservableObject {
     private func notifyGitHubFeatureRemoval(_ action: String) {
         receive(
             .statusMessage(
-                "\(action) is no longer available because GitHub integration has been removed from Liney.",
+                localizedFormat("main.github.removed.actionFormat", action),
                 .warning,
                 deliverSystemNotification: false
             )

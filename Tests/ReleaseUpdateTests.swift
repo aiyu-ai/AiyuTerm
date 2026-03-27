@@ -19,8 +19,8 @@ final class ReleaseUpdateTests: XCTestCase {
     }
 
     func testWindowLifecycleHelpersRespectHotKeyAndVisibility() {
-        XCTAssertTrue(lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: false))
-        XCTAssertFalse(lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: true))
+        XCTAssertTrue(lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: false, isRunningTests: false))
+        XCTAssertFalse(lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: true, isRunningTests: false))
         XCTAssertTrue(lineyShouldReopenMainWindow(hasVisibleWindows: false))
         XCTAssertFalse(lineyShouldReopenMainWindow(hasVisibleWindows: true))
     }

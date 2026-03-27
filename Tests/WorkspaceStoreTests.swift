@@ -10,6 +10,11 @@ import XCTest
 
 @MainActor
 final class WorkspaceStoreTests: XCTestCase {
+    override func tearDown() {
+        LocalizationManager.shared.updateSelectedLanguage(.automatic)
+        super.tearDown()
+    }
+
     func testOpenWorkspaceAsRepositoryAddsRepositoryWorkspaceWithoutChangingLocalWorkspace() async throws {
         let directoryURL = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directoryURL) }
@@ -37,6 +42,79 @@ final class WorkspaceStoreTests: XCTestCase {
             },
             directoryURL.standardizedFileURL.path
         )
+    }
+
+    func testLoadIfNeededAppliesInitialAppLanguageToLocalizationManager() async {
+        LocalizationManager.shared.updateSelectedLanguage(.automatic)
+        let store = WorkspaceStore(
+            initialAppSettings: AppSettings(appLanguage: .simplifiedChinese),
+            persistsWorkspaceState: false
+        )
+
+        await store.loadIfNeeded()
+
+        XCTAssertEqual(LocalizationManager.shared.selectedLanguage, .simplifiedChinese)
+    }
+
+    func testUpdateAppSettingsPublishesSelectedLanguageToLocalizationManager() {
+        LocalizationManager.shared.updateSelectedLanguage(.automatic)
+        let store = WorkspaceStore(persistsWorkspaceState: false)
+
+        store.updateAppSettings(AppSettings(appLanguage: .simplifiedChinese))
+
+        XCTAssertEqual(store.appSettings.appLanguage, .simplifiedChinese)
+        XCTAssertEqual(LocalizationManager.shared.selectedLanguage, .simplifiedChinese)
+    }
+
+    func testCommandPaletteItemsLocalizeForSimplifiedChinese() {
+        LocalizationManager.shared.updateSelectedLanguage(.simplifiedChinese)
+        let store = WorkspaceStore(persistsWorkspaceState: false)
+
+        let items = store.commandPaletteItems
+
+        XCTAssertTrue(items.contains(where: { $0.id == "overview" && $0.title == "打开工作区概览" }))
+        XCTAssertTrue(items.contains(where: { $0.id == "settings" && $0.title == "打开设置" }))
+        XCTAssertTrue(items.contains(where: { $0.id == "check-updates" && $0.title == "检查 Liney 更新" }))
+    }
+
+    func testSleepPreventionStringsLocalizeForSimplifiedChinese() {
+        LocalizationManager.shared.updateSelectedLanguage(.simplifiedChinese)
+        let store = WorkspaceStore(persistsWorkspaceState: false)
+
+        XCTAssertEqual(store.sleepPreventionStatusText, "禁止休眠")
+        XCTAssertEqual(store.sleepPreventionPrimaryActionLabel, "开始禁止休眠")
+        XCTAssertEqual(store.sleepPreventionPrimaryActionHelpText, "为 macOS 启用禁止休眠：1 小时")
+    }
+
+    func testModelDisplayStringsLocalizeForSimplifiedChinese() {
+        LocalizationManager.shared.updateSelectedLanguage(.simplifiedChinese)
+
+        XCTAssertEqual(WorkspaceKind.repository.displayName, "仓库")
+        XCTAssertEqual(WorkspaceKind.localTerminal.displayName, "本地终端")
+        XCTAssertEqual(SessionBackendKind.localShell.displayName, "本地 Shell")
+        XCTAssertEqual(WorkspaceActivityKind.workflow.displayName, "工作流")
+        XCTAssertEqual(GlobalCanvasColorGroup.slate.title, "石板灰")
+        XCTAssertEqual(WorkspaceTabStateRecord.makeDefault(for: "/tmp/liney").title, "标签页 1")
+    }
+
+    func testWorktreeAndRemoteStringsLocalizeForSimplifiedChinese() throws {
+        LocalizationManager.shared.updateSelectedLanguage(.simplifiedChinese)
+
+        let worktree = WorktreeModel(
+            path: "/tmp/liney-main",
+            branch: nil,
+            head: "abc123",
+            isMainWorktree: true,
+            isLocked: false,
+            lockReason: nil
+        )
+        XCTAssertEqual(worktree.displayName, "主检出")
+        XCTAssertEqual(worktree.branchLabel, "游离 HEAD")
+        XCTAssertEqual(
+            L10nTable.string(for: "remote.activity.openedShell", language: .simplifiedChinese),
+            "已打开远程目标 Shell"
+        )
+        XCTAssertEqual(RemoteSessionCoordinatorError.missingTarget.errorDescription, "找不到所选远程目标。")
     }
 
     private func makeTemporaryDirectory() throws -> URL {

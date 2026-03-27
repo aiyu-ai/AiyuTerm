@@ -936,8 +936,12 @@ private final class LineyGhosttySurfaceView: NSView {
             return
         }
 
-        let mods = ghosttyMods(event.modifierFlags)
-        let action: ghostty_input_action_e = mods.rawValue == 0 ? GHOSTTY_ACTION_RELEASE : GHOSTTY_ACTION_PRESS
+        guard let action = lineyGhosttyModifierAction(
+            keyCode: event.keyCode,
+            modifierFlags: event.modifierFlags
+        ) else {
+            return
+        }
         let keyEvent = event.ghosttyKeyEvent(action)
         _ = ghostty_surface_key(surface, keyEvent)
     }

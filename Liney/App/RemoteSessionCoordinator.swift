@@ -7,6 +7,10 @@
 
 import Foundation
 
+private func lineyLocalizedRemoteString(_ key: String) -> String {
+    LocalizationManager.shared.string(key)
+}
+
 enum RemoteSessionCoordinatorError: LocalizedError {
     case missingTarget
     case missingAgentPreset
@@ -14,9 +18,9 @@ enum RemoteSessionCoordinatorError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingTarget:
-            return "The selected remote target could not be found."
+            return lineyLocalizedRemoteString("remote.error.missingTarget")
         case .missingAgentPreset:
-            return "This remote target does not have a valid agent preset."
+            return lineyLocalizedRemoteString("remote.error.missingAgentPreset")
         }
     }
 }
@@ -42,7 +46,7 @@ struct RemoteSessionCoordinator {
             backendConfiguration: backendConfiguration,
             workingDirectory: workspace.activeWorktreePath,
             activityKind: .remote,
-            activityTitle: "Opened remote target shell",
+            activityTitle: lineyLocalizedRemoteString("remote.activity.openedShell"),
             activityDetail: "\(target.name) · \(target.ssh.destination)",
             replayAction: .createSession(
                 backendConfiguration: backendConfiguration,
@@ -69,7 +73,7 @@ struct RemoteSessionCoordinator {
             backendConfiguration: backendConfiguration,
             workingDirectory: workspace.activeWorktreePath,
             activityKind: .agent,
-            activityTitle: "Opened remote agent",
+            activityTitle: lineyLocalizedRemoteString("remote.activity.openedAgent"),
             activityDetail: "\(target.name) · \(preset.name)",
             replayAction: .createSession(
                 backendConfiguration: backendConfiguration,

@@ -9,9 +9,18 @@ import SwiftUI
 
 struct DeskView: View {
     @ObservedObject var workspace: WorkspaceModel
+    @ObservedObject private var localization = LocalizationManager.shared
     let onTap: () -> Void
 
     @State private var isHovering = false
+
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
+
+    private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
+        l10nFormat(localized(key), locale: Locale.current, arguments: arguments)
+    }
 
     private var sessions: [ShellSession] {
         let controller = workspace.sessionController
@@ -89,7 +98,7 @@ struct DeskView: View {
             Image(systemName: "desktopcomputer")
                 .font(.system(size: 20))
                 .foregroundStyle(LineyTheme.mutedText.opacity(0.4))
-            Text("No active sessions")
+            Text(localized("desk.empty.noActiveSessions"))
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(LineyTheme.mutedText.opacity(0.5))
         }
@@ -112,14 +121,14 @@ struct DeskView: View {
         HStack(spacing: 8) {
             let worktreeCount = workspace.worktrees.count
             if worktreeCount > 1 {
-                Label("\(worktreeCount) worktrees", systemImage: "arrow.triangle.branch")
+                Label(localizedFormat("desk.footer.worktreesFormat", worktreeCount), systemImage: "arrow.triangle.branch")
                     .font(.system(size: 9, weight: .medium))
                     .foregroundStyle(LineyTheme.mutedText)
             }
 
             Spacer()
 
-            Text("\(sessions.count) session\(sessions.count == 1 ? "" : "s")")
+            Text(localizedFormat("desk.footer.sessionsFormat", sessions.count, sessions.count == 1 ? "" : localized("desk.footer.sessionsPluralSuffix")))
                 .font(.system(size: 9, weight: .medium))
                 .foregroundStyle(LineyTheme.mutedText)
         }
@@ -133,9 +142,14 @@ struct DeskView: View {
 
 private struct MonitorView: View {
     @ObservedObject var session: ShellSession
+    @ObservedObject private var localization = LocalizationManager.shared
     let accentColor: Color
 
     @State private var glowPhase: Bool = false
+
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
 
     private var isActive: Bool { session.hasActiveProcess }
 
@@ -179,7 +193,7 @@ private struct MonitorView: View {
                 .frame(width: 8, height: 3)
 
             // Label
-            Text(session.title.isEmpty ? "shell" : session.title)
+            Text(session.title.isEmpty ? localized("desk.monitor.defaultShell") : session.title)
                 .font(.system(size: 7, weight: .medium, design: .monospaced))
                 .foregroundStyle(LineyTheme.mutedText)
                 .lineLimit(1)
