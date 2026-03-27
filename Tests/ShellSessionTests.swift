@@ -36,6 +36,7 @@ final class ShellSessionTests: XCTestCase {
         XCTAssertEqual(prepared.environment["TERM"], "xterm-ghostty")
         XCTAssertEqual(prepared.environment["TERMINFO"], terminfo.path)
         XCTAssertEqual(prepared.environment["GHOSTTY_RESOURCES_DIR"], ghosttyResources.path)
+        XCTAssertEqual(prepared.environment["GHOSTTY_SHELL_FEATURES"], "ssh-env")
         XCTAssertEqual(prepared.environment["GHOSTTY_ZSH_ZDOTDIR"], "/tmp/original-zdotdir")
         XCTAssertEqual(prepared.environment["ZDOTDIR"], zshIntegration.path)
     }
@@ -64,6 +65,7 @@ final class ShellSessionTests: XCTestCase {
         XCTAssertEqual(prepared.environment["TERM"], "xterm-ghostty")
         XCTAssertEqual(prepared.environment["TERMINFO"], terminfo.path)
         XCTAssertEqual(prepared.environment["GHOSTTY_RESOURCES_DIR"], ghosttyResources.path)
+        XCTAssertEqual(prepared.environment["GHOSTTY_SHELL_FEATURES"], "ssh-env")
         XCTAssertEqual(
             prepared.environment["GHOSTTY_SHELL_INTEGRATION_XDG_DIR"],
             ghosttyResources.appendingPathComponent("shell-integration", isDirectory: true).path
@@ -76,6 +78,25 @@ final class ShellSessionTests: XCTestCase {
                 "/usr/share",
             ].joined(separator: ":")
         )
+    }
+
+    func testGhosttyShellIntegrationPreservesExistingShellFeaturesWhileAppendingSSHEnv() {
+        let prepared = LineyGhosttyShellIntegration.prepare(
+            command: TerminalCommandDefinition(
+                executablePath: "/bin/zsh",
+                arguments: ["-l"],
+                displayName: "zsh"
+            ),
+            environment: [
+                "GHOSTTY_SHELL_FEATURES": "cursor,title",
+            ],
+            resourcePaths: LineyGhosttyResourcePaths(
+                ghosttyResourcesDirectory: "/tmp/ghostty",
+                terminfoDirectory: "/tmp/terminfo"
+            )
+        )
+
+        XCTAssertEqual(prepared.environment["GHOSTTY_SHELL_FEATURES"], "cursor,title,ssh-env")
     }
 
     func testGhosttyBootstrapPublishesBundledResourcesDirectory() {

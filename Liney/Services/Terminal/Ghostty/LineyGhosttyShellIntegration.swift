@@ -40,6 +40,8 @@ struct LineyGhosttyResourcePaths: Equatable {
 }
 
 enum LineyGhosttyShellIntegration {
+    private static let defaultShellFeatures = ["ssh-env"]
+
     static func prepare(
         command: TerminalCommandDefinition,
         environment: [String: String],
@@ -49,6 +51,10 @@ enum LineyGhosttyShellIntegration {
 
         environment["TERM"] = "xterm-ghostty"
         environment["COLORTERM"] = "truecolor"
+        environment["GHOSTTY_SHELL_FEATURES"] = mergedShellFeatures(
+            existing: environment["GHOSTTY_SHELL_FEATURES"],
+            defaults: defaultShellFeatures
+        )
 
         if let terminfoDirectory = resourcePaths.terminfoDirectory {
             environment["TERMINFO"] = terminfoDirectory
@@ -71,6 +77,22 @@ enum LineyGhosttyShellIntegration {
         }
 
         return (command, environment)
+    }
+
+    private static func mergedShellFeatures(
+        existing: String?,
+        defaults: [String]
+    ) -> String {
+        let existingFeatures = existing?
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty } ?? []
+
+        var orderedFeatures = existingFeatures
+        for feature in defaults where !orderedFeatures.contains(feature) {
+            orderedFeatures.append(feature)
+        }
+        return orderedFeatures.joined(separator: ",")
     }
 
     private static func shellName(for executablePath: String) -> String {
