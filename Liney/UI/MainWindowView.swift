@@ -49,11 +49,19 @@ struct MainWindowView: View {
         store.effectiveExternalEditor
     }
 
+    private var availableHAPIInstallation: HAPIInstallationStatus? {
+        store.availableHAPIInstallation
+    }
+
     private var externalEditorHelpText: String {
         if let editor = effectiveExternalEditor {
             return localizedFormat("main.toolbar.openCurrentWorkspaceInFormat", editor.editor.displayName)
         }
         return localized("main.toolbar.openCurrentWorkspaceInExternalEditor")
+    }
+
+    private var hapiHelpText: String {
+        availableHAPIInstallation?.primaryActionHelpText ?? "Use HAPI in the current workspace"
     }
 
     private var sleepPreventionIconName: String {
@@ -219,6 +227,38 @@ struct MainWindowView: View {
                             .foregroundStyle(LineyTheme.secondaryText)
                     }
                     )
+
+                    if let hapiInstallation = availableHAPIInstallation {
+                        ToolbarSegmentedControl(
+                        backgroundColor: LineyTheme.chromeBackground.opacity(0.96),
+                        borderColor: LineyTheme.border,
+                        leadingAction: { _ in
+                            store.performPrimaryHAPIAction()
+                        },
+                        trailingAction: { anchorView in
+                            present(menu: makeHAPIMenu(using: hapiInstallation), from: anchorView)
+                        },
+                        isLeadingDisabled: !hasSelectedWorkspace,
+                        isTrailingDisabled: !hasSelectedWorkspace,
+                        leadingAccessibilityLabel: hapiInstallation.primaryActionTitle,
+                        leadingHelp: hapiHelpText,
+                        trailingAccessibilityLabel: "HAPI Actions",
+                        trailingHelp: "HAPI Quick Start and Session Actions",
+                        leadingContent: {
+                            HStack(spacing: 6) {
+                                ToolbarFeatureIcon(
+                                    systemName: "dot.radiowaves.left.and.right",
+                                    tint: hapiInstallation.authStatus.hasToken ? LineyTheme.success : LineyTheme.warning
+                                )
+                            }
+                        },
+                        trailingContent: {
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(LineyTheme.secondaryText)
+                        }
+                        )
+                    }
 
                     ToolbarSegmentedControl(
                         backgroundColor: sleepPreventionSplitButtonBackground,
@@ -428,6 +468,14 @@ struct MainWindowView: View {
                 .help(localized("main.menu.moreActions"))
             }
         }
+        .task {
+            await store.refreshHAPIIntegrationStatus()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            Task { @MainActor in
+                await store.refreshHAPIIntegrationStatus()
+            }
+        }
         .onChange(of: store.selectedWorkspaceID) { _, newValue in
             if newValue == nil {
                 isCanvasPresented = false
@@ -623,6 +671,41 @@ struct MainWindowView: View {
 
         menu.addActionItem(title: localized("menu.app.settings"), imageSystemName: "gearshape") {
             store.presentSettings(for: store.selectedWorkspace)
+        }
+
+        return menu
+    }
+
+    private func makeHAPIMenu(using installation: HAPIInstallationStatus) -> NSMenu {
+        let menu = NSMenu()
+
+        menu.addDisabledItem(title: installation.menuStatusText)
+        menu.addItem(.separator())
+
+        menu.addActionItem(
+            title: installation.primaryActionTitle,
+            imageSystemName: installation.primaryAction == .launchSession ? "play.circle" : "dot.radiowaves.left.and.right"
+        ) {
+            store.performPrimaryHAPIAction()
+        }
+
+        if installation.primaryAction != .launchSession {
+            menu.addActionItem(title: "Launch HAPI in Current Project", imageSystemName: "play.circle") {
+                guard let workspace = store.selectedWorkspace else { return }
+                store.launchHAPISession(workspaceID: workspace.id)
+            }
+        }
+
+        if installation.primaryAction != .startHub {
+            menu.addActionItem(title: "Start HAPI Hub (--relay)", imageSystemName: "dot.radiowaves.left.and.right") {
+                guard let workspace = store.selectedWorkspace else { return }
+                store.startHAPIHub(workspaceID: workspace.id)
+            }
+        }
+
+        menu.addItem(.separator())
+        menu.addActionItem(title: "Open HAPI Quick Start", imageSystemName: "book") {
+            store.openHAPIQuickStart()
         }
 
         return menu
