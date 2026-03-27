@@ -288,6 +288,8 @@ struct AppSettings: Codable, Hashable {
         commandPaletteRecents: [String: TimeInterval] = [:],
         keyboardShortcutOverrides: [String: KeyboardShortcutOverride] = [:]
     ) {
+        let normalizedKeyboardShortcutOverrides = LineyKeyboardShortcuts.normalizedOverrides(keyboardShortcutOverrides)
+
         self.appLanguage = appLanguage
         self.autoRefreshEnabled = autoRefreshEnabled
         self.autoRefreshIntervalSeconds = max(10, autoRefreshIntervalSeconds)
@@ -309,14 +311,17 @@ struct AppSettings: Codable, Hashable {
         self.defaultLocalTerminalIcon = defaultLocalTerminalIcon
         self.defaultWorktreeIcon = defaultWorktreeIcon
         self.preferredExternalEditor = preferredExternalEditor
-        self.quickCommandPresets = QuickCommandCatalog.normalizedCommands(quickCommandPresets)
+        self.keyboardShortcutOverrides = normalizedKeyboardShortcutOverrides
+        self.quickCommandPresets = QuickCommandCatalog.normalizedCommands(
+            quickCommandPresets,
+            reservedShortcuts: LineyKeyboardShortcuts.effectiveShortcuts(using: normalizedKeyboardShortcutOverrides)
+        )
         self.quickCommandRecentIDs = QuickCommandCatalog.normalizedRecentCommandIDs(
             quickCommandRecentIDs,
             availableCommands: self.quickCommandPresets
         )
         self.releaseChannel = releaseChannel
         self.commandPaletteRecents = commandPaletteRecents
-        self.keyboardShortcutOverrides = LineyKeyboardShortcuts.normalizedOverrides(keyboardShortcutOverrides)
     }
 }
 
@@ -391,7 +396,7 @@ extension AppSettings {
     }
 }
 
-struct StoredShortcut: Codable, Hashable {
+nonisolated struct StoredShortcut: Codable, Hashable {
     var key: String
     var command: Bool
     var shift: Bool
@@ -901,6 +906,21 @@ enum LineyKeyboardShortcuts {
             return "Not Set"
         }
         return action.displayedShortcutString(for: shortcut)
+    }
+
+    static func effectiveShortcuts(in settings: AppSettings) -> Set<StoredShortcut> {
+        effectiveShortcuts(using: settings.keyboardShortcutOverrides)
+    }
+
+    static func effectiveShortcuts(using overrides: [String: KeyboardShortcutOverride]) -> Set<StoredShortcut> {
+        Set(
+            LineyShortcutAction.allCases.compactMap { action in
+                if let override = overrides[action.rawValue] {
+                    return override.shortcut
+                }
+                return action.defaultShortcut
+            }
+        )
     }
 
     static func setShortcut(_ shortcut: StoredShortcut, for action: LineyShortcutAction, in settings: inout AppSettings) {

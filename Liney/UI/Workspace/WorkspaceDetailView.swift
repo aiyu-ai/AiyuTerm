@@ -121,6 +121,14 @@ private struct WorkspaceTabBarView: View {
                             }
                         )
                         .draggable(tab.id.uuidString)
+                        .dropDestination(for: String.self) { items, _ in
+                            handleTabDrop(items, targetTabID: tab.id)
+                        } isTargeted: { isTargeted in
+                            withAnimation(.easeInOut(duration: 0.12)) {
+                                let targetIndex = workspace.tabs.firstIndex(where: { $0.id == tab.id }) ?? 0
+                                dropInsertionIndex = isTargeted ? targetIndex : (dropInsertionIndex == targetIndex ? nil : dropInsertionIndex)
+                            }
+                        }
                     }
 
                     tabInsertionMarker(for: index + 1)
@@ -190,6 +198,19 @@ private struct WorkspaceTabBarView: View {
         store.moveTab(in: workspace, tabID: draggedTabID, to: finalIndex)
         return true
     }
+
+    private func handleTabDrop(_ items: [String], targetTabID: UUID) -> Bool {
+        guard let draggedValue = items.first,
+              let draggedTabID = UUID(uuidString: draggedValue),
+              let sourceIndex = workspace.tabs.firstIndex(where: { $0.id == draggedTabID }),
+              let targetIndex = workspace.tabs.firstIndex(where: { $0.id == targetTabID }) else {
+            dropInsertionIndex = nil
+            return false
+        }
+
+        let insertionSlot = sourceIndex < targetIndex ? targetIndex + 1 : targetIndex
+        return handleDrop(items, insertionSlot: insertionSlot)
+    }
 }
 
 private struct WorkspaceTabButton: View {
@@ -214,24 +235,29 @@ private struct WorkspaceTabButton: View {
     }
 
     var body: some View {
-        HStack(spacing: 8) {
-            Text(title)
-                .font(.system(size: 11, weight: .semibold))
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Text("\(paneCount)")
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
-                .foregroundStyle(isSelected ? LineyTheme.accent : LineyTheme.mutedText)
-                .padding(.horizontal, 5)
-                .padding(.vertical, 2)
-                .background(LineyTheme.subtleFill, in: Capsule())
+        Button(action: onSelect) {
+            HStack(spacing: 8) {
+                Text(title)
+                    .font(.system(size: 11, weight: .semibold))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text("\(paneCount)")
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundStyle(isSelected ? LineyTheme.accent : LineyTheme.mutedText)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(LineyTheme.subtleFill, in: Capsule())
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, 12)
+            .padding(.trailing, canClose ? 34 : 12)
+            .padding(.vertical, 9)
+            .frame(width: WorkspaceTabSizing.width(for: title, paneCount: paneCount, canClose: canClose), alignment: .leading)
+            .frame(minHeight: 38, alignment: .leading)
+            .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.leading, 12)
-        .padding(.trailing, canClose ? 34 : 12)
-        .padding(.vertical, 8)
-        .frame(width: WorkspaceTabSizing.width(for: title, paneCount: paneCount, canClose: canClose))
+        .buttonStyle(.plain)
         .foregroundStyle(labelColor)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -273,7 +299,6 @@ private struct WorkspaceTabButton: View {
         .accessibilityLabel(Text(title))
         .accessibilityValue(Text("\(paneCount) panes"))
         .accessibilityAddTraits(.isButton)
-        .onTapGesture(perform: onSelect)
         .onHover { hovering in
             isHovered = hovering
             if !hovering {
@@ -383,11 +408,11 @@ private struct WorkspaceTabInsertionMarker: View {
 
             Capsule()
                 .fill(LineyTheme.accent)
-                .frame(width: isActive ? 3 : 1.5, height: isActive ? 20 : 12)
+                .frame(width: isActive ? 4 : 2, height: isActive ? 24 : 14)
                 .opacity(isActive ? 1 : 0)
                 .shadow(color: LineyTheme.accent.opacity(0.28), radius: 8, y: 1)
         }
-        .frame(width: 10, height: 34)
+        .frame(width: 18, height: 38)
         .animation(.easeInOut(duration: 0.12), value: isActive)
     }
 }

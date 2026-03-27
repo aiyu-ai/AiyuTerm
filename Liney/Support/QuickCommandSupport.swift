@@ -5,6 +5,7 @@
 //  Author: wuwenrui
 //
 
+import AppKit
 import Foundation
 
 nonisolated enum QuickCommandCategory: String, Codable, Hashable, CaseIterable, Identifiable {
@@ -47,17 +48,23 @@ nonisolated struct QuickCommandPreset: Codable, Hashable, Identifiable {
     var title: String
     var command: String
     var category: QuickCommandCategory
+    var shortcut: StoredShortcut?
+    var submitsReturn: Bool
 
     init(
         id: String = UUID().uuidString,
         title: String,
         command: String,
-        category: QuickCommandCategory
+        category: QuickCommandCategory,
+        shortcut: StoredShortcut? = nil,
+        submitsReturn: Bool = false
     ) {
         self.id = id.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? UUID().uuidString
         self.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         self.command = command
         self.category = category
+        self.shortcut = shortcut
+        self.submitsReturn = submitsReturn
     }
 
     var normalizedTitle: String {
@@ -82,6 +89,8 @@ nonisolated struct QuickCommandPreset: Codable, Hashable, Identifiable {
         case title
         case command
         case category
+        case shortcut
+        case submitsReturn
     }
 
     init(from decoder: any Decoder) throws {
@@ -90,7 +99,9 @@ nonisolated struct QuickCommandPreset: Codable, Hashable, Identifiable {
             id: try container.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString,
             title: try container.decodeIfPresent(String.self, forKey: .title) ?? "",
             command: try container.decodeIfPresent(String.self, forKey: .command) ?? "",
-            category: try container.decodeIfPresent(QuickCommandCategory.self, forKey: .category) ?? .codex
+            category: try container.decodeIfPresent(QuickCommandCategory.self, forKey: .category) ?? .codex,
+            shortcut: try container.decodeIfPresent(StoredShortcut.self, forKey: .shortcut),
+            submitsReturn: try container.decodeIfPresent(Bool.self, forKey: .submitsReturn) ?? false
         )
     }
 }
@@ -137,8 +148,12 @@ enum QuickCommandCatalog {
         ),
     ]
 
-    static func normalizedCommands(_ commands: [QuickCommandPreset]) -> [QuickCommandPreset] {
+    static func normalizedCommands(
+        _ commands: [QuickCommandPreset],
+        reservedShortcuts: Set<StoredShortcut> = []
+    ) -> [QuickCommandPreset] {
         var seenIDs = Set<String>()
+        var seenShortcuts = reservedShortcuts
 
         return commands.compactMap { command in
             let normalizedCommand = command.normalizedCommand
@@ -147,11 +162,21 @@ enum QuickCommandCatalog {
             let normalizedID = command.id.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? UUID().uuidString
             guard seenIDs.insert(normalizedID).inserted else { return nil }
 
+            let normalizedShortcut: StoredShortcut?
+            if let shortcut = command.shortcut, !shortcut.key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               seenShortcuts.insert(shortcut).inserted {
+                normalizedShortcut = shortcut
+            } else {
+                normalizedShortcut = nil
+            }
+
             return QuickCommandPreset(
                 id: normalizedID,
                 title: command.normalizedTitle,
                 command: normalizedCommand,
-                category: command.category
+                category: command.category,
+                shortcut: normalizedShortcut,
+                submitsReturn: command.submitsReturn
             )
         }
     }
@@ -174,4 +199,9 @@ enum QuickCommandCatalog {
 
         return deduplicated
     }
+}
+
+func lineyQuickCommandMatch(for event: NSEvent, in settings: AppSettings) -> QuickCommandPreset? {
+    guard let recordedShortcut = StoredShortcut.from(event: event) else { return nil }
+    return settings.quickCommandPresets.first(where: { $0.shortcut == recordedShortcut })
 }

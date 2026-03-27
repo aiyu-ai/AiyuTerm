@@ -61,6 +61,10 @@ struct QuickCommandEditorSheet: View {
                             .foregroundStyle(.secondary)
                     }
 
+                    Text(localized("sheet.quickCommands.shortcutHint"))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+
                     if draftCommands.isEmpty {
                         Text(localized("sheet.quickCommands.empty"))
                             .font(.system(size: 12, weight: .medium))
@@ -146,6 +150,15 @@ private struct QuickCommandEditorCard: View {
                 }
                 .frame(width: 140)
 
+                ShortcutRecorderField(
+                    shortcut: $command.shortcut,
+                    fallbackShortcut: StoredShortcut(key: "k", command: true, shift: false, option: false, control: false),
+                    emptyTitle: localized("sheet.quickCommands.shortcutPlaceholder"),
+                    displayString: { $0.displayString },
+                    transformRecordedShortcut: { $0 }
+                )
+                .frame(width: 132)
+
                 Button(action: onMoveUp) {
                     Image(systemName: "arrow.up")
                 }
@@ -176,6 +189,10 @@ private struct QuickCommandEditorCard: View {
                             .stroke(LineyTheme.border, lineWidth: 1)
                     )
             }
+
+            Toggle(localized("sheet.quickCommands.autoReturn"), isOn: $command.submitsReturn)
+                .toggleStyle(.switch)
+                .font(.system(size: 11, weight: .medium))
 
         }
         .padding(14)

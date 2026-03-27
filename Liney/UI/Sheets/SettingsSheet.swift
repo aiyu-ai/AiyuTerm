@@ -1078,7 +1078,7 @@ private struct ShortcutSettingsRow: View {
     }
 }
 
-private struct ShortcutRecorderField: NSViewRepresentable {
+struct ShortcutRecorderField: NSViewRepresentable {
     @Binding var shortcut: StoredShortcut?
     let fallbackShortcut: StoredShortcut
     let emptyTitle: String
@@ -1108,7 +1108,7 @@ private struct ShortcutRecorderField: NSViewRepresentable {
     }
 }
 
-private final class ShortcutRecorderNSButton: NSButton {
+final class ShortcutRecorderNSButton: NSButton {
     var shortcut: StoredShortcut?
     var fallbackShortcut = StoredShortcut(key: "k", command: true, shift: false, option: false, control: false)
     var emptyTitle = "Not Set"

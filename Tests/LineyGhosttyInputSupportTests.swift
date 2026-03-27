@@ -264,6 +264,42 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
         XCTAssertTrue(shouldSendGhosttyText("你"))
     }
 
+    func testCtrlLetterDoesNotAttachPrintableTextToGhosttyKeyEvent() {
+        let event = NSEvent.keyEvent(
+            with: .keyDown,
+            location: .zero,
+            modifierFlags: [.control],
+            timestamp: 0,
+            windowNumber: 0,
+            context: nil,
+            characters: "\u{19}",
+            charactersIgnoringModifiers: "y",
+            isARepeat: false,
+            keyCode: UInt16(kVK_ANSI_Y)
+        )
+
+        XCTAssertNotNil(event)
+        XCTAssertNil(textForGhosttyKeyEvent(event!))
+    }
+
+    func testCtrlReturnDoesNotAttachTextToGhosttyKeyEvent() {
+        let event = NSEvent.keyEvent(
+            with: .keyDown,
+            location: .zero,
+            modifierFlags: [.control],
+            timestamp: 0,
+            windowNumber: 0,
+            context: nil,
+            characters: "\r",
+            charactersIgnoringModifiers: "\r",
+            isARepeat: false,
+            keyCode: UInt16(kVK_Return)
+        )
+
+        XCTAssertNotNil(event)
+        XCTAssertNil(textForGhosttyKeyEvent(event!))
+    }
+
     func testConsumedBindingWithoutActiveSequencesAttemptsMenu() {
         XCTAssertTrue(
             ghosttyShouldAttemptMenu(

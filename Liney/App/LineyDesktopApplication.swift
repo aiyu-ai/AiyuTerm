@@ -190,6 +190,10 @@ public final class LineyDesktopApplication: NSObject {
         store.selectPreviousTab(in: workspace)
     }
 
+    func insertQuickCommand(_ preset: QuickCommandPreset) {
+        activeStore?.insertQuickCommand(preset)
+    }
+
     func splitFocusedPane(axis: PaneSplitAxis) {
         guard let store = activeStore,
               let workspace = store.selectedWorkspace,
