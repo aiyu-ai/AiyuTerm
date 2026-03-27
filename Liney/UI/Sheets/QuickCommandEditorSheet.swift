@@ -24,23 +24,33 @@ struct QuickCommandEditorSheet: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            topBar
+        ZStack {
+            LineyTheme.appBackground
 
-            HStack(spacing: 0) {
-                sidebar
+            VStack(spacing: 0) {
+                topBar
 
-                Divider()
+                HStack(spacing: 0) {
+                    sidebar
 
-                detailPane
+                    Divider()
+
+                    detailPane
+                }
+
+                footer
             }
-
-            Divider()
-
-            footer
         }
-        .background(LineyTheme.panelBackground)
         .frame(width: 900, height: 590)
+        .padding(12)
+        .background(
+            LineyTheme.panelBackground,
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(LineyTheme.border, lineWidth: 1)
+        )
         .task {
             draftCommands = store.quickCommandPresets
             syncSelection()
@@ -187,9 +197,8 @@ struct QuickCommandEditorSheet: View {
                     }
                     .padding(.vertical, 2)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
-
-            Spacer(minLength: 0)
         }
         .padding(16)
         .frame(width: 284)
