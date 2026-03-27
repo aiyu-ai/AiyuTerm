@@ -214,26 +214,23 @@ private struct WorkspaceTabButton: View {
     }
 
     var body: some View {
-        Button(action: onSelect) {
-            HStack(spacing: 8) {
-                Text(title)
-                    .font(.system(size: 11, weight: .semibold))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Text("\(paneCount)")
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                    .foregroundStyle(isSelected ? LineyTheme.accent : LineyTheme.mutedText)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2)
-                    .background(LineyTheme.subtleFill, in: Capsule())
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, 12)
-            .padding(.trailing, canClose ? 34 : 12)
-            .padding(.vertical, 8)
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text("\(paneCount)")
+                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .foregroundStyle(isSelected ? LineyTheme.accent : LineyTheme.mutedText)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(LineyTheme.subtleFill, in: Capsule())
         }
-        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.leading, 12)
+        .padding(.trailing, canClose ? 34 : 12)
+        .padding(.vertical, 8)
         .frame(width: WorkspaceTabSizing.width(for: title, paneCount: paneCount, canClose: canClose))
         .foregroundStyle(labelColor)
         .background(
@@ -272,6 +269,11 @@ private struct WorkspaceTabButton: View {
         .offset(y: isHovered ? -1 : 0)
         .animation(.easeInOut(duration: 0.12), value: isHovered)
         .animation(.easeInOut(duration: 0.12), value: isSelected)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(title))
+        .accessibilityValue(Text("\(paneCount) panes"))
+        .accessibilityAddTraits(.isButton)
+        .onTapGesture(perform: onSelect)
         .onHover { hovering in
             isHovered = hovering
             if !hovering {
