@@ -983,7 +983,12 @@ final class WorkspaceStore: ObservableObject {
         }
 
         workspace.sessionController.focus(targetPaneID)
-        session.insertText(preset.command + (preset.submitsReturn ? "\r" : ""))
+        switch lineyQuickCommandDispatch(for: preset) {
+        case .insert(let text):
+            session.insertText(text)
+        case .run(let command):
+            session.sendShellCommand(command)
+        }
         recordQuickCommandUse(preset.id)
         receive(
             .statusMessage(

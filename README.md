@@ -43,8 +43,8 @@ Download the latest signed `.dmg` from GitHub Releases:
 
 ## Requirements
 
-- macOS 15.6 or later
-- Apple Silicon Mac
+- macOS 14.6 or later
+- Universal build: Apple Silicon and Intel Macs are both supported
 
 ## Links
 
@@ -56,6 +56,10 @@ Download the latest signed `.dmg` from GitHub Releases:
 ## For Developers
 
 Development setup, build commands, testing, repo layout, and release docs live in [`DEVELOP.md`](./DEVELOP.md).
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=wuwenrui/liney&type=Date)](https://www.star-history.com/#wuwenrui/liney&Date)
 
 ## License
 

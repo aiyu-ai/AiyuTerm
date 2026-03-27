@@ -205,3 +205,12 @@ func lineyQuickCommandMatch(for event: NSEvent, in settings: AppSettings) -> Qui
     guard let recordedShortcut = StoredShortcut.from(event: event) else { return nil }
     return settings.quickCommandPresets.first(where: { $0.shortcut == recordedShortcut })
 }
+
+enum QuickCommandDispatch: Equatable {
+    case insert(String)
+    case run(String)
+}
+
+func lineyQuickCommandDispatch(for preset: QuickCommandPreset) -> QuickCommandDispatch {
+    preset.submitsReturn ? .run(preset.command) : .insert(preset.command)
+}

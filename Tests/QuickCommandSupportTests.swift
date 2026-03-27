@@ -170,6 +170,26 @@ final class QuickCommandSupportTests: XCTestCase {
         XCTAssertEqual(match?.submitsReturn, true)
     }
 
+    func testQuickCommandDispatchUsesRunOnlyWhenAutoReturnIsEnabled() {
+        let insertPreset = QuickCommandPreset(
+            id: "insert",
+            title: "Insert",
+            command: "codex",
+            category: .codex,
+            submitsReturn: false
+        )
+        let runPreset = QuickCommandPreset(
+            id: "run",
+            title: "Run",
+            command: "codex",
+            category: .codex,
+            submitsReturn: true
+        )
+
+        XCTAssertEqual(lineyQuickCommandDispatch(for: insertPreset), .insert("codex"))
+        XCTAssertEqual(lineyQuickCommandDispatch(for: runPreset), .run("codex"))
+    }
+
     func testSettingsEncodingPreservesQuickCommandShortcutAndAutoReturn() throws {
         let settings = AppSettings(
             quickCommandPresets: [
