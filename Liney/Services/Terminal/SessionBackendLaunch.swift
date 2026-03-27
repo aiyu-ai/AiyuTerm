@@ -18,6 +18,7 @@ struct TerminalLaunchConfiguration: Hashable {
     var environment: [String: String]
     var command: TerminalCommandDefinition
     var backendConfiguration: SessionBackendConfiguration
+    var initialInput: String?
 
     var ghosttyCommand: String {
         ([command.executablePath] + command.arguments)
@@ -47,7 +48,8 @@ extension SessionBackendConfiguration {
                 workingDirectory: preferredWorkingDirectory,
                 environment: prepared.environment,
                 command: prepared.command,
-                backendConfiguration: self
+                backendConfiguration: self,
+                initialInput: nil
             )
 
         case .ssh:
@@ -67,7 +69,8 @@ extension SessionBackendConfiguration {
                     arguments: configuration.sshArguments(),
                     displayName: configuration.destination
                 ),
-                backendConfiguration: self
+                backendConfiguration: self,
+                initialInput: configuration.initialInput
             )
 
         case .agent:
@@ -95,7 +98,8 @@ extension SessionBackendConfiguration {
                 workingDirectory: configuration.workingDirectory ?? preferredWorkingDirectory,
                 environment: prepared.environment,
                 command: prepared.command,
-                backendConfiguration: self
+                backendConfiguration: self,
+                initialInput: nil
             )
         }
     }
@@ -106,6 +110,10 @@ private extension SSHSessionConfiguration {
         // Dedicated SSH panes are interactive terminal sessions, so always
         // force a remote PTY to keep line editing and arrow keys working.
         var arguments: [String] = ["-tt"]
+        arguments.append(contentsOf: [
+            "-o", "SetEnv COLORTERM=truecolor",
+            "-o", "SendEnv TERM_PROGRAM TERM_PROGRAM_VERSION",
+        ])
         if let port {
             arguments.append(contentsOf: ["-p", String(port)])
         }
@@ -119,6 +127,15 @@ private extension SSHSessionConfiguration {
         return arguments
     }
 
+    var initialInput: String? {
+        guard normalizedRemoteCommand() == nil,
+              let remoteWorkingDirectoryCommand = normalizedRemoteWorkingDirectoryCommand() else {
+            return nil
+        }
+
+        return "\(remoteWorkingDirectoryCommand)\n"
+    }
+
     func remoteInvocation() -> String? {
         let remoteShellCommand = normalizedRemoteCommand()
         let remoteWorkingDirectoryCommand = normalizedRemoteWorkingDirectoryCommand()
@@ -126,8 +143,8 @@ private extension SSHSessionConfiguration {
         switch (remoteWorkingDirectoryCommand, remoteShellCommand) {
         case (.none, .none):
             return nil
-        case let (.some(directoryCommand), .none):
-            return "\(directoryCommand) && exec ${SHELL:-/bin/zsh} -l"
+        case (.some, .none):
+            return nil
         case let (.none, .some(shellCommand)):
             return shellCommand
         case let (.some(directoryCommand), .some(shellCommand)):

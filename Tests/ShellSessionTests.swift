@@ -36,6 +36,7 @@ final class ShellSessionTests: XCTestCase {
         XCTAssertEqual(prepared.environment["TERM"], "xterm-ghostty")
         XCTAssertEqual(prepared.environment["TERMINFO"], terminfo.path)
         XCTAssertEqual(prepared.environment["GHOSTTY_RESOURCES_DIR"], ghosttyResources.path)
+        XCTAssertEqual(prepared.environment["GHOSTTY_SHELL_FEATURES"], "ssh-env")
         XCTAssertEqual(prepared.environment["GHOSTTY_ZSH_ZDOTDIR"], "/tmp/original-zdotdir")
         XCTAssertEqual(prepared.environment["ZDOTDIR"], zshIntegration.path)
     }
@@ -64,6 +65,7 @@ final class ShellSessionTests: XCTestCase {
         XCTAssertEqual(prepared.environment["TERM"], "xterm-ghostty")
         XCTAssertEqual(prepared.environment["TERMINFO"], terminfo.path)
         XCTAssertEqual(prepared.environment["GHOSTTY_RESOURCES_DIR"], ghosttyResources.path)
+        XCTAssertEqual(prepared.environment["GHOSTTY_SHELL_FEATURES"], "ssh-env")
         XCTAssertEqual(
             prepared.environment["GHOSTTY_SHELL_INTEGRATION_XDG_DIR"],
             ghosttyResources.appendingPathComponent("shell-integration", isDirectory: true).path
@@ -76,6 +78,25 @@ final class ShellSessionTests: XCTestCase {
                 "/usr/share",
             ].joined(separator: ":")
         )
+    }
+
+    func testGhosttyShellIntegrationPreservesExistingShellFeaturesWhileAppendingSSHEnv() {
+        let prepared = LineyGhosttyShellIntegration.prepare(
+            command: TerminalCommandDefinition(
+                executablePath: "/bin/zsh",
+                arguments: ["-l"],
+                displayName: "zsh"
+            ),
+            environment: [
+                "GHOSTTY_SHELL_FEATURES": "cursor,title",
+            ],
+            resourcePaths: LineyGhosttyResourcePaths(
+                ghosttyResourcesDirectory: "/tmp/ghostty",
+                terminfoDirectory: "/tmp/terminfo"
+            )
+        )
+
+        XCTAssertEqual(prepared.environment["GHOSTTY_SHELL_FEATURES"], "cursor,title,ssh-env")
     }
 
     func testGhosttyBootstrapPublishesBundledResourcesDirectory() {
@@ -170,12 +191,44 @@ final class ShellSessionTests: XCTestCase {
             launchConfiguration.command.arguments,
             [
                 "-tt",
+                "-o", "SetEnv COLORTERM=truecolor",
+                "-o", "SendEnv TERM_PROGRAM TERM_PROGRAM_VERSION",
                 "-p", "2222",
                 "-i", "~/.ssh/id_ed25519",
                 "dev@example.com",
-                "cd '/srv/app' && exec ${SHELL:-/bin/zsh} -l",
             ]
         )
+        XCTAssertEqual(launchConfiguration.initialInput, "cd '/srv/app'\n")
+    }
+
+    func testSSHBackendPreservesExplicitRemoteCommandInvocation() {
+        let configuration = SessionBackendConfiguration.ssh(
+            SSHSessionConfiguration(
+                host: "example.com",
+                user: "dev",
+                port: nil,
+                identityFilePath: nil,
+                remoteWorkingDirectory: "/srv/app",
+                remoteCommand: "tmux attach || tmux"
+            )
+        )
+
+        let launchConfiguration = configuration.makeLaunchConfiguration(
+            preferredWorkingDirectory: "/tmp/liney-ssh",
+            baseEnvironment: [:]
+        )
+
+        XCTAssertEqual(
+            launchConfiguration.command.arguments,
+            [
+                "-tt",
+                "-o", "SetEnv COLORTERM=truecolor",
+                "-o", "SendEnv TERM_PROGRAM TERM_PROGRAM_VERSION",
+                "dev@example.com",
+                "cd '/srv/app' && tmux attach || tmux",
+            ]
+        )
+        XCTAssertNil(launchConfiguration.initialInput)
     }
 
     func testStartIfNeededOnlyAutoStartsIdleSession() async {

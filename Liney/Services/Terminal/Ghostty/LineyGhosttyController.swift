@@ -97,6 +97,12 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
         launchConfiguration = configuration
     }
 
+    func applyConfig(_ config: ghostty_config_t) {
+        guard let surface = currentSurface else { return }
+        ghostty_surface_update_config(surface, config)
+        terminalView.syncSurfaceMetrics()
+    }
+
     func startManagedSessionIfNeeded() {
         terminalView.ensureSurface(runtime: LineyGhosttyRuntime.shared, launchConfiguration: launchConfiguration)
         terminalView.syncSurfaceMetrics()
@@ -781,12 +787,17 @@ private final class LineyGhosttySurfaceView: NSView {
             return
         }
 
+        let (translationEvent, translationMods) = translationState(for: event, on: surface)
+
         if shouldPreferRawKeyEvent(for: event) {
-            sendRawKeyEvent(event, on: surface)
+            sendRawKeyEvent(
+                event,
+                on: surface,
+                translationEvent: translationEvent,
+                translationMods: translationMods
+            )
             return
         }
-
-        let (translationEvent, translationMods) = translationState(for: event, on: surface)
 
         let textModifiers = event.modifierFlags.intersection([.command, .control])
         if textModifiers.isEmpty {
@@ -1113,20 +1124,19 @@ private final class LineyGhosttySurfaceView: NSView {
         configuration.scale_factor = Double(window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2)
         configuration.context = GHOSTTY_SURFACE_CONTEXT_SPLIT
         configuration.wait_after_command = false
-        if let terminalFontSize = AppSettingsPersistence().load().terminalFontSize,
-           terminalFontSize > 0 {
-            configuration.font_size = Float(terminalFontSize)
-        }
 
         let workingDirectory = strdup(launchConfiguration.workingDirectory)
         let command = strdup(launchConfiguration.ghosttyCommand)
+        let initialInput = launchConfiguration.initialInput.flatMap { strdup($0) }
         defer {
             free(workingDirectory)
             free(command)
+            free(initialInput)
         }
 
         configuration.working_directory = workingDirectory.map { UnsafePointer($0) }
         configuration.command = command.map { UnsafePointer($0) }
+        configuration.initial_input = initialInput.map { UnsafePointer($0) }
 
         let envStorage = launchConfiguration.environment
             .sorted { $0.key < $1.key }
@@ -1434,6 +1444,11 @@ final class LineyGhosttyControllerRegistry {
     func controller(for address: UInt?) -> LineyGhosttyController? {
         guard let address else { return nil }
         return controllers[address]?.controller
+    }
+
+    func liveControllers() -> [LineyGhosttyController] {
+        controllers = controllers.filter { $0.value.controller != nil }
+        return controllers.values.compactMap(\.controller)
     }
 
     func unregister(_ token: UnsafeMutableRawPointer) {

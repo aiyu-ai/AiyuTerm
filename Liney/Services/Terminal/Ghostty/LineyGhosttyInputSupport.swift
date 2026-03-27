@@ -108,7 +108,13 @@ enum LineyGhosttyTextInputCommandAction: Equatable {
 func lineyGhosttyShouldEnableIMEDebugLogging(
     environment: [String: String]
 ) -> Bool {
-    false
+    guard let rawValue = environment["LINEY_DEBUG_IME"]?
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+        .lowercased() else {
+        return true
+    }
+
+    return rawValue != "0" && rawValue != "false" && rawValue != "no"
 }
 
 struct LineyGhosttyMarkedTextState: Equatable {

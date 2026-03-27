@@ -139,6 +139,14 @@ final class WorkspaceStore: ObservableObject {
         appSettings.quickCommandPresets
     }
 
+    var quickCommandCategories: [QuickCommandCategory] {
+        appSettings.quickCommandCategories
+    }
+
+    var quickCommandCategoryMap: [String: QuickCommandCategory] {
+        QuickCommandCatalog.categoryMap(quickCommandCategories)
+    }
+
     var quitConfirmationSessionCount: Int {
         workspaces.reduce(0) { $0 + $1.quitConfirmationSessionCount }
     }
@@ -737,6 +745,7 @@ final class WorkspaceStore: ObservableObject {
             autoDownloadUpdates: settings.autoDownloadUpdates,
             systemNotificationsEnabled: settings.systemNotificationsEnabled,
             showArchivedWorkspaces: settings.showArchivedWorkspaces,
+            terminalFontFamily: settings.terminalFontFamily,
             terminalFontSize: settings.terminalFontSize,
             sidebarShowsSecondaryLabels: settings.sidebarShowsSecondaryLabels,
             sidebarShowsWorkspaceBadges: settings.sidebarShowsWorkspaceBadges,
@@ -745,6 +754,7 @@ final class WorkspaceStore: ObservableObject {
             defaultLocalTerminalIcon: settings.defaultLocalTerminalIcon,
             defaultWorktreeIcon: settings.defaultWorktreeIcon,
             preferredExternalEditor: settings.preferredExternalEditor,
+            quickCommandCategories: settings.quickCommandCategories,
             quickCommandPresets: settings.quickCommandPresets,
             quickCommandRecentIDs: settings.quickCommandRecentIDs,
             releaseChannel: settings.releaseChannel,
@@ -951,10 +961,15 @@ final class WorkspaceStore: ObservableObject {
         openWorkspace(workspace, in: editor)
     }
 
-    func updateQuickCommandPresets(_ commands: [QuickCommandPreset]) {
+    func updateQuickCommands(
+        commands: [QuickCommandPreset],
+        categories: [QuickCommandCategory]
+    ) {
         var settings = appSettings
+        settings.quickCommandCategories = QuickCommandCatalog.normalizedCategories(categories)
         settings.quickCommandPresets = QuickCommandCatalog.normalizedCommands(
             commands,
+            categories: settings.quickCommandCategories,
             reservedShortcuts: LineyKeyboardShortcuts.effectiveShortcuts(in: settings)
         )
         settings.quickCommandRecentIDs = QuickCommandCatalog.normalizedRecentCommandIDs(
@@ -965,8 +980,15 @@ final class WorkspaceStore: ObservableObject {
         persistAppSettings()
     }
 
+    func updateQuickCommandPresets(_ commands: [QuickCommandPreset]) {
+        updateQuickCommands(commands: commands, categories: appSettings.quickCommandCategories)
+    }
+
     func resetQuickCommandPresetsToDefaults() {
-        updateQuickCommandPresets(QuickCommandCatalog.defaultCommands)
+        updateQuickCommands(
+            commands: QuickCommandCatalog.defaultCommands,
+            categories: QuickCommandCatalog.defaultCategories
+        )
     }
 
     func insertQuickCommand(_ preset: QuickCommandPreset) {

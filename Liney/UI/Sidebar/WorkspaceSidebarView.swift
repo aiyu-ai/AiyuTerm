@@ -1386,15 +1386,17 @@ private struct WorktreeRowContent: View {
 
     private let iconSize: CGFloat = 16
     private let leadingInset: CGFloat = 5
+    private let iconColumnWidth: CGFloat = 24
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             SidebarItemIconView(
                 icon: icon,
                 size: iconSize,
                 usesCircularShape: true,
                 isActive: workspace.activeWorktreePath == worktree.path
             )
+            .frame(width: iconColumnWidth, alignment: .leading)
             Text(worktree.displayName)
                 .font(.system(size: 10, weight: .medium))
                 .lineLimit(1)
