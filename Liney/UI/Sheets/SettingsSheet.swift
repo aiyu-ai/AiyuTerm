@@ -279,6 +279,28 @@ struct SettingsSheet: View {
                 .padding(.top, 8)
             }
 
+            GroupBox(localized("settings.general.terminal.group")) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Toggle(localized("settings.general.terminal.useCustomFontSize"), isOn: terminalFontSizeEnabledBinding)
+
+                    if appSettings.terminalFontSize != nil {
+                        HStack {
+                            Text(localized("settings.general.terminal.fontSize"))
+                            Spacer()
+                            Text("\(Int((appSettings.terminalFontSize ?? 13).rounded())) pt")
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Slider(value: terminalFontSizeBinding, in: 10...24, step: 1)
+                    }
+
+                    Text(localized("settings.general.terminal.fontSizeHint"))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.top, 8)
+            }
+
             GroupBox(localized("settings.general.quickCommands.group")) {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(localized("settings.general.quickCommands.description"))
@@ -761,6 +783,26 @@ struct SettingsSheet: View {
                 guard let newShortcut else { return }
                 appSettings.hotKeyWindowShortcut = newShortcut
             }
+        )
+    }
+
+    private var terminalFontSizeEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { appSettings.terminalFontSize != nil },
+            set: { enabled in
+                if enabled {
+                    appSettings.terminalFontSize = appSettings.terminalFontSize ?? 13
+                } else {
+                    appSettings.terminalFontSize = nil
+                }
+            }
+        )
+    }
+
+    private var terminalFontSizeBinding: Binding<Double> {
+        Binding(
+            get: { appSettings.terminalFontSize ?? 13 },
+            set: { appSettings.terminalFontSize = min(max($0, 10), 24) }
         )
     }
 }
