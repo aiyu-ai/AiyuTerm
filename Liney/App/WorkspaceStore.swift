@@ -351,7 +351,7 @@ final class WorkspaceStore: ObservableObject {
                 items.append(
                     CommandPaletteItem(
                         id: "workspace-selected-hapi:\(selectedWorkspace.id.uuidString)",
-                        title: "Launch HAPI in \(selectedWorkspace.name)",
+                        title: localizedFormat("main.hapi.commandPalette.launchInFormat", selectedWorkspace.name),
                         subtitle: selectedWorkspace.activeWorktreePath,
                         group: .sessions,
                         keywords: ["hapi", "remote", "quick start", "phone", "claude"],
@@ -362,7 +362,7 @@ final class WorkspaceStore: ObservableObject {
                 items.append(
                     CommandPaletteItem(
                         id: "workspace-selected-hapi-hub:\(selectedWorkspace.id.uuidString)",
-                        title: "Start HAPI Hub in \(selectedWorkspace.name)",
+                        title: localizedFormat("main.hapi.commandPalette.startHubInFormat", selectedWorkspace.name),
                         subtitle: "hapi hub --relay",
                         group: .automation,
                         keywords: ["hapi", "hub", "relay", "remote", "quick start"],
@@ -497,7 +497,7 @@ final class WorkspaceStore: ObservableObject {
                 items.append(
                     CommandPaletteItem(
                         id: "workspace-hapi:\(workspace.id.uuidString)",
-                        title: "Launch HAPI in \(workspace.name)",
+                        title: localizedFormat("main.hapi.commandPalette.launchInFormat", workspace.name),
                         subtitle: workspace.activeWorktreePath,
                         group: .sessions,
                         keywords: ["hapi", "remote", "quick start", "phone", workspace.name],
@@ -508,7 +508,7 @@ final class WorkspaceStore: ObservableObject {
                 items.append(
                     CommandPaletteItem(
                         id: "workspace-hapi-hub:\(workspace.id.uuidString)",
-                        title: "Start HAPI Hub in \(workspace.name)",
+                        title: localizedFormat("main.hapi.commandPalette.startHubInFormat", workspace.name),
                         subtitle: "hapi hub --relay",
                         group: .automation,
                         keywords: ["hapi", "hub", "relay", "remote", workspace.name],
@@ -1324,11 +1324,11 @@ final class WorkspaceStore: ObservableObject {
 
     func performPrimaryHAPIAction() {
         guard let installation = availableHAPIInstallation else {
-            receive(.statusMessage("Install hapi to enable this shortcut.", .warning, deliverSystemNotification: false))
+            receive(.statusMessage(localized("status.hapi.installToEnable"), .warning, deliverSystemNotification: false))
             return
         }
         guard let workspace = selectedWorkspace else {
-            receive(.statusMessage("Select a workspace before using HAPI.", .warning, deliverSystemNotification: false))
+            receive(.statusMessage(localized("status.hapi.selectWorkspace"), .warning, deliverSystemNotification: false))
             return
         }
 
@@ -1357,7 +1357,7 @@ final class WorkspaceStore: ObservableObject {
 
     private func launchHAPISession(in workspace: WorkspaceModel) {
         guard let installation = availableHAPIInstallation else {
-            receive(.statusMessage("Install hapi to launch it from Liney.", .warning, deliverSystemNotification: false))
+            receive(.statusMessage(localized("status.hapi.installToLaunch"), .warning, deliverSystemNotification: false))
             return
         }
 
@@ -1377,7 +1377,7 @@ final class WorkspaceStore: ObservableObject {
         recordActivity(
             in: workspace,
             kind: .agent,
-            title: "Launched HAPI",
+            title: localized("activity.hapi.launched"),
             detail: workspace.activeWorktreePath,
             worktreePath: workspace.activeWorktreePath,
             replayAction: .createSession(
@@ -1389,7 +1389,7 @@ final class WorkspaceStore: ObservableObject {
 
     private func startHAPIHub(in workspace: WorkspaceModel) {
         guard let installation = availableHAPIInstallation else {
-            receive(.statusMessage("Install hapi to start the hub from Liney.", .warning, deliverSystemNotification: false))
+            receive(.statusMessage(localized("status.hapi.installToStartHub"), .warning, deliverSystemNotification: false))
             return
         }
 
@@ -1410,7 +1410,7 @@ final class WorkspaceStore: ObservableObject {
         recordActivity(
             in: workspace,
             kind: .command,
-            title: "Started HAPI hub",
+            title: localized("activity.hapi.startedHub"),
             detail: "hapi hub --relay",
             worktreePath: workspace.activeWorktreePath,
             replayAction: .createSession(

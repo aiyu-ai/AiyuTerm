@@ -22,6 +22,14 @@ final class LocalizationManagerTests: XCTestCase {
         XCTAssertEqual(language, .simplifiedChinese)
     }
 
+    func testAutomaticPrefersFirstSupportedLanguage() {
+        let language = LocalizationManager.resolveAutomaticLanguage(
+            preferredLanguages: ["en-US", "zh-Hans-US"]
+        )
+
+        XCTAssertEqual(language, .english)
+    }
+
     func testAutomaticFallsBackToEnglishForUnsupportedLanguages() {
         let language = LocalizationManager.resolveAutomaticLanguage(
             preferredLanguages: ["ja-JP"]
@@ -42,6 +50,7 @@ final class LocalizationManagerTests: XCTestCase {
         XCTAssertEqual(L10nTable.string(for: "settings.button.cancel", language: .english), "Cancel")
         XCTAssertEqual(L10nTable.string(for: "settings.general.language.title", language: .english), "Language")
         XCTAssertEqual(L10nTable.string(for: "settings.general.language.appliesImmediately", language: .english), "Changes apply immediately throughout Liney.")
+        XCTAssertEqual(L10nTable.string(for: "main.hapi.launchCurrentProject", language: .english), "Launch HAPI in Current Project")
         XCTAssertEqual(L10nTable.string(for: "settings.general.terminal.group", language: .english), "Terminal")
         XCTAssertEqual(L10nTable.string(for: "settings.general.terminal.useCustomFontSize", language: .english), "Use custom terminal font size")
         XCTAssertEqual(L10nTable.string(for: "settings.sidebar.visibility.group", language: .english), "Sidebar")
@@ -75,6 +84,7 @@ final class LocalizationManagerTests: XCTestCase {
         XCTAssertEqual(L10nTable.string(for: "settings.button.cancel", language: .simplifiedChinese), "取消")
         XCTAssertEqual(L10nTable.string(for: "settings.general.language.title", language: .simplifiedChinese), "语言")
         XCTAssertEqual(L10nTable.string(for: "settings.general.language.appliesImmediately", language: .simplifiedChinese), "更改会立即在 Liney 中生效。")
+        XCTAssertEqual(L10nTable.string(for: "main.hapi.launchCurrentProject", language: .simplifiedChinese), "在当前项目中启动 HAPI")
         XCTAssertEqual(L10nTable.string(for: "settings.general.terminal.group", language: .simplifiedChinese), "终端")
         XCTAssertEqual(L10nTable.string(for: "settings.general.terminal.useCustomFontSize", language: .simplifiedChinese), "使用自定义终端字号")
         XCTAssertEqual(L10nTable.string(for: "settings.sidebar.visibility.group", language: .simplifiedChinese), "侧边栏")

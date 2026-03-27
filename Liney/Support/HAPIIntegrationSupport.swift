@@ -7,6 +7,14 @@
 
 import Foundation
 
+private func lineyLocalizedHAPIString(_ key: String) -> String {
+    LocalizationManager.shared.string(key)
+}
+
+private func lineyLocalizedHAPIFormat(_ key: String, _ arguments: CVarArg...) -> String {
+    l10nFormat(lineyLocalizedHAPIString(key), locale: Locale.current, arguments: arguments)
+}
+
 enum HAPIPrimaryAction: Hashable {
     case launchSession
     case startHub
@@ -64,29 +72,29 @@ struct HAPIInstallationStatus: Hashable {
     var primaryActionTitle: String {
         switch primaryAction {
         case .launchSession:
-            return "Launch HAPI in Current Project"
+            return lineyLocalizedHAPIString("main.hapi.launchCurrentProject")
         case .startHub:
-            return "Start HAPI Hub"
+            return lineyLocalizedHAPIString("main.hapi.startHub")
         }
     }
 
     var primaryActionHelpText: String {
         switch primaryAction {
         case .launchSession:
-            return "Launch HAPI in the current worktree"
+            return lineyLocalizedHAPIString("main.hapi.help.launch")
         case .startHub:
-            return "Quick Start step 1: start `hapi hub --relay`"
+            return lineyLocalizedHAPIString("main.hapi.help.startHub")
         }
     }
 
     var menuStatusText: String {
         if authStatus.hasToken {
             if let apiURL = authStatus.apiURL {
-                return "Configured for \(apiURL)"
+                return lineyLocalizedHAPIFormat("main.hapi.status.configuredForFormat", apiURL)
             }
-            return "HAPI is configured"
+            return lineyLocalizedHAPIString("main.hapi.status.configured")
         }
-        return "Quick Start: start the hub first"
+        return lineyLocalizedHAPIString("main.hapi.status.startHubFirst")
     }
 }
 

@@ -666,8 +666,6 @@
 				kind = exactVersion;
 				version = 9.8.0;
 			};
-			traits = (
-			);
 		};
 		7F0A1B2C3D4E5F6071829303 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
 			isa = XCRemoteSwiftPackageReference;

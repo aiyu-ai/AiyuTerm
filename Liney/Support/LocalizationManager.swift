@@ -24,6 +24,9 @@ final class LocalizationManager: ObservableObject {
     static func resolveAutomaticLanguage(preferredLanguages: [String] = Locale.preferredLanguages) -> AppLanguage {
         for identifier in preferredLanguages {
             let normalized = identifier.replacingOccurrences(of: "_", with: "-").lowercased()
+            if normalized == "en" || normalized.hasPrefix("en-") {
+                return .english
+            }
             if normalized == "zh" || normalized.hasPrefix("zh-") {
                 return .simplifiedChinese
             }

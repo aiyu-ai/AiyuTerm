@@ -61,7 +61,7 @@ struct MainWindowView: View {
     }
 
     private var hapiHelpText: String {
-        availableHAPIInstallation?.primaryActionHelpText ?? "Use HAPI in the current workspace"
+        availableHAPIInstallation?.primaryActionHelpText ?? localized("main.hapi.defaultHelpText")
     }
 
     private var sleepPreventionIconName: String {
@@ -242,8 +242,8 @@ struct MainWindowView: View {
                         isTrailingDisabled: !hasSelectedWorkspace,
                         leadingAccessibilityLabel: hapiInstallation.primaryActionTitle,
                         leadingHelp: hapiHelpText,
-                        trailingAccessibilityLabel: "HAPI Actions",
-                        trailingHelp: "HAPI Quick Start and Session Actions",
+                        trailingAccessibilityLabel: localized("main.hapi.actions"),
+                        trailingHelp: localized("main.hapi.quickStartActions"),
                         leadingContent: {
                             HStack(spacing: 6) {
                                 ToolbarFeatureIcon(
@@ -644,6 +644,10 @@ struct MainWindowView: View {
             menu.addItem(.separator())
         }
 
+        if !menu.items.isEmpty, menu.items.last?.isSeparatorItem == false {
+            menu.addItem(.separator())
+        }
+
         menu.addActionItem(title: localized("main.quickCommands.edit"), imageSystemName: "slider.horizontal.3") {
             store.presentQuickCommandEditor()
         }
@@ -690,21 +694,21 @@ struct MainWindowView: View {
         }
 
         if installation.primaryAction != .launchSession {
-            menu.addActionItem(title: "Launch HAPI in Current Project", imageSystemName: "play.circle") {
+            menu.addActionItem(title: localized("main.hapi.launchCurrentProject"), imageSystemName: "play.circle") {
                 guard let workspace = store.selectedWorkspace else { return }
                 store.launchHAPISession(workspaceID: workspace.id)
             }
         }
 
         if installation.primaryAction != .startHub {
-            menu.addActionItem(title: "Start HAPI Hub (--relay)", imageSystemName: "dot.radiowaves.left.and.right") {
+            menu.addActionItem(title: localized("main.hapi.startHubRelay"), imageSystemName: "dot.radiowaves.left.and.right") {
                 guard let workspace = store.selectedWorkspace else { return }
                 store.startHAPIHub(workspaceID: workspace.id)
             }
         }
 
         menu.addItem(.separator())
-        menu.addActionItem(title: "Open HAPI Quick Start", imageSystemName: "book") {
+        menu.addActionItem(title: localized("main.hapi.openQuickStart"), imageSystemName: "book") {
             store.openHAPIQuickStart()
         }
 

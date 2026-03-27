@@ -102,6 +102,26 @@ final class ShellSessionTests: XCTestCase {
         XCTAssertEqual(configuration, .legacyDefault)
     }
 
+    func testAugmentedExecutablePathPrependsCommonUserAndHomebrewDirectories() {
+        XCTAssertEqual(
+            lineyAugmentedExecutablePath("/usr/bin:/bin", homeDirectory: "/Users/tester"),
+            [
+                "/Users/tester/.local/bin",
+                "/Users/tester/.cargo/bin",
+                "/Users/tester/.bun/bin",
+                "/Users/tester/.deno/bin",
+                "/opt/homebrew/bin",
+                "/opt/homebrew/sbin",
+                "/usr/local/bin",
+                "/usr/local/sbin",
+                "/usr/bin",
+                "/bin",
+                "/usr/sbin",
+                "/sbin",
+            ].joined(separator: ":")
+        )
+    }
+
     func testLocalShellBackendResolvesLegacyDefaultToCurrentLoginShell() {
         let backend = SessionBackendConfiguration.local(
             shellPath: LocalShellSessionConfiguration.legacyDefault.shellPath,

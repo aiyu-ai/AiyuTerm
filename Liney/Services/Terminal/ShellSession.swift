@@ -10,6 +10,49 @@ import Combine
 import Darwin
 import Foundation
 
+func lineyAugmentedExecutablePath(
+    _ existingPath: String?,
+    homeDirectory: String = NSHomeDirectory()
+) -> String {
+    let userDirectories = [
+        ".local/bin",
+        ".cargo/bin",
+        ".bun/bin",
+        ".deno/bin",
+    ].map {
+        URL(fileURLWithPath: homeDirectory, isDirectory: true)
+            .appendingPathComponent($0, isDirectory: true)
+            .path
+    }
+
+    let preferredDirectories = userDirectories + [
+        "/opt/homebrew/bin",
+        "/opt/homebrew/sbin",
+        "/usr/local/bin",
+        "/usr/local/sbin",
+        "/usr/bin",
+        "/bin",
+        "/usr/sbin",
+        "/sbin",
+    ]
+    let existingDirectories = existingPath?
+        .split(separator: ":")
+        .map(String.init) ?? []
+
+    var seen = Set<String>()
+    var orderedDirectories: [String] = []
+
+    for directory in preferredDirectories + existingDirectories {
+        let trimmed = directory.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { continue }
+        if seen.insert(trimmed).inserted {
+            orderedDirectories.append(trimmed)
+        }
+    }
+
+    return orderedDirectories.joined(separator: ":")
+}
+
 enum ShellSessionLifecycle: Equatable {
     case idle
     case starting
@@ -275,6 +318,7 @@ final class ShellSession: ObservableObject, Identifiable {
 
     private static func defaultEnvironment() -> [String: String] {
         var environment = ProcessInfo.processInfo.environment
+        environment["PATH"] = lineyAugmentedExecutablePath(environment["PATH"])
         environment["TERM"] = "xterm-256color"
         environment["COLORTERM"] = "truecolor"
         environment["TERM_PROGRAM"] = "Liney"
