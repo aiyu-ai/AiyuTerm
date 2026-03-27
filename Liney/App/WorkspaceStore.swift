@@ -1323,7 +1323,7 @@ final class WorkspaceStore: ObservableObject {
     }
 
     func performPrimaryHAPIAction() {
-        guard let installation = availableHAPIInstallation else {
+        guard availableHAPIInstallation != nil else {
             receive(.statusMessage(localized("status.hapi.installToEnable"), .warning, deliverSystemNotification: false))
             return
         }
@@ -1331,13 +1331,7 @@ final class WorkspaceStore: ObservableObject {
             receive(.statusMessage(localized("status.hapi.selectWorkspace"), .warning, deliverSystemNotification: false))
             return
         }
-
-        switch installation.primaryAction {
-        case .launchSession:
-            launchHAPISession(in: workspace)
-        case .startHub:
-            startHAPIHub(in: workspace)
-        }
+        launchHAPISession(in: workspace)
     }
 
     func launchHAPISession(workspaceID: UUID) {
@@ -1348,6 +1342,26 @@ final class WorkspaceStore: ObservableObject {
     func startHAPIHub(workspaceID: UUID) {
         guard let workspace = workspaces.first(where: { $0.id == workspaceID }) else { return }
         startHAPIHub(in: workspace)
+    }
+
+    func launchHAPICodex(workspaceID: UUID) {
+        guard let workspace = workspaces.first(where: { $0.id == workspaceID }) else { return }
+        launchHAPISubcommand(in: workspace, name: "HAPI Codex", arguments: ["codex"])
+    }
+
+    func launchHAPICursor(workspaceID: UUID) {
+        guard let workspace = workspaces.first(where: { $0.id == workspaceID }) else { return }
+        launchHAPISubcommand(in: workspace, name: "HAPI Cursor", arguments: ["cursor"])
+    }
+
+    func launchHAPIGemini(workspaceID: UUID) {
+        guard let workspace = workspaces.first(where: { $0.id == workspaceID }) else { return }
+        launchHAPISubcommand(in: workspace, name: "HAPI Gemini", arguments: ["gemini"])
+    }
+
+    func launchHAPIOpenCode(workspaceID: UUID) {
+        guard let workspace = workspaces.first(where: { $0.id == workspaceID }) else { return }
+        launchHAPISubcommand(in: workspace, name: "HAPI OpenCode", arguments: ["opencode"])
     }
 
     func openHAPIQuickStart() {
@@ -1387,6 +1401,42 @@ final class WorkspaceStore: ObservableObject {
         )
     }
 
+    private func launchHAPISubcommand(
+        in workspace: WorkspaceModel,
+        name: String,
+        arguments: [String]
+    ) {
+        guard let installation = availableHAPIInstallation else {
+            receive(.statusMessage(localized("status.hapi.installToLaunch"), .warning, deliverSystemNotification: false))
+            return
+        }
+
+        let configuration = AgentSessionConfiguration(
+            name: name,
+            launchPath: installation.executablePath,
+            arguments: arguments,
+            environment: [:],
+            workingDirectory: workspace.activeWorktreePath
+        )
+
+        createSession(
+            in: workspace,
+            backendConfiguration: .agent(configuration),
+            workingDirectory: workspace.activeWorktreePath
+        )
+        recordActivity(
+            in: workspace,
+            kind: .agent,
+            title: name,
+            detail: ([installation.executablePath] + arguments).joined(separator: " "),
+            worktreePath: workspace.activeWorktreePath,
+            replayAction: .createSession(
+                backendConfiguration: .agent(configuration),
+                workingDirectory: workspace.activeWorktreePath
+            )
+        )
+    }
+
     private func startHAPIHub(in workspace: WorkspaceModel) {
         guard let installation = availableHAPIInstallation else {
             receive(.statusMessage(localized("status.hapi.installToStartHub"), .warning, deliverSystemNotification: false))
@@ -1418,11 +1468,6 @@ final class WorkspaceStore: ObservableObject {
                 workingDirectory: workingDirectory
             )
         )
-
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
-            await refreshHAPIIntegrationStatus()
-        }
     }
 
     @discardableResult

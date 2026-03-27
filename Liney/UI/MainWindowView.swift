@@ -64,6 +64,39 @@ struct MainWindowView: View {
         availableHAPIInstallation?.primaryActionHelpText ?? localized("main.hapi.defaultHelpText")
     }
 
+    @ViewBuilder
+    private func hapiToolbarControl(using installation: HAPIInstallationStatus) -> some View {
+        ToolbarSegmentedControl(
+            backgroundColor: LineyTheme.chromeBackground.opacity(0.96),
+            borderColor: LineyTheme.border,
+            leadingAction: { _ in
+                store.performPrimaryHAPIAction()
+            },
+            trailingAction: { anchorView in
+                present(menu: makeHAPIMenu(using: installation), from: anchorView)
+            },
+            isLeadingDisabled: !hasSelectedWorkspace,
+            isTrailingDisabled: !hasSelectedWorkspace,
+            leadingAccessibilityLabel: installation.primaryActionTitle,
+            leadingHelp: hapiHelpText,
+            trailingAccessibilityLabel: localized("main.hapi.actions"),
+            trailingHelp: localized("main.hapi.quickStartActions"),
+            leadingContent: {
+                HStack(spacing: 6) {
+                    ToolbarFeatureIcon(
+                        systemName: "dot.radiowaves.left.and.right",
+                        tint: LineyTheme.accent
+                    )
+                }
+            },
+            trailingContent: {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(LineyTheme.secondaryText)
+            }
+        )
+    }
+
     private var sleepPreventionIconName: String {
         store.sleepPreventionSession == nil ? "moon.zzz" : "moon.zzz.fill"
     }
@@ -229,35 +262,7 @@ struct MainWindowView: View {
                     )
 
                     if let hapiInstallation = availableHAPIInstallation {
-                        ToolbarSegmentedControl(
-                        backgroundColor: LineyTheme.chromeBackground.opacity(0.96),
-                        borderColor: LineyTheme.border,
-                        leadingAction: { _ in
-                            store.performPrimaryHAPIAction()
-                        },
-                        trailingAction: { anchorView in
-                            present(menu: makeHAPIMenu(using: hapiInstallation), from: anchorView)
-                        },
-                        isLeadingDisabled: !hasSelectedWorkspace,
-                        isTrailingDisabled: !hasSelectedWorkspace,
-                        leadingAccessibilityLabel: hapiInstallation.primaryActionTitle,
-                        leadingHelp: hapiHelpText,
-                        trailingAccessibilityLabel: localized("main.hapi.actions"),
-                        trailingHelp: localized("main.hapi.quickStartActions"),
-                        leadingContent: {
-                            HStack(spacing: 6) {
-                                ToolbarFeatureIcon(
-                                    systemName: "dot.radiowaves.left.and.right",
-                                    tint: hapiInstallation.authStatus.hasToken ? LineyTheme.success : LineyTheme.warning
-                                )
-                            }
-                        },
-                        trailingContent: {
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(LineyTheme.secondaryText)
-                        }
-                        )
+                        hapiToolbarControl(using: hapiInstallation)
                     }
 
                     ToolbarSegmentedControl(
@@ -683,28 +688,34 @@ struct MainWindowView: View {
     private func makeHAPIMenu(using installation: HAPIInstallationStatus) -> NSMenu {
         let menu = NSMenu()
 
-        menu.addDisabledItem(title: installation.menuStatusText)
-        menu.addItem(.separator())
-
         menu.addActionItem(
             title: installation.primaryActionTitle,
-            imageSystemName: installation.primaryAction == .launchSession ? "play.circle" : "dot.radiowaves.left.and.right"
+            imageSystemName: "play.circle"
         ) {
             store.performPrimaryHAPIAction()
         }
 
-        if installation.primaryAction != .launchSession {
-            menu.addActionItem(title: localized("main.hapi.launchCurrentProject"), imageSystemName: "play.circle") {
-                guard let workspace = store.selectedWorkspace else { return }
-                store.launchHAPISession(workspaceID: workspace.id)
-            }
+        menu.addActionItem(title: localized("main.hapi.startHubRelay"), imageSystemName: "dot.radiowaves.left.and.right") {
+            guard let workspace = store.selectedWorkspace else { return }
+            store.startHAPIHub(workspaceID: workspace.id)
         }
 
-        if installation.primaryAction != .startHub {
-            menu.addActionItem(title: localized("main.hapi.startHubRelay"), imageSystemName: "dot.radiowaves.left.and.right") {
-                guard let workspace = store.selectedWorkspace else { return }
-                store.startHAPIHub(workspaceID: workspace.id)
-            }
+        menu.addItem(.separator())
+        menu.addActionItem(title: localized("main.hapi.codex"), imageSystemName: "terminal") {
+            guard let workspace = store.selectedWorkspace else { return }
+            store.launchHAPICodex(workspaceID: workspace.id)
+        }
+        menu.addActionItem(title: localized("main.hapi.cursor"), imageSystemName: "cursorarrow.rays") {
+            guard let workspace = store.selectedWorkspace else { return }
+            store.launchHAPICursor(workspaceID: workspace.id)
+        }
+        menu.addActionItem(title: localized("main.hapi.gemini"), imageSystemName: "sparkles") {
+            guard let workspace = store.selectedWorkspace else { return }
+            store.launchHAPIGemini(workspaceID: workspace.id)
+        }
+        menu.addActionItem(title: localized("main.hapi.opencode"), imageSystemName: "chevron.left.forwardslash.chevron.right") {
+            guard let workspace = store.selectedWorkspace else { return }
+            store.launchHAPIOpenCode(workspaceID: workspace.id)
         }
 
         menu.addItem(.separator())
