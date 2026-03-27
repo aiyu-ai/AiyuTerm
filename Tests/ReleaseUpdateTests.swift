@@ -79,6 +79,7 @@ final class ReleaseUpdateTests: XCTestCase {
         XCTAssertTrue(decoded.sidebarShowsSecondaryLabels)
         XCTAssertTrue(decoded.sidebarShowsWorkspaceBadges)
         XCTAssertTrue(decoded.sidebarShowsWorktreeBadges)
+        XCTAssertNil(decoded.terminalFontFamily)
         XCTAssertNil(decoded.terminalFontSize)
         XCTAssertEqual(decoded.defaultRepositoryIcon, .repositoryDefault)
         XCTAssertEqual(decoded.defaultLocalTerminalIcon, .localTerminalDefault)
@@ -93,5 +94,14 @@ final class ReleaseUpdateTests: XCTestCase {
 
         let decoded = try JSONDecoder().decode(AppSettings.self, from: encoded)
         XCTAssertEqual(decoded.terminalFontSize, 15)
+    }
+
+    func testAppSettingsPreservesCustomTerminalFontFamily() throws {
+        let encoded = try JSONEncoder().encode(
+            AppSettings(terminalFontFamily: "JetBrains Mono")
+        )
+
+        let decoded = try JSONDecoder().decode(AppSettings.self, from: encoded)
+        XCTAssertEqual(decoded.terminalFontFamily, "JetBrains Mono")
     }
 }

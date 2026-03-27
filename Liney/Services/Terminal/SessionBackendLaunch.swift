@@ -106,6 +106,10 @@ private extension SSHSessionConfiguration {
         // Dedicated SSH panes are interactive terminal sessions, so always
         // force a remote PTY to keep line editing and arrow keys working.
         var arguments: [String] = ["-tt"]
+        arguments.append(contentsOf: [
+            "-o", "SetEnv COLORTERM=truecolor",
+            "-o", "SendEnv TERM_PROGRAM TERM_PROGRAM_VERSION",
+        ])
         if let port {
             arguments.append(contentsOf: ["-p", String(port)])
         }

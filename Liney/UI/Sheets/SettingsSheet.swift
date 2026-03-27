@@ -5,6 +5,7 @@
 //  Author: wuwenrui
 //
 
+import AppKit
 import SwiftUI
 
 private enum SettingsSheetSection: String, CaseIterable, Identifiable {
@@ -62,6 +63,24 @@ private enum SettingsSheetSection: String, CaseIterable, Identifiable {
     }
 }
 
+private enum LineyTerminalFontCatalog {
+    static func availableFamilies(fontManager: NSFontManager = .shared) -> [String] {
+        fontManager.availableFontFamilies
+            .filter { family in
+                guard let font = fontManager.font(
+                    withFamily: family,
+                    traits: .fixedPitchFontMask,
+                    weight: 5,
+                    size: 13
+                ) else {
+                    return false
+                }
+                return font.isFixedPitch
+            }
+            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    }
+}
+
 struct SettingsSheet: View {
     let request: WorkspaceSettingsRequest
 
@@ -92,6 +111,16 @@ struct SettingsSheet: View {
 
     private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
         l10nFormat(localized(key), locale: Locale.current, arguments: arguments)
+    }
+
+    private var terminalFontFamilies: [String] {
+        let availableFamilies = LineyTerminalFontCatalog.availableFamilies()
+        guard let selectedFamily = appSettings.terminalFontFamily,
+              !selectedFamily.isEmpty,
+              !availableFamilies.contains(selectedFamily) else {
+            return availableFamilies
+        }
+        return [selectedFamily] + availableFamilies
     }
 
     var body: some View {
@@ -281,6 +310,27 @@ struct SettingsSheet: View {
 
             GroupBox(localized("settings.general.terminal.group")) {
                 VStack(alignment: .leading, spacing: 12) {
+                    Toggle(localized("settings.general.terminal.useCustomFont"), isOn: terminalFontFamilyEnabledBinding)
+
+                    if appSettings.terminalFontFamily != nil {
+                        if terminalFontFamilies.isEmpty {
+                            Text(localized("settings.general.terminal.fontUnavailable"))
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Picker(localized("settings.general.terminal.font"), selection: terminalFontFamilyBinding) {
+                                ForEach(terminalFontFamilies, id: \.self) { family in
+                                    Text(family).tag(family)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                        }
+
+                        Text(localized("settings.general.terminal.fontHint"))
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
+
                     Toggle(localized("settings.general.terminal.useCustomFontSize"), isOn: terminalFontSizeEnabledBinding)
 
                     if appSettings.terminalFontSize != nil {
@@ -783,6 +833,32 @@ struct SettingsSheet: View {
                 guard let newShortcut else { return }
                 appSettings.hotKeyWindowShortcut = newShortcut
             }
+        )
+    }
+
+    private var terminalFontFamilyEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { appSettings.terminalFontFamily != nil },
+            set: { enabled in
+                if enabled {
+                    appSettings.terminalFontFamily = appSettings.terminalFontFamily
+                        ?? terminalFontFamilies.first
+                        ?? "Menlo"
+                } else {
+                    appSettings.terminalFontFamily = nil
+                }
+            }
+        )
+    }
+
+    private var terminalFontFamilyBinding: Binding<String> {
+        Binding(
+            get: {
+                appSettings.terminalFontFamily
+                    ?? terminalFontFamilies.first
+                    ?? "Menlo"
+            },
+            set: { appSettings.terminalFontFamily = $0.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty }
         )
     }
 

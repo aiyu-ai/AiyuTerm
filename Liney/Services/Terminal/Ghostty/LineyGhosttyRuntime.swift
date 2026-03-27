@@ -15,6 +15,7 @@ final class LineyGhosttyRuntime: NSObject {
 
     var config: ghostty_config_t!
     var app: ghostty_app_t!
+    private var appSettingsObserver: NSObjectProtocol?
 
     var needsConfirmQuit: Bool {
         guard let app else { return false }
@@ -25,12 +26,7 @@ final class LineyGhosttyRuntime: NSObject {
         super.init()
         LineyGhosttyBootstrap.initialize()
 
-        guard let configuration = ghostty_config_new() else {
-            fatalError("Unable to allocate libghostty config")
-        }
-        ghostty_config_load_default_files(configuration)
-        ghostty_config_finalize(configuration)
-        config = configuration
+        config = Self.makeConfig(for: AppSettingsPersistence().load())
 
         var runtimeConfiguration = ghostty_runtime_config_s(
             userdata: Unmanaged.passUnretained(self).toOpaque(),
@@ -43,12 +39,24 @@ final class LineyGhosttyRuntime: NSObject {
             close_surface_cb: lineyGhosttyCloseSurfaceCallback
         )
 
-        guard let app = ghostty_app_new(&runtimeConfiguration, configuration) else {
+        guard let app = ghostty_app_new(&runtimeConfiguration, config) else {
             fatalError("Unable to initialize libghostty runtime")
         }
         self.app = app
         ghostty_app_set_focus(app, NSApp.isActive)
         installObservers()
+    }
+
+    deinit {
+        if let appSettingsObserver {
+            NotificationCenter.default.removeObserver(appSettingsObserver)
+        }
+        if let app {
+            ghostty_app_free(app)
+        }
+        if let config {
+            ghostty_config_free(config)
+        }
     }
 
     func tick() {
@@ -75,6 +83,19 @@ final class LineyGhosttyRuntime: NSObject {
             name: NSApplication.didResignActiveNotification,
             object: nil
         )
+        appSettingsObserver = center.addObserver(
+            forName: .lineyAppSettingsDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self,
+                  let settings = notification.object as? AppSettings else {
+                return
+            }
+            Task { @MainActor [weak self] in
+                self?.apply(settings: settings)
+            }
+        }
     }
 
     @objc private func keyboardSelectionDidChange(_ notification: Notification) {
@@ -87,6 +108,27 @@ final class LineyGhosttyRuntime: NSObject {
 
     @objc private func applicationDidResignActive(_ notification: Notification) {
         ghostty_app_set_focus(app, false)
+    }
+
+    private func apply(settings: AppSettings) {
+        let nextConfig = Self.makeConfig(for: settings)
+        ghostty_app_update_config(app, nextConfig)
+        for controller in LineyGhosttyControllerRegistry.shared.liveControllers() {
+            controller.applyConfig(nextConfig)
+        }
+
+        if let previousConfig = config {
+            ghostty_config_free(previousConfig)
+        }
+        config = nextConfig
+    }
+
+    private static func makeConfig(for settings: AppSettings) -> ghostty_config_t {
+        do {
+            return try LineyGhosttyConfigManager.buildConfig(settings: settings)
+        } catch {
+            fatalError("Unable to configure libghostty: \(error.localizedDescription)")
+        }
     }
 
     nonisolated fileprivate static func wakeup(_ userdata: UnsafeMutableRawPointer?) {

@@ -170,6 +170,8 @@ final class ShellSessionTests: XCTestCase {
             launchConfiguration.command.arguments,
             [
                 "-tt",
+                "-o", "SetEnv COLORTERM=truecolor",
+                "-o", "SendEnv TERM_PROGRAM TERM_PROGRAM_VERSION",
                 "-p", "2222",
                 "-i", "~/.ssh/id_ed25519",
                 "dev@example.com",
