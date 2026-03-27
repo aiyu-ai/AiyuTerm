@@ -175,9 +175,39 @@ final class ShellSessionTests: XCTestCase {
                 "-p", "2222",
                 "-i", "~/.ssh/id_ed25519",
                 "dev@example.com",
-                "cd '/srv/app' && exec ${SHELL:-/bin/zsh} -l",
             ]
         )
+        XCTAssertEqual(launchConfiguration.initialInput, "cd '/srv/app'\n")
+    }
+
+    func testSSHBackendPreservesExplicitRemoteCommandInvocation() {
+        let configuration = SessionBackendConfiguration.ssh(
+            SSHSessionConfiguration(
+                host: "example.com",
+                user: "dev",
+                port: nil,
+                identityFilePath: nil,
+                remoteWorkingDirectory: "/srv/app",
+                remoteCommand: "tmux attach || tmux"
+            )
+        )
+
+        let launchConfiguration = configuration.makeLaunchConfiguration(
+            preferredWorkingDirectory: "/tmp/liney-ssh",
+            baseEnvironment: [:]
+        )
+
+        XCTAssertEqual(
+            launchConfiguration.command.arguments,
+            [
+                "-tt",
+                "-o", "SetEnv COLORTERM=truecolor",
+                "-o", "SendEnv TERM_PROGRAM TERM_PROGRAM_VERSION",
+                "dev@example.com",
+                "cd '/srv/app' && tmux attach || tmux",
+            ]
+        )
+        XCTAssertNil(launchConfiguration.initialInput)
     }
 
     func testStartIfNeededOnlyAutoStartsIdleSession() async {

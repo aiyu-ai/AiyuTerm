@@ -1127,13 +1127,16 @@ private final class LineyGhosttySurfaceView: NSView {
 
         let workingDirectory = strdup(launchConfiguration.workingDirectory)
         let command = strdup(launchConfiguration.ghosttyCommand)
+        let initialInput = launchConfiguration.initialInput.flatMap { strdup($0) }
         defer {
             free(workingDirectory)
             free(command)
+            free(initialInput)
         }
 
         configuration.working_directory = workingDirectory.map { UnsafePointer($0) }
         configuration.command = command.map { UnsafePointer($0) }
+        configuration.initial_input = initialInput.map { UnsafePointer($0) }
 
         let envStorage = launchConfiguration.environment
             .sorted { $0.key < $1.key }
