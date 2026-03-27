@@ -100,7 +100,7 @@ struct QuickCommandEditorSheet: View {
     }
 
     private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 Button(localized("sheet.quickCommands.add")) {
                     addCommand()
@@ -167,23 +167,23 @@ struct QuickCommandEditorSheet: View {
                 )
             } else {
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 10) {
+                    LazyVStack(alignment: .leading, spacing: 8) {
                         ForEach(filteredSections) { section in
-                            VStack(alignment: .leading, spacing: 6) {
+                            VStack(alignment: .leading, spacing: 4) {
                                 HStack {
                                     Text(section.category.title)
-                                        .font(.system(size: 10, weight: .semibold))
+                                        .font(.system(size: 9, weight: .semibold))
                                         .foregroundStyle(LineyTheme.secondaryText)
                                         .textCase(.uppercase)
 
                                     Spacer()
 
                                     Text("\(section.commands.count)")
-                                        .font(.system(size: 10, weight: .semibold))
+                                        .font(.system(size: 9, weight: .semibold))
                                         .foregroundStyle(LineyTheme.mutedText)
                                 }
 
-                                VStack(spacing: 6) {
+                                VStack(spacing: 4) {
                                     ForEach(section.commands) { command in
                                         QuickCommandListItem(
                                             command: command,
@@ -201,7 +201,7 @@ struct QuickCommandEditorSheet: View {
             }
         }
         .padding(16)
-        .frame(width: 284)
+        .frame(width: 272)
         .frame(maxHeight: .infinity, alignment: .topLeading)
         .background(LineyTheme.appBackground.opacity(0.16))
     }
@@ -394,16 +394,16 @@ private struct QuickCommandListItem: View {
 
     var body: some View {
         Button(action: onSelect) {
-            HStack(alignment: .top, spacing: 8) {
-                ToolbarFeatureIcon(
-                    systemName: command.category.symbolName,
-                    tint: tint
-                )
+            HStack(alignment: .center, spacing: 8) {
+                Image(systemName: command.category.symbolName)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(tint)
+                    .frame(width: 14, height: 14)
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 1) {
                     HStack(spacing: 6) {
                         Text(command.normalizedTitle)
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(LineyTheme.tertiaryText)
                             .lineLimit(1)
 
@@ -422,7 +422,7 @@ private struct QuickCommandListItem: View {
                     }
 
                     Text(command.normalizedCommand.nilIfEmpty ?? " ")
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.system(size: 9, design: .monospaced))
                         .foregroundStyle(LineyTheme.mutedText)
                         .lineLimit(1)
                 }
@@ -430,7 +430,7 @@ private struct QuickCommandListItem: View {
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 10)
-            .padding(.vertical, 8)
+            .padding(.vertical, 6)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(backgroundShape.fill(backgroundColor))
             .overlay(
@@ -442,7 +442,7 @@ private struct QuickCommandListItem: View {
     }
 
     private var backgroundShape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
     }
 
     private var backgroundColor: Color {
@@ -622,10 +622,10 @@ private struct QuickCommandMetaTag: View {
 
     var body: some View {
         Text(title)
-            .font(.system(size: 10, weight: .semibold))
+            .font(.system(size: 8, weight: .semibold))
             .foregroundStyle(tint)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
             .background(tint.opacity(0.12), in: Capsule())
     }
 }
