@@ -14,6 +14,7 @@ struct QuickCommandEditorSheet: View {
     @State private var draftCommands: [QuickCommandPreset] = []
     @State private var selectedCommandID: String?
     @State private var searchQuery = ""
+    @State private var isLoading = true
 
     private func localized(_ key: String) -> String {
         LocalizationManager.shared.string(key)
@@ -54,6 +55,7 @@ struct QuickCommandEditorSheet: View {
         .task {
             draftCommands = store.quickCommandPresets
             syncSelection()
+            isLoading = false
         }
         .onChange(of: draftCommands.map(\.id)) { _, _ in
             syncSelection()
@@ -139,7 +141,10 @@ struct QuickCommandEditorSheet: View {
                     .stroke(LineyTheme.border, lineWidth: 1)
             )
 
-            if draftCommands.isEmpty {
+            if isLoading {
+                QuickCommandLoadingState(localized: localized)
+                    .frame(maxHeight: .infinity, alignment: .top)
+            } else if draftCommands.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(localized("sheet.quickCommands.empty"))
                         .font(.system(size: 13, weight: .medium))
@@ -208,7 +213,11 @@ struct QuickCommandEditorSheet: View {
 
     private var detailPane: some View {
         Group {
-            if let commandBinding = selectedCommandBinding {
+            if isLoading {
+                QuickCommandDetailLoadingState(localized: localized)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(14)
+            } else if let commandBinding = selectedCommandBinding {
                 QuickCommandDetailPanel(
                     command: commandBinding,
                     canMoveUp: canMoveSelectedUp,
@@ -385,6 +394,46 @@ private struct QuickCommandCategorySection: Identifiable {
     let commands: [QuickCommandPreset]
 
     var id: String { category.id }
+}
+
+private struct QuickCommandLoadingState: View {
+    let localized: (String) -> String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ProgressView()
+                .controlSize(.small)
+
+            Text(localized("common.loading"))
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(LineyTheme.secondaryText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(LineyTheme.border, lineWidth: 1)
+        )
+    }
+}
+
+private struct QuickCommandDetailLoadingState: View {
+    let localized: (String) -> String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ProgressView()
+                .controlSize(.regular)
+
+            Text(localized("common.loading"))
+                .font(.system(size: 18, weight: .semibold))
+
+            Text(localized("sheet.quickCommands.loadingDetail"))
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(LineyTheme.secondaryText)
+        }
+    }
 }
 
 private struct QuickCommandListItem: View {
