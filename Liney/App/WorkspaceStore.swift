@@ -986,17 +986,24 @@ final class WorkspaceStore: ObservableObject {
         switch lineyQuickCommandDispatch(for: preset) {
         case .insert(let text):
             session.insertText(text)
+            receive(
+                .statusMessage(
+                    localizedFormat("main.status.quickCommand.insertedFormat", preset.normalizedTitle),
+                    .neutral,
+                    deliverSystemNotification: false
+                )
+            )
         case .run(let command):
             session.sendShellCommand(command)
+            receive(
+                .statusMessage(
+                    localizedFormat("main.status.quickCommand.ranFormat", preset.normalizedTitle),
+                    .success,
+                    deliverSystemNotification: false
+                )
+            )
         }
         recordQuickCommandUse(preset.id)
-        receive(
-            .statusMessage(
-                localizedFormat("main.status.quickCommand.insertedFormat", preset.normalizedTitle),
-                .neutral,
-                deliverSystemNotification: false
-            )
-        )
     }
 
     func refresh(_ workspace: WorkspaceModel) {
