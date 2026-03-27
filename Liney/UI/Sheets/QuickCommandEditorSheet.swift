@@ -15,6 +15,7 @@ struct QuickCommandEditorSheet: View {
     @State private var selectedCommandID: String?
     @State private var searchQuery = ""
     @State private var isLoading = true
+    @State private var showDiscardChangesAlert = false
 
     private func localized(_ key: String) -> String {
         LocalizationManager.shared.string(key)
@@ -42,7 +43,7 @@ struct QuickCommandEditorSheet: View {
                 footer
             }
         }
-        .frame(width: 900, height: 590)
+        .frame(width: 980, height: 660)
         .padding(12)
         .background(
             LineyTheme.panelBackground,
@@ -62,6 +63,17 @@ struct QuickCommandEditorSheet: View {
         }
         .onChange(of: searchQuery) { _, _ in
             syncSelection(preferVisible: true)
+        }
+        .alert(localized("sheet.quickCommands.unsavedChangesTitle"), isPresented: $showDiscardChangesAlert) {
+            Button(localized("sheet.quickCommands.saveChanges")) {
+                saveAndDismiss()
+            }
+            Button(localized("sheet.quickCommands.discardChanges"), role: .destructive) {
+                dismiss()
+            }
+            Button(localized("sheet.quickCommands.continueEditing"), role: .cancel) {}
+        } message: {
+            Text(localized("sheet.quickCommands.unsavedChangesMessage"))
         }
     }
 
@@ -250,12 +262,11 @@ struct QuickCommandEditorSheet: View {
             Spacer()
 
             Button(localized("common.cancel")) {
-                dismiss()
+                requestDismiss()
             }
 
             Button(localized("common.save")) {
-                store.updateQuickCommandPresets(draftCommands)
-                dismiss()
+                saveAndDismiss()
             }
             .buttonStyle(.borderedProminent)
         }
@@ -386,6 +397,24 @@ struct QuickCommandEditorSheet: View {
         let item = draftCommands.remove(at: source)
         draftCommands.insert(item, at: destination)
         selectedCommandID = item.id
+    }
+
+    private var hasUnsavedChanges: Bool {
+        !isLoading && draftCommands != store.quickCommandPresets
+    }
+
+    private func requestDismiss() {
+        if hasUnsavedChanges {
+            showDiscardChangesAlert = true
+            return
+        }
+
+        dismiss()
+    }
+
+    private func saveAndDismiss() {
+        store.updateQuickCommandPresets(draftCommands)
+        dismiss()
     }
 }
 
@@ -536,6 +565,9 @@ private struct QuickCommandDetailPanel: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(command.normalizedTitle)
                         .font(.system(size: 18, weight: .semibold))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                     Text(command.category.title)
                         .font(.system(size: 10, weight: .semibold))
