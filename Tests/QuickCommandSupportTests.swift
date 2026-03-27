@@ -14,6 +14,7 @@ final class QuickCommandSupportTests: XCTestCase {
         let settings = try JSONDecoder().decode(AppSettings.self, from: Data("{}".utf8))
 
         XCTAssertEqual(settings.quickCommandPresets, QuickCommandCatalog.defaultCommands)
+        XCTAssertEqual(settings.quickCommandCategories, QuickCommandCatalog.defaultCategories)
         XCTAssertTrue(settings.quickCommandRecentIDs.isEmpty)
         XCTAssertFalse(settings.hotKeyWindowEnabled)
         XCTAssertTrue(settings.confirmQuitWhenCommandsRunning)
@@ -78,19 +79,19 @@ final class QuickCommandSupportTests: XCTestCase {
                 id: "dup",
                 title: "  ",
                 command: "  ls -la  ",
-                category: .linux
+                categoryID: QuickCommandCategory.linux.id
             ),
             QuickCommandPreset(
                 id: "dup",
                 title: "Other",
                 command: "pwd",
-                category: .linux
+                categoryID: QuickCommandCategory.linux.id
             ),
             QuickCommandPreset(
                 id: "empty",
                 title: "Empty",
                 command: "   ",
-                category: .codex
+                categoryID: QuickCommandCategory.codex.id
             ),
         ]
 
@@ -109,21 +110,21 @@ final class QuickCommandSupportTests: XCTestCase {
                 id: "first",
                 title: "First",
                 command: "echo first",
-                category: .linux,
+                categoryID: QuickCommandCategory.linux.id,
                 shortcut: reservedShortcut
             ),
             QuickCommandPreset(
                 id: "second",
                 title: "Second",
                 command: "echo second",
-                category: .linux,
+                categoryID: QuickCommandCategory.linux.id,
                 shortcut: StoredShortcut(key: "k", command: true, shift: false, option: false, control: false)
             ),
             QuickCommandPreset(
                 id: "third",
                 title: "Third",
                 command: "echo third",
-                category: .linux,
+                categoryID: QuickCommandCategory.linux.id,
                 shortcut: StoredShortcut(key: "k", command: true, shift: false, option: false, control: false)
             ),
         ]
@@ -143,7 +144,7 @@ final class QuickCommandSupportTests: XCTestCase {
                     id: "deploy",
                     title: "Deploy",
                     command: "deploy-now",
-                    category: .cloud,
+                    categoryID: QuickCommandCategory.cloud.id,
                     shortcut: shortcut,
                     submitsReturn: true
                 )
@@ -175,14 +176,14 @@ final class QuickCommandSupportTests: XCTestCase {
             id: "insert",
             title: "Insert",
             command: "codex",
-            category: .codex,
+            categoryID: QuickCommandCategory.codex.id,
             submitsReturn: false
         )
         let runPreset = QuickCommandPreset(
             id: "run",
             title: "Run",
             command: "codex",
-            category: .codex,
+            categoryID: QuickCommandCategory.codex.id,
             submitsReturn: true
         )
 
@@ -197,7 +198,7 @@ final class QuickCommandSupportTests: XCTestCase {
                     id: "run-tests",
                     title: "Run Tests",
                     command: "swift test",
-                    category: .codex,
+                    categoryID: QuickCommandCategory.codex.id,
                     shortcut: StoredShortcut(key: "t", command: true, shift: true, option: false, control: false),
                     submitsReturn: true
                 )
@@ -217,8 +218,8 @@ final class QuickCommandSupportTests: XCTestCase {
 
     func testRecentQuickCommandsArePrunedAndDeduplicated() {
         let commands = [
-            QuickCommandPreset(id: "a", title: "A", command: "a", category: .codex),
-            QuickCommandPreset(id: "b", title: "B", command: "b", category: .cloud),
+            QuickCommandPreset(id: "a", title: "A", command: "a", categoryID: QuickCommandCategory.codex.id),
+            QuickCommandPreset(id: "b", title: "B", command: "b", categoryID: QuickCommandCategory.cloud.id),
         ]
 
         let normalized = QuickCommandCatalog.normalizedRecentCommandIDs(
@@ -227,6 +228,72 @@ final class QuickCommandSupportTests: XCTestCase {
         )
 
         XCTAssertEqual(normalized, ["a", "b"])
+    }
+
+    func testQuickCommandPresetDecodesLegacyCategoryString() throws {
+        let preset = try JSONDecoder().decode(
+            QuickCommandPreset.self,
+            from: Data(#"{"id":"legacy","title":"Legacy","command":"ls","category":"linux"}"#.utf8)
+        )
+
+        XCTAssertEqual(preset.categoryID, QuickCommandCategory.linux.id)
+    }
+
+    func testQuickCommandCategoryDecodesLegacyStringValue() throws {
+        let category = try JSONDecoder().decode(
+            QuickCommandCategory.self,
+            from: Data(#""cloud""#.utf8)
+        )
+
+        XCTAssertEqual(category, .cloud)
+    }
+
+    func testQuickCommandCategoriesNormalizeByKeepingBuiltInsAndCustomCategories() {
+        let custom = QuickCommandCategory(id: "custom-tools", title: "Tools", symbolName: "tag")
+
+        let normalized = QuickCommandCatalog.normalizedCategories([custom, .linux])
+
+        XCTAssertTrue(normalized.contains(.linux))
+        XCTAssertTrue(normalized.contains(custom))
+        XCTAssertEqual(normalized.first, .general)
+    }
+
+    func testQuickCommandNormalizationFallsBackWhenCategoryIsMissing() {
+        let normalized = QuickCommandCatalog.normalizedCommands(
+            [
+                QuickCommandPreset(
+                    id: "custom",
+                    title: "Custom",
+                    command: "echo hi",
+                    categoryID: "missing"
+                )
+            ],
+            categories: QuickCommandCatalog.defaultCategories
+        )
+
+        XCTAssertEqual(normalized.first?.categoryID, QuickCommandCategory.general.id)
+    }
+
+    func testPredefinedQuickCommandLibraryContainsLargeCuratedCatalog() {
+        XCTAssertEqual(QuickCommandCatalog.predefinedCommands.count, 200)
+        XCTAssertEqual(QuickCommandCatalog.predefinedCommandCount, QuickCommandCatalog.predefinedCommands.count)
+        XCTAssertTrue(QuickCommandCatalog.defaultCategories.contains(.complex))
+
+        let complexCommands = QuickCommandCatalog.predefinedCommands.filter {
+            $0.categoryID == QuickCommandCategory.complex.id
+        }
+        XCTAssertGreaterThanOrEqual(complexCommands.count, 70)
+    }
+
+    func testRecommendedComplexSubsetResolvesToExistingComplexCommands() throws {
+        let allCommandsByID = Dictionary(uniqueKeysWithValues: QuickCommandCatalog.predefinedCommands.map { ($0.id, $0) })
+
+        XCTAssertEqual(QuickCommandCatalog.recommendedComplexCommandIDs.count, 12)
+
+        for id in QuickCommandCatalog.recommendedComplexCommandIDs {
+            let command = try XCTUnwrap(allCommandsByID[id])
+            XCTAssertEqual(command.categoryID, QuickCommandCategory.complex.id)
+        }
     }
 
     func testShortcutAssignmentDisablesConflictingAction() {

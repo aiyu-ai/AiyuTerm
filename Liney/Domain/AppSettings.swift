@@ -255,6 +255,7 @@ struct AppSettings: Codable, Hashable {
     var defaultLocalTerminalIcon: SidebarItemIcon
     var defaultWorktreeIcon: SidebarItemIcon
     var preferredExternalEditor: ExternalEditor
+    var quickCommandCategories: [QuickCommandCategory]
     var quickCommandPresets: [QuickCommandPreset]
     var quickCommandRecentIDs: [String]
     var releaseChannel: ReleaseChannel
@@ -284,6 +285,7 @@ struct AppSettings: Codable, Hashable {
         defaultLocalTerminalIcon: SidebarItemIcon = .localTerminalDefault,
         defaultWorktreeIcon: SidebarItemIcon = .worktreeDefault,
         preferredExternalEditor: ExternalEditor = .cursor,
+        quickCommandCategories: [QuickCommandCategory] = QuickCommandCatalog.defaultCategories,
         quickCommandPresets: [QuickCommandPreset] = QuickCommandCatalog.defaultCommands,
         quickCommandRecentIDs: [String] = [],
         releaseChannel: ReleaseChannel = .stable,
@@ -317,8 +319,10 @@ struct AppSettings: Codable, Hashable {
         self.defaultWorktreeIcon = defaultWorktreeIcon
         self.preferredExternalEditor = preferredExternalEditor
         self.keyboardShortcutOverrides = normalizedKeyboardShortcutOverrides
+        self.quickCommandCategories = QuickCommandCatalog.normalizedCategories(quickCommandCategories)
         self.quickCommandPresets = QuickCommandCatalog.normalizedCommands(
             quickCommandPresets,
+            categories: self.quickCommandCategories,
             reservedShortcuts: LineyKeyboardShortcuts.effectiveShortcuts(using: normalizedKeyboardShortcutOverrides)
         )
         self.quickCommandRecentIDs = QuickCommandCatalog.normalizedRecentCommandIDs(
@@ -354,6 +358,7 @@ extension AppSettings {
         case defaultLocalTerminalIcon
         case defaultWorktreeIcon
         case preferredExternalEditor
+        case quickCommandCategories
         case quickCommandPresets
         case quickCommandRecentIDs
         case releaseChannel
@@ -394,6 +399,7 @@ extension AppSettings {
             defaultLocalTerminalIcon: try container.decodeIfPresent(SidebarItemIcon.self, forKey: .defaultLocalTerminalIcon) ?? .localTerminalDefault,
             defaultWorktreeIcon: try container.decodeIfPresent(SidebarItemIcon.self, forKey: .defaultWorktreeIcon) ?? .worktreeDefault,
             preferredExternalEditor: preferredExternalEditor,
+            quickCommandCategories: try container.decodeIfPresent([QuickCommandCategory].self, forKey: .quickCommandCategories) ?? QuickCommandCatalog.defaultCategories,
             quickCommandPresets: try container.decodeIfPresent([QuickCommandPreset].self, forKey: .quickCommandPresets) ?? QuickCommandCatalog.defaultCommands,
             quickCommandRecentIDs: try container.decodeIfPresent([String].self, forKey: .quickCommandRecentIDs) ?? [],
             releaseChannel: try container.decodeIfPresent(ReleaseChannel.self, forKey: .releaseChannel) ?? .stable,

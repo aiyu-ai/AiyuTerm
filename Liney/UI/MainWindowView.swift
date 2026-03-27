@@ -611,9 +611,10 @@ struct MainWindowView: View {
         if !recentCommands.isEmpty {
             menu.addSectionHeader(localized("main.quickCommands.recent"))
             for command in recentCommands {
+                let category = store.quickCommandCategoryMap[command.categoryID] ?? .fallbackCategory
                 menu.addActionItem(
                     title: command.normalizedTitle,
-                    imageSystemName: command.category.symbolName,
+                    imageSystemName: category.symbolName,
                     isEnabled: hasSelectedSession,
                     toolTip: command.command
                 ) {
@@ -623,9 +624,12 @@ struct MainWindowView: View {
             menu.addItem(.separator())
         }
 
-        let commandsByCategory = Dictionary(grouping: store.quickCommandPresets, by: \.category)
-        for category in QuickCommandCategory.allCases {
-            guard let commands = commandsByCategory[category], !commands.isEmpty else { continue }
+        let commandsByCategory = Dictionary(grouping: store.quickCommandPresets, by: \.categoryID)
+        for category in QuickCommandCatalog.visibleCategories(
+            commands: store.quickCommandPresets,
+            categories: store.quickCommandCategories
+        ) {
+            guard let commands = commandsByCategory[category.id], !commands.isEmpty else { continue }
             menu.addSectionHeader(category.title)
             for command in commands {
                 menu.addActionItem(
