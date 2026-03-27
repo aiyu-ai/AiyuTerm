@@ -1331,7 +1331,7 @@ final class WorkspaceStore: ObservableObject {
             receive(.statusMessage(localized("status.hapi.selectWorkspace"), .warning, deliverSystemNotification: false))
             return
         }
-        launchHAPISession(in: workspace)
+        startHAPIHub(in: workspace, relay: false)
     }
 
     func launchHAPISession(workspaceID: UUID) {
@@ -1341,7 +1341,12 @@ final class WorkspaceStore: ObservableObject {
 
     func startHAPIHub(workspaceID: UUID) {
         guard let workspace = workspaces.first(where: { $0.id == workspaceID }) else { return }
-        startHAPIHub(in: workspace)
+        startHAPIHub(in: workspace, relay: false)
+    }
+
+    func startHAPIHubRelay(workspaceID: UUID) {
+        guard let workspace = workspaces.first(where: { $0.id == workspaceID }) else { return }
+        startHAPIHub(in: workspace, relay: true)
     }
 
     func launchHAPICodex(workspaceID: UUID) {
@@ -1394,6 +1399,17 @@ final class WorkspaceStore: ObservableObject {
             executablePath: availableHAPIInstallation?.executablePath,
             arguments: ["auth", "logout"],
             activityTitle: localized("activity.hapi.startedLogout")
+        )
+    }
+
+    func showHAPISettings(workspaceID: UUID) {
+        guard let workspace = workspaces.first(where: { $0.id == workspaceID }) else { return }
+        launchWrappedHomeCommand(
+            in: workspace,
+            name: "HAPI Show Settings",
+            executablePath: "/bin/cat",
+            arguments: [NSHomeDirectory() + "/.hapi/settings.json"],
+            activityTitle: localized("activity.hapi.showedSettings")
         )
     }
 
@@ -1554,17 +1570,18 @@ final class WorkspaceStore: ObservableObject {
         )
     }
 
-    private func startHAPIHub(in workspace: WorkspaceModel) {
+    private func startHAPIHub(in workspace: WorkspaceModel, relay: Bool) {
         guard let installation = availableHAPIInstallation else {
             receive(.statusMessage(localized("status.hapi.installToStartHub"), .warning, deliverSystemNotification: false))
             return
         }
 
         let workingDirectory = NSHomeDirectory()
+        let arguments = relay ? ["hub", "--relay"] : ["hub"]
         let configuration = AgentSessionConfiguration(
             name: "HAPI Hub",
             launchPath: installation.executablePath,
-            arguments: ["hub", "--relay"],
+            arguments: arguments,
             environment: [:],
             workingDirectory: workingDirectory
         )
@@ -1578,7 +1595,7 @@ final class WorkspaceStore: ObservableObject {
             in: workspace,
             kind: .command,
             title: localized("activity.hapi.startedHub"),
-            detail: "hapi hub --relay",
+            detail: ([installation.executablePath] + arguments).joined(separator: " "),
             worktreePath: workspace.activeWorktreePath,
             replayAction: .createSession(
                 backendConfiguration: .agent(configuration),

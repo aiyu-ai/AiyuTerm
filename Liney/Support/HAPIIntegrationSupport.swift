@@ -16,11 +16,11 @@ struct HAPIInstallationStatus: Hashable {
     var cloudflaredExecutablePath: String? = nil
 
     var primaryActionTitle: String {
-        lineyLocalizedHAPIString("main.hapi.claudeCode")
+        lineyLocalizedHAPIString("main.hapi.openMenu")
     }
 
     var primaryActionHelpText: String {
-        lineyLocalizedHAPIString("main.hapi.help.launch")
+        lineyLocalizedHAPIString("main.hapi.help.openMenu")
     }
 }
 

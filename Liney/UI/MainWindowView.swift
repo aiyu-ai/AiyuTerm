@@ -69,8 +69,8 @@ struct MainWindowView: View {
         ToolbarSegmentedControl(
             backgroundColor: LineyTheme.chromeBackground.opacity(0.96),
             borderColor: LineyTheme.border,
-            leadingAction: { _ in
-                store.performPrimaryHAPIAction()
+            leadingAction: { anchorView in
+                present(menu: makeHAPIMenu(using: installation), from: anchorView)
             },
             trailingAction: { anchorView in
                 present(menu: makeHAPIMenu(using: installation), from: anchorView)
@@ -688,13 +688,17 @@ struct MainWindowView: View {
     private func makeHAPIMenu(using installation: HAPIInstallationStatus) -> NSMenu {
         let menu = NSMenu()
 
-        menu.addActionItem(title: localized("main.hapi.startHubRelay"), imageSystemName: "dot.radiowaves.left.and.right") {
+        menu.addActionItem(title: localized("main.hapi.startHub"), imageSystemName: "dot.radiowaves.left.and.right") {
             guard let workspace = store.selectedWorkspace else { return }
             store.startHAPIHub(workspaceID: workspace.id)
         }
+        menu.addActionItem(title: localized("main.hapi.startHubRelay"), imageSystemName: "dot.radiowaves.left.and.right") {
+            guard let workspace = store.selectedWorkspace else { return }
+            store.startHAPIHubRelay(workspaceID: workspace.id)
+        }
 
         menu.addItem(.separator())
-        menu.addActionItem(title: localized("main.hapi.claudeCode"), imageSystemName: "play.circle") {
+        menu.addActionItem(title: localized("main.hapi.claude"), imageSystemName: "play.circle") {
             guard let workspace = store.selectedWorkspace else { return }
             store.launchHAPISession(workspaceID: workspace.id)
         }
@@ -720,6 +724,10 @@ struct MainWindowView: View {
             guard let workspace = store.selectedWorkspace else { return }
             store.showHAPIAuthStatus(workspaceID: workspace.id)
         }
+        menu.addActionItem(title: localized("main.hapi.showSettings"), imageSystemName: "doc.text.magnifyingglass") {
+            guard let workspace = store.selectedWorkspace else { return }
+            store.showHAPISettings(workspaceID: workspace.id)
+        }
         menu.addActionItem(title: localized("main.hapi.authLogin"), imageSystemName: "key") {
             guard let workspace = store.selectedWorkspace else { return }
             store.loginToHAPI(workspaceID: workspace.id)
@@ -743,6 +751,20 @@ struct MainWindowView: View {
                 guard let workspace = store.selectedWorkspace else { return }
                 store.runCloudflaredTunnel(workspaceID: workspace.id)
             }
+        }
+
+        menu.addItem(.separator())
+        menu.addActionItem(title: localized("main.hapi.docs"), imageSystemName: "book") {
+            guard let url = URL(string: "https://hapi.run/") else {
+                return
+            }
+            NSWorkspace.shared.open(url)
+        }
+        menu.addActionItem(title: localized("main.hapi.cloudflareDocs"), imageSystemName: "book") {
+            guard let url = URL(string: "https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/") else {
+                return
+            }
+            NSWorkspace.shared.open(url)
         }
 
         return menu
