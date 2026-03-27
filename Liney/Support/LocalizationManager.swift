@@ -14,14 +14,16 @@ extension Notification.Name {
 @MainActor
 final class LocalizationManager: ObservableObject {
     static let shared = LocalizationManager()
+    nonisolated(unsafe) private static var cachedSelectedLanguage: AppLanguage = .automatic
 
     @Published private(set) var selectedLanguage: AppLanguage
 
     init(selectedLanguage: AppLanguage = .automatic) {
         self.selectedLanguage = selectedLanguage
+        Self.cachedSelectedLanguage = selectedLanguage
     }
 
-    static func resolveAutomaticLanguage(preferredLanguages: [String] = Locale.preferredLanguages) -> AppLanguage {
+    nonisolated static func resolveAutomaticLanguage(preferredLanguages: [String] = Locale.preferredLanguages) -> AppLanguage {
         for identifier in preferredLanguages {
             let normalized = identifier.replacingOccurrences(of: "_", with: "-").lowercased()
             if normalized == "en" || normalized.hasPrefix("en-") {
@@ -33,6 +35,16 @@ final class LocalizationManager: ObservableObject {
         }
 
         return .english
+    }
+
+    nonisolated static func stringForCurrentLanguage(_ key: String) -> String {
+        let language = switch cachedSelectedLanguage {
+        case .automatic:
+            resolveAutomaticLanguage()
+        case .english, .simplifiedChinese:
+            cachedSelectedLanguage
+        }
+        return L10nTable.string(for: key, language: language)
     }
 
     var effectiveLanguage: AppLanguage {
@@ -47,6 +59,7 @@ final class LocalizationManager: ObservableObject {
     func updateSelectedLanguage(_ language: AppLanguage) {
         guard selectedLanguage != language else { return }
         selectedLanguage = language
+        Self.cachedSelectedLanguage = language
         NotificationCenter.default.post(name: .lineyLocalizationDidChange, object: language)
     }
 

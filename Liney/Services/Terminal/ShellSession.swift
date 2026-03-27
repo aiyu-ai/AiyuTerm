@@ -366,7 +366,7 @@ enum TerminalWorkspaceAction {
     case closePane
 }
 
-struct LineyTerminalManagedProcessMetadata: Equatable {
+nonisolated struct LineyTerminalManagedProcessMetadata: Equatable {
     var shellPID: Int32?
     var loginPID: Int32?
     var tty: String?
@@ -402,7 +402,7 @@ struct LineyTerminalManagedProcessMetadata: Equatable {
     }
 }
 
-struct LineyTerminalManagedProcessControl {
+nonisolated struct LineyTerminalManagedProcessControl {
     var processGroupID: @Sendable (Int32) -> Int32
     var sendSignal: @Sendable (Int32, Int32) -> Int32
 
@@ -412,7 +412,7 @@ struct LineyTerminalManagedProcessControl {
     )
 }
 
-enum LineyTerminalManagedProcessReaper {
+nonisolated enum LineyTerminalManagedProcessReaper {
     static let sessionIDEnvironmentKey = "LINEY_SESSION_ID"
     static let metadataPathEnvironmentKey = "LINEY_SESSION_METADATA_PATH"
 

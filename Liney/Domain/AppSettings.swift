@@ -9,8 +9,8 @@ import AppKit
 import Carbon
 import Foundation
 
-private func lineyLocalizedSettingsString(_ key: String) -> String {
-    LocalizationManager.shared.string(key)
+nonisolated private func lineyLocalizedSettingsString(_ key: String) -> String {
+    LocalizationManager.stringForCurrentLanguage(key)
 }
 
 nonisolated enum SidebarIconFillStyle: String, Codable, Hashable, CaseIterable, Identifiable {
