@@ -13,6 +13,7 @@ struct QuickCommandEditorSheet: View {
 
     @State private var draftCommands: [QuickCommandPreset] = []
     @State private var selectedCommandID: String?
+    @State private var searchQuery = ""
 
     private func localized(_ key: String) -> String {
         LocalizationManager.shared.string(key)
@@ -47,6 +48,9 @@ struct QuickCommandEditorSheet: View {
         }
         .onChange(of: draftCommands.map(\.id)) { _, _ in
             syncSelection()
+        }
+        .onChange(of: searchQuery) { _, _ in
+            syncSelection(preferVisible: true)
         }
     }
 
@@ -103,6 +107,32 @@ struct QuickCommandEditorSheet: View {
                 .buttonStyle(.bordered)
             }
 
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(LineyTheme.mutedText)
+
+                TextField(localized("sheet.quickCommands.searchPlaceholder"), text: $searchQuery)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 13, weight: .medium))
+
+                if !searchQuery.isEmpty {
+                    Button {
+                        searchQuery = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(LineyTheme.mutedText)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(LineyTheme.border, lineWidth: 1)
+            )
+
             Text(localized("sheet.quickCommands.shortcutHint"))
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(LineyTheme.mutedText)
@@ -121,15 +151,47 @@ struct QuickCommandEditorSheet: View {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .stroke(LineyTheme.border, lineWidth: 1)
                 )
+            } else if filteredSections.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(localized("sheet.quickCommands.noResults"))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(LineyTheme.secondaryText)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(LineyTheme.border, lineWidth: 1)
+                )
             } else {
                 ScrollView {
-                    LazyVStack(spacing: 10) {
-                        ForEach(draftCommands) { command in
-                            QuickCommandListItem(
-                                command: command,
-                                isSelected: command.id == selectedCommandID,
-                                onSelect: { selectedCommandID = command.id }
-                            )
+                    LazyVStack(alignment: .leading, spacing: 16) {
+                        ForEach(filteredSections) { section in
+                            VStack(alignment: .leading, spacing: 10) {
+                                HStack {
+                                    Text(section.category.title)
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundStyle(LineyTheme.secondaryText)
+                                        .textCase(.uppercase)
+
+                                    Spacer()
+
+                                    Text("\(section.commands.count)")
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .foregroundStyle(LineyTheme.mutedText)
+                                }
+
+                                VStack(spacing: 10) {
+                                    ForEach(section.commands) { command in
+                                        QuickCommandListItem(
+                                            command: command,
+                                            isSelected: command.id == selectedCommandID,
+                                            onSelect: { selectedCommandID = command.id }
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                     .padding(.vertical, 2)
@@ -214,6 +276,32 @@ struct QuickCommandEditorSheet: View {
         return draftCommands.firstIndex(where: { $0.id == selectedCommandID })
     }
 
+    private var filteredSections: [QuickCommandCategorySection] {
+        let trimmedQuery = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        let filteredCommands: [QuickCommandPreset]
+
+        if trimmedQuery.isEmpty {
+            filteredCommands = draftCommands
+        } else {
+            let query = trimmedQuery.lowercased()
+            filteredCommands = draftCommands.filter { command in
+                command.normalizedTitle.lowercased().contains(query) ||
+                command.normalizedCommand.lowercased().contains(query) ||
+                command.category.title.lowercased().contains(query)
+            }
+        }
+
+        return QuickCommandCategory.allCases.compactMap { category in
+            let commands = filteredCommands.filter { $0.category == category }
+            guard !commands.isEmpty else { return nil }
+            return QuickCommandCategorySection(category: category, commands: commands)
+        }
+    }
+
+    private var visibleCommandIDs: Set<String> {
+        Set(filteredSections.flatMap { $0.commands.map(\.id) })
+    }
+
     private var canMoveSelectedUp: Bool {
         guard let selectedIndex else { return false }
         return selectedIndex > 0
@@ -224,13 +312,16 @@ struct QuickCommandEditorSheet: View {
         return selectedIndex < draftCommands.count - 1
     }
 
-    private func syncSelection() {
+    private func syncSelection(preferVisible: Bool = false) {
         if let selectedCommandID,
            draftCommands.contains(where: { $0.id == selectedCommandID }) {
+            if preferVisible, !visibleCommandIDs.contains(selectedCommandID) {
+                self.selectedCommandID = filteredSections.first?.commands.first?.id
+            }
             return
         }
 
-        selectedCommandID = draftCommands.first?.id
+        selectedCommandID = filteredSections.first?.commands.first?.id ?? draftCommands.first?.id
     }
 
     private func addCommand() {
@@ -281,6 +372,13 @@ struct QuickCommandEditorSheet: View {
         draftCommands.insert(item, at: destination)
         selectedCommandID = item.id
     }
+}
+
+private struct QuickCommandCategorySection: Identifiable {
+    let category: QuickCommandCategory
+    let commands: [QuickCommandPreset]
+
+    var id: String { category.id }
 }
 
 private struct QuickCommandListItem: View {
