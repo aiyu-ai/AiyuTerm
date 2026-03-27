@@ -25,9 +25,7 @@ struct QuickCommandEditorSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header
-
-            Divider()
+            topBar
 
             HStack(spacing: 0) {
                 sidebar
@@ -41,7 +39,8 @@ struct QuickCommandEditorSheet: View {
 
             footer
         }
-        .frame(width: 920, height: 620)
+        .background(LineyTheme.panelBackground)
+        .frame(width: 900, height: 590)
         .task {
             draftCommands = store.quickCommandPresets
             syncSelection()
@@ -54,47 +53,44 @@ struct QuickCommandEditorSheet: View {
         }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline) {
+    private var topBar: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(localized("sheet.quickCommands.title"))
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.system(size: 19, weight: .semibold))
 
-                Spacer()
-
-                Text(localizedFormat("sheet.quickCommands.countFormat", draftCommands.count))
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(LineyTheme.secondaryText)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 5)
-                    .background(LineyTheme.subtleFill, in: Capsule())
-                    .overlay(
-                        Capsule()
-                            .stroke(LineyTheme.border, lineWidth: 1)
-                    )
+                Text(localized("sheet.quickCommands.shortcutHint"))
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(LineyTheme.mutedText)
             }
 
-            Text(localized("sheet.quickCommands.subtitle"))
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary)
+            Spacer()
+
+            Text(localizedFormat("sheet.quickCommands.countFormat", draftCommands.count))
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(LineyTheme.secondaryText)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 5)
+                .background(LineyTheme.subtleFill, in: Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(LineyTheme.border, lineWidth: 1)
+                )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
-        .background(
-            LinearGradient(
-                colors: [
-                    LineyTheme.backdropBlue.opacity(0.32),
-                    .clear,
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+        .padding(.bottom, 10)
+        .background(LineyTheme.panelBackground.opacity(0.98))
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(LineyTheme.border)
+                .frame(height: 1)
+        }
     }
 
     private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
                 Button(localized("sheet.quickCommands.add")) {
                     addCommand()
@@ -126,17 +122,12 @@ struct QuickCommandEditorSheet: View {
                 }
             }
                 .padding(.horizontal, 11)
-                .padding(.vertical, 9)
-                .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .padding(.vertical, 8)
+                .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .stroke(LineyTheme.border, lineWidth: 1)
             )
-
-            Text(localized("sheet.quickCommands.shortcutHint"))
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(LineyTheme.mutedText)
-                .fixedSize(horizontal: false, vertical: true)
 
             if draftCommands.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
@@ -166,12 +157,12 @@ struct QuickCommandEditorSheet: View {
                 )
             } else {
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 12) {
+                    LazyVStack(alignment: .leading, spacing: 10) {
                         ForEach(filteredSections) { section in
-                            VStack(alignment: .leading, spacing: 8) {
+                            VStack(alignment: .leading, spacing: 6) {
                                 HStack {
                                     Text(section.category.title)
-                                        .font(.system(size: 11, weight: .semibold))
+                                        .font(.system(size: 10, weight: .semibold))
                                         .foregroundStyle(LineyTheme.secondaryText)
                                         .textCase(.uppercase)
 
@@ -182,7 +173,7 @@ struct QuickCommandEditorSheet: View {
                                         .foregroundStyle(LineyTheme.mutedText)
                                 }
 
-                                VStack(spacing: 8) {
+                                VStack(spacing: 6) {
                                     ForEach(section.commands) { command in
                                         QuickCommandListItem(
                                             command: command,
@@ -201,9 +192,9 @@ struct QuickCommandEditorSheet: View {
             Spacer(minLength: 0)
         }
         .padding(16)
-        .frame(width: 296)
+        .frame(width: 284)
         .frame(maxHeight: .infinity, alignment: .topLeading)
-        .background(LineyTheme.panelBackground.opacity(0.55))
+        .background(LineyTheme.appBackground.opacity(0.16))
     }
 
     private var detailPane: some View {
@@ -218,22 +209,22 @@ struct QuickCommandEditorSheet: View {
                     onDelete: deleteSelectedCommand,
                     localized: localized
                 )
-                .padding(18)
+                .padding(14)
             } else {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(localized("sheet.quickCommands.empty"))
                         .font(.system(size: 18, weight: .semibold))
 
-                    Text(localized("sheet.quickCommands.subtitle"))
+                    Text(localized("sheet.quickCommands.searchPlaceholder"))
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(LineyTheme.secondaryText)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                .padding(18)
+                .padding(14)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(LineyTheme.appBackground.opacity(0.35))
+        .background(LineyTheme.panelBackground.opacity(0.72))
     }
 
     private var footer: some View {
@@ -250,8 +241,14 @@ struct QuickCommandEditorSheet: View {
             }
             .buttonStyle(.borderedProminent)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(LineyTheme.panelBackground.opacity(0.98))
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(LineyTheme.border)
+                .frame(height: 1)
+        }
     }
 
     private var selectedCommandBinding: Binding<QuickCommandPreset>? {
@@ -388,39 +385,43 @@ private struct QuickCommandListItem: View {
 
     var body: some View {
         Button(action: onSelect) {
-            HStack(alignment: .top, spacing: 10) {
+            HStack(alignment: .top, spacing: 8) {
                 ToolbarFeatureIcon(
                     systemName: command.category.symbolName,
                     tint: tint
                 )
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(command.normalizedTitle)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(LineyTheme.tertiaryText)
-                        .lineLimit(1)
-
-                    Text(command.normalizedCommand.nilIfEmpty ?? " ")
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundStyle(LineyTheme.mutedText)
-                        .lineLimit(2)
-
+                VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
-                        QuickCommandMetaTag(title: command.category.title, tint: tint)
-
-                        if let shortcut = command.shortcut {
-                            QuickCommandMetaTag(title: shortcut.displayString, tint: LineyTheme.secondaryText)
-                        }
+                        Text(command.normalizedTitle)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(LineyTheme.tertiaryText)
+                            .lineLimit(1)
 
                         if command.submitsReturn {
                             QuickCommandMetaTag(title: "Return", tint: LineyTheme.success)
                         }
+
+                        Spacer(minLength: 0)
+
+                        if let shortcut = command.shortcut {
+                            Text(shortcut.displayString)
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundStyle(LineyTheme.mutedText)
+                                .lineLimit(1)
+                        }
                     }
+
+                    Text(command.normalizedCommand.nilIfEmpty ?? " ")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(LineyTheme.mutedText)
+                        .lineLimit(1)
                 }
 
                 Spacer(minLength: 0)
             }
-            .padding(12)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(backgroundShape.fill(backgroundColor))
             .overlay(
@@ -432,7 +433,7 @@ private struct QuickCommandListItem: View {
     }
 
     private var backgroundShape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
     }
 
     private var backgroundColor: Color {
@@ -467,8 +468,8 @@ private struct QuickCommandDetailPanel: View {
     let localized: (String) -> String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 10) {
                 ToolbarFeatureIcon(
                     systemName: command.category.symbolName,
                     tint: tint
@@ -476,16 +477,16 @@ private struct QuickCommandDetailPanel: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(command.normalizedTitle)
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.system(size: 18, weight: .semibold))
 
                     Text(command.category.title)
-                    .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(tint)
                 }
 
                 Spacer()
 
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     Button(action: onMoveUp) {
                         Image(systemName: "arrow.up")
                     }
@@ -503,7 +504,7 @@ private struct QuickCommandDetailPanel: View {
                 .buttonStyle(.bordered)
             }
 
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 12) {
                 detailField(title: localized("sheet.quickCommands.commandTitle")) {
                     TextField(localized("sheet.quickCommands.commandTitle"), text: $command.title)
                         .textFieldStyle(.roundedBorder)
@@ -535,14 +536,14 @@ private struct QuickCommandDetailPanel: View {
                 detailField(title: localized("sheet.quickCommands.commandBody")) {
                     TextEditor(text: $command.command)
                         .font(.system(size: 12, design: .monospaced))
-                        .frame(minHeight: 200)
+                        .frame(minHeight: 160)
                         .padding(8)
                         .background(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .fill(Color.white.opacity(0.035))
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .stroke(LineyTheme.border, lineWidth: 1)
                         )
                 }
@@ -560,20 +561,20 @@ private struct QuickCommandDetailPanel: View {
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(LineyTheme.mutedText)
                 }
-                .padding(14)
+                .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .stroke(LineyTheme.border, lineWidth: 1)
                 )
             }
         }
-        .padding(18)
+        .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(LineyTheme.panelRaised, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(LineyTheme.panelRaised, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(LineyTheme.border, lineWidth: 1)
         )
     }
@@ -614,8 +615,8 @@ private struct QuickCommandMetaTag: View {
         Text(title)
             .font(.system(size: 10, weight: .semibold))
             .foregroundStyle(tint)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
             .background(tint.opacity(0.12), in: Capsule())
     }
 }
