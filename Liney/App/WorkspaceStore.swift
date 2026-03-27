@@ -953,7 +953,10 @@ final class WorkspaceStore: ObservableObject {
 
     func updateQuickCommandPresets(_ commands: [QuickCommandPreset]) {
         var settings = appSettings
-        settings.quickCommandPresets = QuickCommandCatalog.normalizedCommands(commands)
+        settings.quickCommandPresets = QuickCommandCatalog.normalizedCommands(
+            commands,
+            reservedShortcuts: LineyKeyboardShortcuts.effectiveShortcuts(in: settings)
+        )
         settings.quickCommandRecentIDs = QuickCommandCatalog.normalizedRecentCommandIDs(
             settings.quickCommandRecentIDs,
             availableCommands: settings.quickCommandPresets
@@ -980,15 +983,27 @@ final class WorkspaceStore: ObservableObject {
         }
 
         workspace.sessionController.focus(targetPaneID)
-        session.insertText(preset.command)
-        recordQuickCommandUse(preset.id)
-        receive(
-            .statusMessage(
-                localizedFormat("main.status.quickCommand.insertedFormat", preset.normalizedTitle),
-                .neutral,
-                deliverSystemNotification: false
+        switch lineyQuickCommandDispatch(for: preset) {
+        case .insert(let text):
+            session.insertText(text)
+            receive(
+                .statusMessage(
+                    localizedFormat("main.status.quickCommand.insertedFormat", preset.normalizedTitle),
+                    .neutral,
+                    deliverSystemNotification: false
+                )
             )
-        )
+        case .run(let command):
+            session.sendShellCommand(command)
+            receive(
+                .statusMessage(
+                    localizedFormat("main.status.quickCommand.ranFormat", preset.normalizedTitle),
+                    .success,
+                    deliverSystemNotification: false
+                )
+            )
+        }
+        recordQuickCommandUse(preset.id)
     }
 
     func refresh(_ workspace: WorkspaceModel) {

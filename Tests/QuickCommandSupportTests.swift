@@ -102,6 +102,119 @@ final class QuickCommandSupportTests: XCTestCase {
         XCTAssertEqual(normalized[0].command, "ls -la")
     }
 
+    func testQuickCommandNormalizationClearsConflictingShortcuts() {
+        let reservedShortcut = StoredShortcut(key: "p", command: true, shift: false, option: false, control: false)
+        let commands = [
+            QuickCommandPreset(
+                id: "first",
+                title: "First",
+                command: "echo first",
+                category: .linux,
+                shortcut: reservedShortcut
+            ),
+            QuickCommandPreset(
+                id: "second",
+                title: "Second",
+                command: "echo second",
+                category: .linux,
+                shortcut: StoredShortcut(key: "k", command: true, shift: false, option: false, control: false)
+            ),
+            QuickCommandPreset(
+                id: "third",
+                title: "Third",
+                command: "echo third",
+                category: .linux,
+                shortcut: StoredShortcut(key: "k", command: true, shift: false, option: false, control: false)
+            ),
+        ]
+
+        let normalized = QuickCommandCatalog.normalizedCommands(commands, reservedShortcuts: Set([reservedShortcut]))
+
+        XCTAssertNil(normalized[0].shortcut)
+        XCTAssertEqual(normalized[1].shortcut, StoredShortcut(key: "k", command: true, shift: false, option: false, control: false))
+        XCTAssertNil(normalized[2].shortcut)
+    }
+
+    func testQuickCommandShortcutMatchReturnsPreset() {
+        let shortcut = StoredShortcut(key: "k", command: true, shift: true, option: false, control: false)
+        let settings = AppSettings(
+            quickCommandPresets: [
+                QuickCommandPreset(
+                    id: "deploy",
+                    title: "Deploy",
+                    command: "deploy-now",
+                    category: .cloud,
+                    shortcut: shortcut,
+                    submitsReturn: true
+                )
+            ]
+        )
+
+        let event = try! XCTUnwrap(
+            NSEvent.keyEvent(
+                with: .keyDown,
+                location: .zero,
+                modifierFlags: [.command, .shift],
+                timestamp: 1,
+                windowNumber: 0,
+                context: nil,
+                characters: "K",
+                charactersIgnoringModifiers: "k",
+                isARepeat: false,
+                keyCode: UInt16(kVK_ANSI_K)
+            )
+        )
+
+        let match = lineyQuickCommandMatch(for: event, in: settings)
+        XCTAssertEqual(match?.id, "deploy")
+        XCTAssertEqual(match?.submitsReturn, true)
+    }
+
+    func testQuickCommandDispatchUsesRunOnlyWhenAutoReturnIsEnabled() {
+        let insertPreset = QuickCommandPreset(
+            id: "insert",
+            title: "Insert",
+            command: "codex",
+            category: .codex,
+            submitsReturn: false
+        )
+        let runPreset = QuickCommandPreset(
+            id: "run",
+            title: "Run",
+            command: "codex",
+            category: .codex,
+            submitsReturn: true
+        )
+
+        XCTAssertEqual(lineyQuickCommandDispatch(for: insertPreset), .insert("codex"))
+        XCTAssertEqual(lineyQuickCommandDispatch(for: runPreset), .run("codex"))
+    }
+
+    func testSettingsEncodingPreservesQuickCommandShortcutAndAutoReturn() throws {
+        let settings = AppSettings(
+            quickCommandPresets: [
+                QuickCommandPreset(
+                    id: "run-tests",
+                    title: "Run Tests",
+                    command: "swift test",
+                    category: .codex,
+                    shortcut: StoredShortcut(key: "t", command: true, shift: true, option: false, control: false),
+                    submitsReturn: true
+                )
+            ]
+        )
+
+        let data = try JSONEncoder().encode(settings)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let presets = try XCTUnwrap(object["quickCommandPresets"] as? [[String: Any]])
+        let shortcut = try XCTUnwrap(presets.first?["shortcut"] as? [String: Any])
+
+        XCTAssertEqual(shortcut["key"] as? String, "t")
+        XCTAssertEqual(shortcut["command"] as? Bool, true)
+        XCTAssertEqual(shortcut["shift"] as? Bool, true)
+        XCTAssertEqual(presets.first?["submitsReturn"] as? Bool, true)
+    }
+
     func testRecentQuickCommandsArePrunedAndDeduplicated() {
         let commands = [
             QuickCommandPreset(id: "a", title: "A", command: "a", category: .codex),

@@ -238,13 +238,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     @MainActor
     func performShortcutAction(matching event: NSEvent) -> Bool {
-        guard let desktopApplication,
-              let match = lineyShortcutMatch(for: event, in: desktopApplication.currentAppSettings) else {
+        guard let desktopApplication else {
             return false
         }
 
-        performShortcutAction(match.action, tabNumber: match.tabNumber ?? 0)
-        return true
+        if let match = lineyShortcutMatch(for: event, in: desktopApplication.currentAppSettings) {
+            performShortcutAction(match.action, tabNumber: match.tabNumber ?? 0)
+            return true
+        }
+
+        if let preset = lineyQuickCommandMatch(for: event, in: desktopApplication.currentAppSettings) {
+            desktopApplication.insertQuickCommand(preset)
+            return true
+        }
+
+        return false
     }
 
     @MainActor

@@ -246,9 +246,11 @@ func textForGhosttyKeyEvent(_ event: NSEvent) -> String? {
 
     if characters.count == 1, let scalar = characters.unicodeScalars.first {
         if isGhosttyControlCharacterScalar(scalar) {
-            if event.modifierFlags.contains(.control) {
-                return event.characters(byApplyingModifiers: event.modifierFlags.subtracting(.control))
-            }
+            // For control-key chords, attach only the key identity/modifiers and
+            // let Ghostty encode the control sequence. Supplying printable text
+            // here causes CSI-u / Kitty keyboard sequences to leak into shells
+            // that are expecting the plain ASCII control byte.
+            return nil
         }
 
         if scalar.value >= 0xF700 && scalar.value <= 0xF8FF {
@@ -395,7 +397,7 @@ extension NSEvent {
 
         if characters.count == 1, let scalar = characters.unicodeScalars.first {
             if scalar.value < 0x20 {
-                return self.characters(byApplyingModifiers: modifierFlags.subtracting(.control))
+                return nil
             }
             if scalar.value >= 0xF700 && scalar.value <= 0xF8FF {
                 return nil

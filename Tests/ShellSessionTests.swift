@@ -305,6 +305,35 @@ final class ShellSessionTests: XCTestCase {
         }
     }
 
+    func testSendShellCommandUsesCarriageReturnSubmission() async {
+        await MainActor.run {
+            let surface = FakeManagedTerminalSurfaceController()
+            let session = ShellSession(
+                snapshot: PaneSnapshot.makeDefault(cwd: "/tmp/liney-shell-session-send-command"),
+                surfaceController: surface
+            )
+
+            session.sendShellCommand("codex")
+
+            XCTAssertEqual(surface.sentTexts, ["codex"])
+            XCTAssertEqual(surface.sendReturnCallCount, 1)
+        }
+    }
+
+    func testInsertTextDoesNotAppendReturn() async {
+        await MainActor.run {
+            let surface = FakeManagedTerminalSurfaceController()
+            let session = ShellSession(
+                snapshot: PaneSnapshot.makeDefault(cwd: "/tmp/liney-shell-session-insert-text"),
+                surfaceController: surface
+            )
+
+            session.insertText("codex")
+
+            XCTAssertEqual(surface.sentTexts, ["codex"])
+        }
+    }
+
     func testProcessReaperTerminatesShellProcessGroupAndLoginProcess() throws {
         let metadataDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -372,6 +401,8 @@ private final class FakeManagedTerminalSurfaceController: ManagedTerminalSession
     private(set) var startCallCount = 0
     private(set) var restartCallCount = 0
     private(set) var terminateCallCount = 0
+    private(set) var sentTexts: [String] = []
+    private(set) var sendReturnCallCount = 0
 
     func updateLaunchConfiguration(_ configuration: TerminalLaunchConfiguration) {}
 
@@ -393,7 +424,12 @@ private final class FakeManagedTerminalSurfaceController: ManagedTerminalSession
         managedPID = nil
     }
 
-    func sendText(_ text: String) {}
+    func sendText(_ text: String) {
+        sentTexts.append(text)
+    }
+    func sendReturn() {
+        sendReturnCallCount += 1
+    }
     func focus() {}
     func setFocused(_ isFocused: Bool) {}
     func beginSearch(initialText: String?) {}
