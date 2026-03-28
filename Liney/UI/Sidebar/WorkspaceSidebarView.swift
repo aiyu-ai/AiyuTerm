@@ -315,10 +315,14 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             let selectedNodes = selectedNodes(from: outlineView)
             let effectiveNodes: [SidebarNodeItem]
 
-            if selectedNodes.isEmpty, row >= 0, let node = outlineView.item(atRow: row) as? SidebarNodeItem {
-                effectiveNodes = [node]
+            if row >= 0, let node = outlineView.item(atRow: row) as? SidebarNodeItem {
+                if outlineView.selectedRowIndexes.contains(row) {
+                    effectiveNodes = selectedNodes.isEmpty ? [node] : selectedNodes
+                } else {
+                    effectiveNodes = [node]
+                }
             } else {
-                effectiveNodes = selectedNodes
+                effectiveNodes = []
             }
 
             guard !effectiveNodes.isEmpty else { return nil }
@@ -553,6 +557,7 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
 
         private func makeWorktreeMenu(workspace: WorkspaceModel, worktree: WorktreeModel) -> NSMenu {
             let menu = NSMenu()
+            let actionPayload = SidebarActionWorktree(workspaceID: workspace.id, worktreePath: worktree.path)
 
             addMenuItem(
                 to: menu,
@@ -570,9 +575,23 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             menu.addItem(.separator())
             addMenuItem(
                 to: menu,
+                title: localized("menu.file.splitRight"),
+                action: #selector(splitRightForWorktree(_:)),
+                representedObject: actionPayload
+            )
+            addMenuItem(
+                to: menu,
+                title: localized("menu.file.splitDown"),
+                action: #selector(splitDownForWorktree(_:)),
+                representedObject: actionPayload
+            )
+
+            menu.addItem(.separator())
+            addMenuItem(
+                to: menu,
                 title: localized("sidebar.menu.customizeIcon"),
                 action: #selector(customizeWorktreeIcon(_:)),
-                representedObject: SidebarActionWorktree(workspaceID: workspace.id, worktreePath: worktree.path)
+                representedObject: actionPayload
             )
 
             if workspace.supportsRepositoryFeatures, !worktree.isMainWorktree {
@@ -581,7 +600,7 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
                     to: menu,
                     title: localized("sidebar.menu.removeWorktree"),
                     action: #selector(removeWorktree(_:)),
-                    representedObject: SidebarActionWorktree(workspaceID: workspace.id, worktreePath: worktree.path)
+                    representedObject: actionPayload
                 )
             }
             return menu
@@ -1212,9 +1231,6 @@ private final class SidebarOutlineView: NSOutlineView {
     override func menu(for event: NSEvent) -> NSMenu? {
         let point = convert(event.locationInWindow, from: nil)
         let row = row(at: point)
-        if row >= 0, !selectedRowIndexes.contains(row) {
-            selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
-        }
         return menuProvider?(row)
     }
 
