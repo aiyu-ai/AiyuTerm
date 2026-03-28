@@ -498,13 +498,6 @@ struct MainWindowView: View {
                         }
                     }
 
-                    Button(localized("sheet.editor.menuTitle")) {
-                        guard let workspace = store.selectedWorkspace else { return }
-                        store.presentLightweightEditor(for: workspace)
-                    }
-                    .disabled(!hasSelectedWorkspace)
-                    Divider()
-
                     Button(localized("menu.app.settings")) {
                         store.presentSettings(for: store.selectedWorkspace)
                     }
@@ -555,11 +548,6 @@ struct MainWindowView: View {
         .sheet(item: $store.quickCommandEditorRequest) { _ in
             QuickCommandEditorSheet()
                 .environmentObject(store)
-        }
-        .sheet(item: $store.lightweightEditorRequest) { request in
-            LightweightEditorSheet(request: request) { contents in
-                store.saveLightweightEditor(request: request, contents: contents)
-            }
         }
         .sheet(item: $store.sidebarIconCustomizationRequest) { request in
             SidebarIconCustomizationSheet(request: request)

@@ -32,7 +32,6 @@ private enum SettingsSheetSection: String, CaseIterable, Identifiable {
     case hotKeyWindow
     case externalEditor
     case terminal
-    case quickCommands
     case sidebar
     case shortcuts
     case updates
@@ -42,7 +41,7 @@ private enum SettingsSheetSection: String, CaseIterable, Identifiable {
 
     var group: SettingsSidebarGroup {
         switch self {
-        case .general, .hotKeyWindow, .externalEditor, .terminal, .quickCommands, .updates:
+        case .general, .hotKeyWindow, .externalEditor, .terminal, .updates:
             return .app
         case .sidebar, .shortcuts:
             return .customize
@@ -61,8 +60,6 @@ private enum SettingsSheetSection: String, CaseIterable, Identifiable {
             return "settings.section.externalEditor.title"
         case .terminal:
             return "settings.section.terminal.title"
-        case .quickCommands:
-            return "settings.section.quickCommands.title"
         case .sidebar:
             return "settings.section.sidebar.title"
         case .shortcuts:
@@ -84,8 +81,6 @@ private enum SettingsSheetSection: String, CaseIterable, Identifiable {
             return "settings.section.externalEditor.subtitle"
         case .terminal:
             return "settings.section.terminal.subtitle"
-        case .quickCommands:
-            return "settings.section.quickCommands.subtitle"
         case .sidebar:
             return "settings.section.sidebar.subtitle"
         case .shortcuts:
@@ -107,8 +102,6 @@ private enum SettingsSheetSection: String, CaseIterable, Identifiable {
             return "square.and.arrow.up"
         case .terminal:
             return "terminal"
-        case .quickCommands:
-            return "bolt"
         case .sidebar:
             return "sidebar.leading"
         case .shortcuts:
@@ -360,8 +353,6 @@ struct SettingsSheet: View {
             externalEditorSettingsView
         case .terminal:
             terminalSettingsView
-        case .quickCommands:
-            quickCommandsSettingsView
         case .sidebar:
             sidebarSettingsView
         case .shortcuts:
@@ -595,27 +586,6 @@ struct SettingsSheet: View {
                 defaultSizeFormat: localized("settings.general.terminal.defaultSizeFormat")
             )
             .frame(maxWidth: .infinity, alignment: .topLeading)
-        }
-    }
-
-    private var quickCommandsSettingsView: some View {
-        GroupBox(localized("settings.general.quickCommands.group")) {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(localized("settings.general.quickCommands.description"))
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.secondary)
-
-                Text(
-                    localizedFormat(
-                        "settings.general.quickCommands.countFormat",
-                        appSettings.quickCommandPresets.count,
-                        appSettings.quickCommandRecentIDs.count
-                    )
-                )
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.top, 8)
         }
     }
 
