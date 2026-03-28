@@ -1279,7 +1279,10 @@ final class WorkspaceStore: ObservableObject {
         createSSHSessionRequest = CreateSSHSessionRequest(
             workspaceID: workspace.id,
             workspaceName: workspace.name,
-            defaultWorkingDirectory: workspace.activeWorktreePath
+            defaultWorkingDirectory: workspace.activeWorktreePath,
+            remoteTargets: workspace.remoteTargets.sorted { lhs, rhs in
+                lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
         )
     }
 
@@ -1295,23 +1298,38 @@ final class WorkspaceStore: ObservableObject {
 
     func createSSHSession(workspaceID: UUID, draft: CreateSSHSessionDraft) {
         guard let configuration = draft.configuration,
-              let workspace = workspaces.first(where: { $0.id == workspaceID }) else { return }
+              let workspaceIndex = workspaces.firstIndex(where: { $0.id == workspaceID }) else { return }
+        let workspace = workspaces[workspaceIndex]
+
+        if let target = draft.targetToSave {
+            if let existingIndex = workspace.remoteTargets.firstIndex(where: { $0.id == target.id }) {
+                workspaces[workspaceIndex].remoteTargets[existingIndex] = target
+            } else if let matchingIndex = workspace.remoteTargets.firstIndex(where: {
+                $0.name.caseInsensitiveCompare(target.name) == .orderedSame
+            }) {
+                workspaces[workspaceIndex].remoteTargets[matchingIndex] = target
+            } else {
+                workspaces[workspaceIndex].remoteTargets.append(target)
+            }
+        }
+
         createSession(
-            in: workspace,
+            in: workspaces[workspaceIndex],
             backendConfiguration: .ssh(configuration),
-            workingDirectory: workspace.activeWorktreePath
+            workingDirectory: workspaces[workspaceIndex].activeWorktreePath
         )
         recordActivity(
-            in: workspace,
+            in: workspaces[workspaceIndex],
             kind: .remote,
             title: "Opened SSH session",
             detail: configuration.destination,
-            worktreePath: workspace.activeWorktreePath,
+            worktreePath: workspaces[workspaceIndex].activeWorktreePath,
             replayAction: .createSession(
                 backendConfiguration: .ssh(configuration),
-                workingDirectory: workspace.activeWorktreePath
+                workingDirectory: workspaces[workspaceIndex].activeWorktreePath
             )
         )
+        persist()
     }
 
     func createAgentSession(workspaceID: UUID, draft: CreateAgentSessionDraft) {
