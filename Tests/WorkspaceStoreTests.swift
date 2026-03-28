@@ -102,14 +102,14 @@ final class WorkspaceStoreTests: XCTestCase {
 
         let worktree = WorktreeModel(
             path: "/tmp/liney-main",
-            branch: nil,
+            branch: "main",
             head: "abc123",
             isMainWorktree: true,
             isLocked: false,
             lockReason: nil
         )
-        XCTAssertEqual(worktree.displayName, "主检出")
-        XCTAssertEqual(worktree.branchLabel, "游离 HEAD")
+        XCTAssertEqual(worktree.displayName, "main")
+        XCTAssertEqual(worktree.branchLabel, "main")
         XCTAssertEqual(
             L10nTable.string(for: "remote.activity.openedShell", language: .simplifiedChinese),
             "已打开远程目标 Shell"
