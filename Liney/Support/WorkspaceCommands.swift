@@ -13,6 +13,8 @@ struct WorkspaceGitHubTarget: Hashable {
 }
 
 enum WorkspaceCommand: Hashable {
+    case openLineyWebsite
+    case submitLineyFeedback
     case toggleCommandPalette
     case toggleOverview
     case presentSettings

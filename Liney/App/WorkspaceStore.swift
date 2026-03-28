@@ -296,6 +296,15 @@ final class WorkspaceStore: ObservableObject {
             ),
         ]
 
+        items.append(
+            contentsOf: LineyFeatureRegistry.shared.commandPaletteItems(
+                context: LineyExtensionContext(
+                    selectedWorkspace: selectedWorkspace,
+                    workspaces: workspaces
+                )
+            )
+        )
+
         if let selectedWorkspace {
             items.append(
                 CommandPaletteItem(
@@ -1914,6 +1923,14 @@ final class WorkspaceStore: ObservableObject {
 
     func dispatch(_ command: WorkspaceCommand) {
         switch command {
+        case .openLineyWebsite:
+            dismissCommandPalette()
+            openLineyWebsite()
+
+        case .submitLineyFeedback:
+            dismissCommandPalette()
+            submitLineyFeedback()
+
         case .toggleCommandPalette:
             isCommandPalettePresented.toggle()
             if isCommandPalettePresented {
@@ -2649,6 +2666,18 @@ final class WorkspaceStore: ObservableObject {
     private func openLatestRelease() {
         NSWorkspace.shared.open(AppUpdaterController.releasesURL)
         receive(.statusMessage(localized("main.status.releaseNotesOpened"), .neutral, deliverSystemNotification: false))
+    }
+
+    private func openLineyWebsite() {
+        guard let url = URL(string: "https://liney.dev") else { return }
+        NSWorkspace.shared.open(url)
+        receive(.statusMessage(localized("extension.support.websiteOpened"), .neutral, deliverSystemNotification: false))
+    }
+
+    private func submitLineyFeedback() {
+        guard let url = URL(string: "https://github.com/wuwenrui/liney/issues/new") else { return }
+        NSWorkspace.shared.open(url)
+        receive(.statusMessage(localized("extension.support.feedbackOpened"), .neutral, deliverSystemNotification: false))
     }
 
     private func checkForUpdates() {
