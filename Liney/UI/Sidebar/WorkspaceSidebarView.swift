@@ -17,30 +17,34 @@ struct WorkspaceSidebarView: View {
         localization.string(key)
     }
 
+    private var uiScale: CGFloat {
+        CGFloat(store.appSettings.uiScale)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 11 * uiScale, weight: .semibold))
                     .foregroundStyle(LineyTheme.mutedText)
 
                 TextField(
                     text: $query,
                     prompt: Text(localized("sidebar.filterWorkspaces"))
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: 11 * uiScale, weight: .medium))
                         .foregroundStyle(LineyTheme.mutedText)
                 ) {
                     EmptyView()
                 }
                 .textFieldStyle(.plain)
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 12 * uiScale, weight: .medium))
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 12 * uiScale)
+            .padding(.vertical, 8 * uiScale)
             .background(LineyTheme.sidebarSearchBackground, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
-            .padding(.horizontal, 8)
-            .padding(.top, 12)
-            .padding(.bottom, 10)
+            .padding(.horizontal, 8 * uiScale)
+            .padding(.top, 12 * uiScale)
+            .padding(.bottom, 10 * uiScale)
             .background(LineyTheme.sidebarBackground)
             .overlay(alignment: .bottom) {
                 Rectangle()
@@ -84,24 +88,29 @@ private struct WorkspaceOutlineSidebar: NSViewRepresentable {
 
 private struct SidebarOpenRepositoryRow: View {
     @ObservedObject private var localization = LocalizationManager.shared
+    @EnvironmentObject private var store: WorkspaceStore
     let action: () -> Void
 
     private func localized(_ key: String) -> String {
         localization.string(key)
     }
 
+    private var uiScale: CGFloat {
+        CGFloat(store.appSettings.uiScale)
+    }
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 5) {
                 Image(systemName: "folder.badge.plus")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 11 * uiScale, weight: .semibold))
                 Text(localized("sidebar.openFolder"))
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 11 * uiScale, weight: .semibold))
 
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 10)
-            .frame(maxWidth: .infinity, minHeight: 30, alignment: .leading)
+            .padding(.horizontal, 10 * uiScale)
+            .frame(maxWidth: .infinity, minHeight: 30 * uiScale, alignment: .leading)
             .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -1297,17 +1306,21 @@ private struct WorkspaceRowContent: View {
             ?? (workspace.supportsRepositoryFeatures ? .repositoryDefault : .localTerminalDefault)
     }
 
+    private var uiScale: CGFloat {
+        CGFloat(appSettings.uiScale)
+    }
+
     var body: some View {
-        HStack(spacing: 8) {
-            SidebarItemIconView(icon: icon, size: 22)
+        HStack(spacing: 8 * uiScale) {
+            SidebarItemIconView(icon: icon, size: 22 * uiScale)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(workspace.name)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 12 * uiScale, weight: .semibold))
                     .lineLimit(1)
                 if appSettings.sidebarShowsSecondaryLabels {
                     Text(workspace.supportsRepositoryFeatures ? workspace.currentBranch : workspace.activeWorktreePath.lastPathComponentValue)
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .font(.system(size: 10 * uiScale, weight: .medium, design: .monospaced))
                         .foregroundStyle(LineyTheme.mutedText)
                         .lineLimit(1)
                 }
@@ -1316,16 +1329,16 @@ private struct WorkspaceRowContent: View {
             Spacer()
 
             if appSettings.sidebarShowsWorkspaceBadges {
-                HStack(spacing: 6) {
+                HStack(spacing: 6 * uiScale) {
                     if workspace.isPinned {
                         Image(systemName: "pin.fill")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.system(size: 9 * uiScale, weight: .bold))
                             .foregroundStyle(LineyTheme.accent)
                     }
 
                     if workspace.isArchived {
                         Image(systemName: "archivebox.fill")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.system(size: 9 * uiScale, weight: .bold))
                             .foregroundStyle(LineyTheme.mutedText)
                     }
 
@@ -1352,9 +1365,9 @@ private struct WorkspaceRowContent: View {
                 }
             }
         }
-        .padding(.vertical, 4)
-        .padding(.leading, 2)
-        .padding(.trailing, 4)
+        .padding(.vertical, 4 * uiScale)
+        .padding(.leading, 2 * uiScale)
+        .padding(.trailing, 4 * uiScale)
         .background(
             LineyTheme.subtleFill.opacity(isHovering ? 1 : 0),
             in: RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -1384,12 +1397,16 @@ private struct WorktreeRowContent: View {
         store?.sidebarIcon(for: worktree, in: workspace) ?? .worktreeDefault
     }
 
-    private let iconSize: CGFloat = 16
-    private let leadingInset: CGFloat = 5
-    private let iconColumnWidth: CGFloat = 24
+    private var uiScale: CGFloat {
+        CGFloat(appSettings.uiScale)
+    }
+
+    private var iconSize: CGFloat { 16 * uiScale }
+    private var leadingInset: CGFloat { 5 * uiScale }
+    private var iconColumnWidth: CGFloat { 24 * uiScale }
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 8 * uiScale) {
             SidebarItemIconView(
                 icon: icon,
                 size: iconSize,
@@ -1398,16 +1415,16 @@ private struct WorktreeRowContent: View {
             )
             .frame(width: iconColumnWidth, alignment: .leading)
             Text(worktree.displayName)
-                .font(.system(size: 10, weight: .medium))
+                .font(.system(size: 10 * uiScale, weight: .medium))
                 .lineLimit(1)
             if worktree.isLocked {
                 Image(systemName: "lock.fill")
-                    .font(.system(size: 8))
+                    .font(.system(size: 8 * uiScale))
                     .foregroundStyle(LineyTheme.mutedText)
             }
             Spacer()
             if appSettings.sidebarShowsWorktreeBadges {
-                HStack(spacing: 5) {
+                HStack(spacing: 5 * uiScale) {
                     if workspace.activeWorktreePath == worktree.path {
                         SidebarInfoBadge(text: localized("sidebar.badge.current"), tone: .subtleSuccess)
                     }
@@ -1419,10 +1436,10 @@ private struct WorktreeRowContent: View {
                 }
             }
         }
-        .padding(.vertical, 1)
+        .padding(.vertical, 1 * uiScale)
         .padding(.leading, leadingInset)
-        .padding(.trailing, 4)
-        .frame(maxWidth: .infinity, minHeight: 24, alignment: .leading)
+        .padding(.trailing, 4 * uiScale)
+        .frame(maxWidth: .infinity, minHeight: 24 * uiScale, alignment: .leading)
         .background(
             LineyTheme.subtleFill.opacity(isHovering ? 1 : 0),
             in: RoundedRectangle(cornerRadius: 8, style: .continuous)

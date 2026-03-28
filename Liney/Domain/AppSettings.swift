@@ -246,6 +246,7 @@ struct AppSettings: Codable, Hashable {
     var autoDownloadUpdates: Bool
     var systemNotificationsEnabled: Bool
     var showArchivedWorkspaces: Bool
+    var uiScale: Double
     var terminalFontFamily: String?
     var terminalFontSize: Double?
     var sidebarShowsSecondaryLabels: Bool
@@ -276,6 +277,7 @@ struct AppSettings: Codable, Hashable {
         autoDownloadUpdates: Bool = false,
         systemNotificationsEnabled: Bool = true,
         showArchivedWorkspaces: Bool = false,
+        uiScale: Double = 1,
         terminalFontFamily: String? = nil,
         terminalFontSize: Double? = nil,
         sidebarShowsSecondaryLabels: Bool = true,
@@ -307,6 +309,7 @@ struct AppSettings: Codable, Hashable {
         self.autoDownloadUpdates = autoDownloadUpdates
         self.systemNotificationsEnabled = systemNotificationsEnabled
         self.showArchivedWorkspaces = showArchivedWorkspaces
+        self.uiScale = min(max(uiScale, 0.85), 1.5)
         self.terminalFontFamily = terminalFontFamily?
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .nilIfEmpty
@@ -349,6 +352,7 @@ extension AppSettings {
         case autoDownloadUpdates
         case systemNotificationsEnabled
         case showArchivedWorkspaces
+        case uiScale
         case terminalFontFamily
         case terminalFontSize
         case sidebarShowsSecondaryLabels
@@ -390,6 +394,7 @@ extension AppSettings {
             autoDownloadUpdates: try container.decodeIfPresent(Bool.self, forKey: .autoDownloadUpdates) ?? false,
             systemNotificationsEnabled: try container.decodeIfPresent(Bool.self, forKey: .systemNotificationsEnabled) ?? true,
             showArchivedWorkspaces: try container.decodeIfPresent(Bool.self, forKey: .showArchivedWorkspaces) ?? false,
+            uiScale: try container.decodeIfPresent(Double.self, forKey: .uiScale) ?? 1,
             terminalFontFamily: try container.decodeIfPresent(String.self, forKey: .terminalFontFamily),
             terminalFontSize: try container.decodeIfPresent(Double.self, forKey: .terminalFontSize),
             sidebarShowsSecondaryLabels: try container.decodeIfPresent(Bool.self, forKey: .sidebarShowsSecondaryLabels) ?? true,

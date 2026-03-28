@@ -15,6 +15,10 @@ struct OverviewView: View {
     private let columns = [GridItem(.adaptive(minimum: 260, maximum: 340), spacing: 16)]
     private var model: OverviewViewModel { OverviewViewModel(workspaces: store.workspaces) }
 
+    private var uiScale: CGFloat {
+        CGFloat(store.appSettings.uiScale)
+    }
+
     private func localized(_ key: String) -> String {
         localization.string(key)
     }
@@ -103,6 +107,7 @@ struct OverviewView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(LineyTheme.appBackground)
+        .scaleEffect(uiScale)
     }
 
     private var overviewHeader: some View {

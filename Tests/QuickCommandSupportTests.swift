@@ -68,6 +68,17 @@ final class QuickCommandSupportTests: XCTestCase {
         XCTAssertEqual(shortcut["control"] as? Bool, false)
     }
 
+    func testSettingsEncodeAndDecodePreserveUIScale() throws {
+        let settings = AppSettings(uiScale: 1.25)
+
+        let data = try JSONEncoder().encode(settings)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["uiScale"] as? Double, 1.25)
+
+        let decoded = try JSONDecoder().decode(AppSettings.self, from: data)
+        XCTAssertEqual(decoded.uiScale, 1.25, accuracy: 0.001)
+    }
+
     func testDebugBuildUsesSeparatePersistenceDirectoryName() {
         XCTAssertEqual(lineyStateDirectoryName(isDebugBuild: true), ".liney-debug")
         XCTAssertEqual(lineyStateDirectoryName(isDebugBuild: false), ".liney")

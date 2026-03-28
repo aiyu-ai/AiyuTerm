@@ -415,6 +415,21 @@ struct SettingsSheet: View {
                 Toggle(localized("settings.general.behavior.allowSystemNotifications"), isOn: $appSettings.systemNotificationsEnabled)
                 Toggle(localized("settings.general.behavior.showArchivedWorkspaces"), isOn: $appSettings.showArchivedWorkspaces)
 
+                Divider()
+
+                HStack {
+                    Text(localized("settings.general.behavior.uiScale"))
+                    Spacer()
+                    Text(localizedFormat("settings.general.behavior.uiScalePercentFormat", Int((appSettings.uiScale * 100).rounded())))
+                        .foregroundStyle(.secondary)
+                }
+
+                Slider(value: $appSettings.uiScale, in: 0.85...1.5, step: 0.05)
+
+                Text(localized("settings.general.behavior.uiScaleHint"))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+
                 HStack {
                     Text(localized("settings.general.behavior.refreshInterval"))
                     Spacer()
