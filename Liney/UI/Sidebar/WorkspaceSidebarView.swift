@@ -1554,28 +1554,54 @@ struct SidebarIconActivityBadge: View {
     @State private var isAnimating = false
 
     private var badgeSize: CGFloat {
-        max(6, size * 0.28)
+        switch kind {
+        case .working:
+            return max(7, size * 0.34)
+        case .current, .none:
+            return max(6, size * 0.28)
+        }
     }
 
     private var pulseLineWidth: CGFloat {
-        isEmphasized ? 1.35 : 1.1
+        isEmphasized ? 1.4 : 1.15
     }
 
     private var pulseOpacity: Double {
-        isEmphasized ? 0.68 : 0.4
+        isEmphasized ? 0.8 : 0.5
     }
 
     private var pulseScale: CGFloat {
-        isEmphasized ? 1.75 : 1.45
+        isEmphasized ? 2.15 : 1.85
     }
 
     private var pulseDuration: Double {
-        isEmphasized ? 1.2 : 1.6
+        isEmphasized ? 0.95 : 1.15
+    }
+
+    private var coreScale: CGFloat {
+        guard kind == .working else { return 1 }
+        return isAnimating ? 1.18 : 0.9
+    }
+
+    private var coreOpacity: Double {
+        guard kind == .working else { return 1 }
+        return isAnimating ? 1 : 0.82
+    }
+
+    private var glowRadius: CGFloat {
+        guard kind == .working else { return 0 }
+        return isEmphasized ? 6 : 4
     }
 
     var body: some View {
         ZStack {
             if kind == .working {
+                Circle()
+                    .fill(LineyTheme.success.opacity(isAnimating ? 0.18 : 0.06))
+                    .frame(width: badgeSize, height: badgeSize)
+                    .scaleEffect(isAnimating ? pulseScale * 0.9 : 1.0)
+                    .blur(radius: isEmphasized ? 1.2 : 0.8)
+
                 Circle()
                     .stroke(LineyTheme.success.opacity(pulseOpacity), lineWidth: pulseLineWidth)
                     .frame(width: badgeSize, height: badgeSize)
@@ -1587,6 +1613,9 @@ struct SidebarIconActivityBadge: View {
                 .fill(LineyTheme.success)
                 .frame(width: badgeSize, height: badgeSize)
                 .overlay(Circle().stroke(LineyTheme.sidebarBackground, lineWidth: 1))
+                .scaleEffect(coreScale)
+                .opacity(coreOpacity)
+                .shadow(color: LineyTheme.success.opacity(kind == .working ? 0.9 : 0), radius: glowRadius)
         }
         .onAppear {
             updateAnimationState()
@@ -1602,7 +1631,7 @@ struct SidebarIconActivityBadge: View {
             return
         }
         isAnimating = false
-        withAnimation(.easeOut(duration: pulseDuration).repeatForever(autoreverses: false)) {
+        withAnimation(.easeInOut(duration: pulseDuration).repeatForever(autoreverses: true)) {
             isAnimating = true
         }
     }
