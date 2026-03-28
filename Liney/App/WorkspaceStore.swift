@@ -428,6 +428,41 @@ final class WorkspaceStore: ObservableObject {
                         kind: .command(.openRemoteTargetShell(workspace.id, remoteTarget.id))
                     )
                 )
+                items.append(
+                    CommandPaletteItem(
+                        id: "remote-browse:\(workspace.id.uuidString):\(remoteTarget.id.uuidString)",
+                        title: localizedFormat("main.commandPalette.browseRemoteRepositoryFormat", remoteTarget.name),
+                        subtitle: remoteTarget.ssh.remoteWorkingDirectory ?? remoteTarget.ssh.destination,
+                        group: .sessions,
+                        keywords: ["ssh", "remote", "repo", "browse", "git", workspace.name],
+                        isGlobal: false,
+                        kind: .command(.browseRemoteTargetRepository(workspace.id, remoteTarget.id))
+                    )
+                )
+                items.append(
+                    CommandPaletteItem(
+                        id: "remote-copy-destination:\(workspace.id.uuidString):\(remoteTarget.id.uuidString)",
+                        title: localizedFormat("main.commandPalette.copyRemoteDestinationFormat", remoteTarget.name),
+                        subtitle: remoteTarget.ssh.destination,
+                        group: .navigation,
+                        keywords: ["ssh", "remote", "copy", "host", workspace.name],
+                        isGlobal: false,
+                        kind: .command(.copyRemoteTargetDestination(workspace.id, remoteTarget.id))
+                    )
+                )
+                if remoteTarget.ssh.remoteWorkingDirectory?.isEmpty == false {
+                    items.append(
+                        CommandPaletteItem(
+                            id: "remote-copy-path:\(workspace.id.uuidString):\(remoteTarget.id.uuidString)",
+                            title: localizedFormat("main.commandPalette.copyRemotePathFormat", remoteTarget.name),
+                            subtitle: remoteTarget.ssh.remoteWorkingDirectory,
+                            group: .navigation,
+                            keywords: ["ssh", "remote", "copy", "path", "workspace", workspace.name],
+                            isGlobal: false,
+                            kind: .command(.copyRemoteTargetWorkingDirectory(workspace.id, remoteTarget.id))
+                        )
+                    )
+                }
                 if let presetID = remoteTarget.agentPresetID,
                    let preset = workspace.agentPresets.first(where: { $0.id == presetID }) {
                     items.append(
@@ -1974,6 +2009,18 @@ final class WorkspaceStore: ObservableObject {
             dismissCommandPalette()
             openRemoteTargetAgent(workspaceID: workspaceID, targetID: targetID)
 
+        case .browseRemoteTargetRepository(let workspaceID, let targetID):
+            dismissCommandPalette()
+            browseRemoteTargetRepository(workspaceID: workspaceID, targetID: targetID)
+
+        case .copyRemoteTargetDestination(let workspaceID, let targetID):
+            dismissCommandPalette()
+            copyRemoteTargetDestination(workspaceID: workspaceID, targetID: targetID)
+
+        case .copyRemoteTargetWorkingDirectory(let workspaceID, let targetID):
+            dismissCommandPalette()
+            copyRemoteTargetWorkingDirectory(workspaceID: workspaceID, targetID: targetID)
+
         case .runWorkspaceScript(let id):
             dismissCommandPalette()
             if let workspace = workspace(for: id) {
@@ -2644,6 +2691,38 @@ final class WorkspaceStore: ObservableObject {
         } catch {
             receive(.statusMessage(error.localizedDescription, .warning, deliverSystemNotification: false))
         }
+    }
+
+    private func browseRemoteTargetRepository(workspaceID: UUID, targetID: UUID) {
+        guard let workspace = workspace(for: workspaceID) else { return }
+        do {
+            let plan = try remoteSessionCoordinator.repositoryBrowserPlan(workspace: workspace, targetID: targetID)
+            createSession(in: workspace, backendConfiguration: plan.backendConfiguration, workingDirectory: plan.workingDirectory)
+            recordActivity(
+                in: workspace,
+                kind: plan.activityKind,
+                title: plan.activityTitle,
+                detail: plan.activityDetail,
+                worktreePath: workspace.activeWorktreePath,
+                replayAction: plan.replayAction
+            )
+        } catch {
+            receive(.statusMessage(error.localizedDescription, .warning, deliverSystemNotification: false))
+        }
+    }
+
+    private func copyRemoteTargetDestination(workspaceID: UUID, targetID: UUID) {
+        guard let target = workspace(for: workspaceID)?.remoteTargets.first(where: { $0.id == targetID }) else { return }
+        copyPath(target.ssh.destination)
+        receive(.statusMessage(localizedFormat("remote.status.copiedDestinationFormat", target.name), .success, deliverSystemNotification: false))
+    }
+
+    private func copyRemoteTargetWorkingDirectory(workspaceID: UUID, targetID: UUID) {
+        guard let target = workspace(for: workspaceID)?.remoteTargets.first(where: { $0.id == targetID }),
+              let path = target.ssh.remoteWorkingDirectory,
+              !path.isEmpty else { return }
+        copyPath(path)
+        receive(.statusMessage(localizedFormat("remote.status.copiedPathFormat", target.name), .success, deliverSystemNotification: false))
     }
 
     private func runWorkspaceScript(in workspace: WorkspaceModel) {

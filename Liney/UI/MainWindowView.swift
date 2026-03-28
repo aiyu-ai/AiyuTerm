@@ -476,6 +476,28 @@ struct MainWindowView: View {
                         openDiffWindow()
                     }
 
+                    if let workspace = store.selectedWorkspace,
+                       !workspace.remoteTargets.isEmpty {
+                        Menu(localized("main.menu.remoteTargets")) {
+                            ForEach(workspace.remoteTargets) { target in
+                                Button(localizedFormat("main.menu.remoteShellFormat", target.name)) {
+                                    store.dispatch(.openRemoteTargetShell(workspace.id, target.id))
+                                }
+                                Button(localizedFormat("main.menu.remoteBrowseFormat", target.name)) {
+                                    store.dispatch(.browseRemoteTargetRepository(workspace.id, target.id))
+                                }
+                                Button(localizedFormat("main.menu.remoteCopyDestinationFormat", target.name)) {
+                                    store.dispatch(.copyRemoteTargetDestination(workspace.id, target.id))
+                                }
+                                if target.ssh.remoteWorkingDirectory?.isEmpty == false {
+                                    Button(localizedFormat("main.menu.remoteCopyPathFormat", target.name)) {
+                                        store.dispatch(.copyRemoteTargetWorkingDirectory(workspace.id, target.id))
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     Button(localized("sheet.editor.menuTitle")) {
                         guard let workspace = store.selectedWorkspace else { return }
                         store.presentLightweightEditor(for: workspace)
