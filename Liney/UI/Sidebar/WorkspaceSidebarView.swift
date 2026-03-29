@@ -1430,7 +1430,7 @@ private struct WorktreeRowContent: View {
     private var leadingInset: CGFloat { 5 * uiScale }
     private var iconColumnWidth: CGFloat { 24 * uiScale }
     private var iconActivityIndicator: SidebarIconActivityIndicator {
-        if workspace.activeSessionCount(forWorktreePath: worktree.path) > 0 {
+        if workspace.runningSessionCount(forWorktreePath: worktree.path) > 0 {
             return .working
         }
         if workspace.activeWorktreePath == worktree.path {
