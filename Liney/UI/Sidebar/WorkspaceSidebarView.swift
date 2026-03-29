@@ -1532,7 +1532,7 @@ struct SidebarItemIconView: View {
                         .strokeBorder(palette.border, lineWidth: 1)
                 )
 
-            if activityIndicator != .none {
+            if activityIndicator == .working {
                 SidebarIconActivityBadge(kind: activityIndicator, size: size, isEmphasized: isEmphasized)
                     .offset(x: 2, y: 2)
             }
