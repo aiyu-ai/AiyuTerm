@@ -333,6 +333,26 @@ func lineyGhosttyShouldDispatchWorkspaceSplitAction(
     }
 }
 
+func lineyGhosttySSHWordNavigationEscapeSequence(
+    keyCode: UInt16,
+    modifierFlags: NSEvent.ModifierFlags,
+    backendConfiguration: SessionBackendConfiguration
+) -> String? {
+    guard backendConfiguration.kind == .ssh else { return nil }
+
+    let relevantModifiers = modifierFlags.intersection(.deviceIndependentFlagsMask)
+    guard relevantModifiers == [.option] else { return nil }
+
+    switch keyCode {
+    case UInt16(kVK_LeftArrow):
+        return "\u{1B}b"
+    case UInt16(kVK_RightArrow):
+        return "\u{1B}f"
+    default:
+        return nil
+    }
+}
+
 func resolveGhosttyEquivalentKey(
     charactersIgnoringModifiers: String?,
     characters: String?,

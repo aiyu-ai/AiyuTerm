@@ -474,6 +474,7 @@ private final class LineyGhosttySurfaceView: NSView {
     private var activeKeyTables: [String] = []
     private var surfaceBackgroundColor: NSColor?
     private var workspaceFocused = false
+    private var backendConfiguration: SessionBackendConfiguration = .local()
     private var handledTextInputCommand = false
     private var lastPerformKeyEvent: TimeInterval?
     private var markedSelectionRange = NSRange(location: NSNotFound, length: 0)
@@ -816,6 +817,15 @@ private final class LineyGhosttySurfaceView: NSView {
             return
         }
 
+        if let escapeSequence = lineyGhosttySSHWordNavigationEscapeSequence(
+            keyCode: event.keyCode,
+            modifierFlags: event.modifierFlags,
+            backendConfiguration: backendConfiguration
+        ) {
+            sendText(escapeSequence)
+            return
+        }
+
         let (translationEvent, translationMods) = translationState(for: event, on: surface)
 
         if shouldPreferRawKeyEvent(for: event) {
@@ -1116,6 +1126,7 @@ private final class LineyGhosttySurfaceView: NSView {
 
     private func createSurface(runtime: LineyGhosttyRuntime, launchConfiguration: TerminalLaunchConfiguration) {
         guard let controller else { return }
+        backendConfiguration = launchConfiguration.backendConfiguration
 
         let surfaceUserdataToken = LineyGhosttyControllerRegistry.shared.register(controller)
         let surface = withSurfaceConfig(

@@ -69,6 +69,75 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
         )
     }
 
+    func testSSHOptionLeftArrowUsesBackwardWordEscapeSequence() {
+        XCTAssertEqual(
+            lineyGhosttySSHWordNavigationEscapeSequence(
+                keyCode: UInt16(kVK_LeftArrow),
+                modifierFlags: [.option],
+                backendConfiguration: .ssh(
+                    SSHSessionConfiguration(
+                        host: "example.com",
+                        user: "dev",
+                        port: nil,
+                        identityFilePath: nil,
+                        remoteWorkingDirectory: nil,
+                        remoteCommand: nil
+                    )
+                )
+            ),
+            "\u{1B}b"
+        )
+    }
+
+    func testSSHOptionRightArrowUsesForwardWordEscapeSequence() {
+        XCTAssertEqual(
+            lineyGhosttySSHWordNavigationEscapeSequence(
+                keyCode: UInt16(kVK_RightArrow),
+                modifierFlags: [.option],
+                backendConfiguration: .ssh(
+                    SSHSessionConfiguration(
+                        host: "example.com",
+                        user: "dev",
+                        port: nil,
+                        identityFilePath: nil,
+                        remoteWorkingDirectory: nil,
+                        remoteCommand: nil
+                    )
+                )
+            ),
+            "\u{1B}f"
+        )
+    }
+
+    func testLocalOptionArrowDoesNotUseSSHWordNavigationEscapeSequence() {
+        XCTAssertNil(
+            lineyGhosttySSHWordNavigationEscapeSequence(
+                keyCode: UInt16(kVK_LeftArrow),
+                modifierFlags: [.option],
+                backendConfiguration: .local()
+            )
+        )
+    }
+
+    func testSSHCommandOptionArrowDoesNotUseSSHWordNavigationEscapeSequence() {
+        XCTAssertNil(
+            lineyGhosttySSHWordNavigationEscapeSequence(
+                keyCode: UInt16(kVK_LeftArrow),
+                modifierFlags: [.command, .option],
+                backendConfiguration: .ssh(
+                    SSHSessionConfiguration(
+                        host: "example.com",
+                        user: "dev",
+                        port: nil,
+                        identityFilePath: nil,
+                        remoteWorkingDirectory: nil,
+                        remoteCommand: nil
+                    )
+                )
+            )
+        )
+    }
+
     func testPlainReturnDoesNotUseRawKeyRouting() {
         XCTAssertFalse(
             LineyGhosttyTextInputRouting.shouldPreferRawKeyEvent(
