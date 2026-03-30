@@ -445,7 +445,10 @@ extension AppSettings {
 }
 
 private func lineyNormalizedAgentPresets(_ presets: [AgentPreset]) -> [AgentPreset] {
-    let filtered = presets.filter { $0.id != AgentPreset.deprecatedAiderPresetID }
+    let builtInsByID = Dictionary(uniqueKeysWithValues: AgentPreset.builtInPresets.map { ($0.id, $0) })
+    let filtered = presets
+        .filter { $0.id != AgentPreset.deprecatedAiderPresetID }
+        .map { builtInsByID[$0.id] ?? $0 }
     if filtered.isEmpty {
         return AgentPreset.builtInPresets
     }

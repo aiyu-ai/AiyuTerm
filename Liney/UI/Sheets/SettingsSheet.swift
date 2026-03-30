@@ -940,11 +940,22 @@ struct SettingsSheet: View {
     }
 
     private var agentPresetsSettingsView: some View {
-        GroupBox(localized("settings.workspace.agentPresets")) {
+        GroupBox(localized("settings.workspace.agentPresetsGroup")) {
             VStack(alignment: .leading, spacing: 12) {
                 Text(localized("settings.workspace.agentPresetsHint"))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.secondary)
+
+                if !appSettings.agentPresets.isEmpty {
+                    Picker(localized("settings.workspace.agentPreset.default"), selection: Binding(
+                        get: { appSettings.preferredAgentPresetID ?? appSettings.agentPresets.first?.id },
+                        set: { appSettings.preferredAgentPresetID = $0 }
+                    )) {
+                        ForEach(appSettings.agentPresets) { preset in
+                            Text(preset.name).tag(Optional(preset.id))
+                        }
+                    }
+                }
 
                 HStack {
                     Spacer()
@@ -953,7 +964,7 @@ struct SettingsSheet: View {
                             AgentPreset(
                                 name: localized("defaults.agent.name"),
                                 launchPath: "/usr/bin/env",
-                                arguments: ["claude", "--resume"]
+                                arguments: ["claude"]
                             )
                         )
                         if appSettings.preferredAgentPresetID == nil {
@@ -970,17 +981,6 @@ struct SettingsSheet: View {
 
                 ForEach(Array(appSettings.agentPresets.indices), id: \.self) { index in
                     agentPresetCard(at: index)
-                }
-
-                if !appSettings.agentPresets.isEmpty {
-                    Picker(localized("settings.workspace.agentPreset.preferred"), selection: Binding(
-                        get: { appSettings.preferredAgentPresetID ?? appSettings.agentPresets.first?.id },
-                        set: { appSettings.preferredAgentPresetID = $0 }
-                    )) {
-                        ForEach(appSettings.agentPresets) { preset in
-                            Text(preset.name).tag(Optional(preset.id))
-                        }
-                    }
                 }
             }
             .padding(.top, 8)

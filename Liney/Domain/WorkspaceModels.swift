@@ -151,14 +151,14 @@ struct AgentPreset: Codable, Hashable, Identifiable {
         id: builtInID("B0A9A6D8-7A85-4B87-A5D0-6E6A8F50C002"),
         name: "Claude Code",
         launchPath: "/usr/bin/env",
-        arguments: ["claude", "--resume"]
+        arguments: ["claude"]
     )
 
     static let codex = AgentPreset(
         id: builtInID("B0A9A6D8-7A85-4B87-A5D0-6E6A8F50C001"),
         name: "Codex",
         launchPath: "/usr/bin/env",
-        arguments: ["codex", "resume"]
+        arguments: ["codex"]
     )
 
     static let openCode = AgentPreset(

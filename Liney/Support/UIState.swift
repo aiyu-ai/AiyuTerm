@@ -261,7 +261,7 @@ struct CreateAgentSessionDraft {
     var selectedPresetID: UUID? = AgentPreset.claudeCode.id
     var name: String = AgentPreset.claudeCode.name
     var launchPath: String = "/usr/bin/env"
-    var argumentsText: String = "claude\n--resume"
+    var argumentsText: String = "claude"
     var environmentText: String = ""
     var workingDirectory: String = ""
     var normalizedName: String {
