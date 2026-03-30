@@ -285,6 +285,31 @@ final class QuickCommandSupportTests: XCTestCase {
         XCTAssertEqual(normalized.first?.categoryID, QuickCommandCategory.general.id)
     }
 
+    func testReplacingQuickCommandClearsConflictingShortcutFromPreviousCommand() {
+        let shortcut = StoredShortcut(key: "k", command: true, shift: true, option: false, control: false)
+        let codex = QuickCommandPreset(
+            id: "codex",
+            title: "Codex",
+            command: "codex",
+            categoryID: QuickCommandCategory.codex.id,
+            shortcut: shortcut
+        )
+        let claude = QuickCommandPreset(
+            id: "claude",
+            title: "Claude",
+            command: "claude",
+            categoryID: QuickCommandCategory.claude.id
+        )
+
+        var updatedClaude = claude
+        updatedClaude.shortcut = shortcut
+
+        let replaced = QuickCommandCatalog.replacingCommand(updatedClaude, in: [codex, claude])
+
+        XCTAssertNil(replaced.first(where: { $0.id == "codex" })?.shortcut)
+        XCTAssertEqual(replaced.first(where: { $0.id == "claude" })?.shortcut, shortcut)
+    }
+
     func testPredefinedQuickCommandLibraryContainsLargeCuratedCatalog() {
         XCTAssertEqual(QuickCommandCatalog.predefinedCommands.count, 200)
         XCTAssertEqual(QuickCommandCatalog.predefinedCommandCount, QuickCommandCatalog.predefinedCommands.count)

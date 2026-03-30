@@ -316,7 +316,9 @@ struct QuickCommandEditorSheet: View {
             },
             set: { updated in
                 guard let index = draftCommands.firstIndex(where: { $0.id == selectedCommandID }) else { return }
-                draftCommands[index] = updated
+                let resolvedCommands = QuickCommandCatalog.replacingCommand(updated, in: draftCommands)
+                draftCommands = resolvedCommands
+                self.selectedCommandID = resolvedCommands[index].id
             }
         )
     }
