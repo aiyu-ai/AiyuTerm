@@ -85,6 +85,7 @@ final class ShellSession: ObservableObject, Identifiable {
     @Published var rows: Int = 24
     @Published var cols: Int = 80
     @Published var surfaceStatus = TerminalSurfaceStatusSnapshot()
+    @Published var agentStatus: AgentSessionStatus = .none
 
     var onWorkspaceAction: ((TerminalWorkspaceAction) -> Void)?
     var onFocus: (() -> Void)?
@@ -162,9 +163,16 @@ final class ShellSession: ObservableObject, Identifiable {
             guard let self else { return }
             self.applyProcessExit(exitCode)
         }
-        if let ghosttySurface = surfaceController as? LineyGhosttyController {
-            ghosttySurface.onWorkspaceAction = { [weak self] action in
+        if let ghosttyController = surfaceController as? LineyGhosttyController {
+            ghosttyController.onWorkspaceAction = { [weak self] action in
                 self?.onWorkspaceAction?(action)
+            }
+            ghosttyController.onDesktopNotification = { [weak self] title, body in
+                guard let self else { return }
+                let detected = AgentSessionStatusDetector.detect(title: title, body: body)
+                if detected != .none {
+                    self.agentStatus = detected
+                }
             }
         }
     }

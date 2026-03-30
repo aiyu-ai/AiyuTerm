@@ -56,6 +56,7 @@ protocol ManagedTerminalSessionSurfaceController: TerminalSurfaceController {
     var isManagedSessionRunning: Bool { get }
     var needsConfirmQuit: Bool { get }
     var onProcessExit: ((Int32?) -> Void)? { get set }
+    var onDesktopNotification: ((String, String?) -> Void)? { get set }
     func updateLaunchConfiguration(_ configuration: TerminalLaunchConfiguration)
     func startManagedSessionIfNeeded()
     func restartManagedSession()
