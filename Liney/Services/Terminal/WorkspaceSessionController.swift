@@ -189,6 +189,19 @@ final class WorkspaceSessionController: ObservableObject {
         sessions.values.filter { $0.isRunning && $0.isUsing(pathPrefix: path) }.count
     }
 
+    func agentStatus(using path: String) -> AgentSessionStatus {
+        let statuses = sessions.values
+            .filter { $0.isUsing(pathPrefix: path) }
+            .map(\.agentStatus)
+        return AgentSessionStatus.highestPriority(in: statuses)
+    }
+
+    func clearAgentStatus(using path: String) {
+        for session in sessions.values where session.isUsing(pathPrefix: path) {
+            session.agentStatus = .none
+        }
+    }
+
     private func updateSessionFocusStates() {
         for (paneID, session) in sessions {
             session.setFocused(paneID == focusedPaneID)

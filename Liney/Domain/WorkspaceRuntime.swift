@@ -412,6 +412,7 @@ final class WorkspaceModel: ObservableObject, Identifiable {
     func switchToWorktree(path: String, restartRunning: Bool) {
         saveActiveWorktreeState()
         activeWorktreePath = path
+        clearAgentStatus(forWorktreePath: path)
         ensureActiveWorktreeState()
         loadActiveWorktreeState()
         if restartRunning {
@@ -545,6 +546,24 @@ final class WorkspaceModel: ObservableObject, Identifiable {
         worktreeControllers[path]?.values.reduce(0) { partialResult, controller in
             partialResult + controller.runningSessionCount(using: path)
         } ?? 0
+    }
+
+    func agentStatus(forWorktreePath path: String) -> AgentSessionStatus {
+        let statuses = worktreeControllers[path]?.values.flatMap { controller in
+            controller.sessions.values.map(\.agentStatus)
+        } ?? []
+        return AgentSessionStatus.highestPriority(in: statuses)
+    }
+
+    var aggregatedAgentStatus: AgentSessionStatus {
+        let statuses = worktrees.map { agentStatus(forWorktreePath: $0.path) }
+        return AgentSessionStatus.highestPriority(in: statuses)
+    }
+
+    func clearAgentStatus(forWorktreePath path: String) {
+        worktreeControllers[path]?.values.forEach { controller in
+            controller.clearAgentStatus(using: path)
+        }
     }
 
     func createTab() {
