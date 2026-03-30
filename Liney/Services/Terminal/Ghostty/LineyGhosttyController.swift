@@ -462,8 +462,9 @@ private final class LineyGhosttySurfaceView: NSView {
     }
 
     private var trackingAreaToken: NSTrackingArea?
+    private var windowObservers: [NSObjectProtocol] = []
     private var surfaceUserdataToken: UnsafeMutableRawPointer?
-    private var pointerShape: ghostty_action_mouse_shape_e = GHOSTTY_MOUSE_SHAPE_TEXT
+    private var pointerShape: ghostty_action_mouse_shape_e = GHOSTTY_MOUSE_SHAPE_DEFAULT
     private var cursorVisible = true
     private var cursorHiddenToken = false
     private var mouseInside = false
@@ -579,6 +580,7 @@ private final class LineyGhosttySurfaceView: NSView {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
+        updateWindowObservers()
         syncSurfaceMetrics()
     }
 
@@ -592,6 +594,30 @@ private final class LineyGhosttySurfaceView: NSView {
         syncSurfaceMetrics()
     }
 
+    override func updateLayer() {
+        super.updateLayer()
+        syncSurfaceMetrics()
+    }
+
+    override func viewDidMoveToSuperview() {
+        super.viewDidMoveToSuperview()
+        syncSurfaceMetrics()
+    }
+
+    override func resetCursorRects() {
+        super.resetCursorRects()
+        guard cursorVisible else {
+            addCursorRect(bounds, cursor: .arrow)
+            return
+        }
+        addCursorRect(bounds, cursor: cursor(for: pointerShape))
+    }
+
+    override func cursorUpdate(with event: NSEvent) {
+        super.cursorUpdate(with: event)
+        applyCursor()
+    }
+
     override func mouseEntered(with event: NSEvent) {
         mouseInside = true
         updateCursorVisibility()
@@ -603,6 +629,7 @@ private final class LineyGhosttySurfaceView: NSView {
         mouseInside = false
         hoveredLink = nil
         updateCursorVisibility()
+        NSCursor.arrow.set()
     }
 
     func syncSurfaceMetrics() {
@@ -628,12 +655,14 @@ private final class LineyGhosttySurfaceView: NSView {
 
     func setCursorShape(_ shape: ghostty_action_mouse_shape_e) {
         pointerShape = shape
+        invalidateCursorRectsForCurrentWindow()
         applyCursor()
     }
 
     func setCursorVisibility(_ visible: Bool) {
         cursorVisible = visible
         updateCursorVisibility()
+        invalidateCursorRectsForCurrentWindow()
         applyCursor()
     }
 
@@ -1353,8 +1382,12 @@ private final class LineyGhosttySurfaceView: NSView {
     }
 
     private func applyCursor() {
-        guard mouseInside, cursorVisible else { return }
-        cursor(for: pointerShape).set()
+        guard mouseInside else { return }
+        if cursorVisible {
+            cursor(for: pointerShape).set()
+        } else {
+            NSCursor.arrow.set()
+        }
     }
 
     private func updateCursorVisibility() {
@@ -1418,6 +1451,41 @@ private final class LineyGhosttySurfaceView: NSView {
             options: [.urlReadingFileURLsOnly: true]
         ) as? [URL] ?? []
         return lineyTerminalDropText(fileURLs: fileURLs, plainText: pasteboard.string(forType: .string))
+    }
+
+    private func invalidateCursorRectsForCurrentWindow() {
+        window?.invalidateCursorRects(for: self)
+    }
+
+    private func updateWindowObservers() {
+        for observer in windowObservers {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        windowObservers.removeAll()
+
+        guard let window else { return }
+        let notifications: [Notification.Name] = [
+            NSWindow.didChangeScreenNotification,
+            NSWindow.didChangeBackingPropertiesNotification,
+            NSWindow.didResizeNotification
+        ]
+
+        for name in notifications {
+            let observer = NotificationCenter.default.addObserver(
+                forName: name,
+                object: window,
+                queue: .main
+            ) { [weak self] _ in
+                self?.syncSurfaceMetrics()
+            }
+            windowObservers.append(observer)
+        }
+    }
+
+    deinit {
+        for observer in windowObservers {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 }
 

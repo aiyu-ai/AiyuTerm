@@ -536,6 +536,23 @@ enum QuickCommandCatalog {
         }
     }
 
+    static func replacingCommand(
+        _ updatedCommand: QuickCommandPreset,
+        in commands: [QuickCommandPreset]
+    ) -> [QuickCommandPreset] {
+        commands.map { command in
+            guard command.id != updatedCommand.id else { return updatedCommand }
+            guard let updatedShortcut = updatedCommand.shortcut,
+                  command.shortcut == updatedShortcut else {
+                return command
+            }
+
+            var cleared = command
+            cleared.shortcut = nil
+            return cleared
+        }
+    }
+
     static func normalizedRecentCommandIDs(
         _ recentIDs: [String],
         availableCommands: [QuickCommandPreset]

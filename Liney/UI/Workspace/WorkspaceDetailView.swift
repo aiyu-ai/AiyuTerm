@@ -7,6 +7,7 @@
 
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct WorkspaceDetailView: View {
     @EnvironmentObject private var store: WorkspaceStore
@@ -83,6 +84,8 @@ private struct WorkspaceTabBarView: View {
     @State private var dropInsertionIndex: Int?
     @State private var titleDraft = ""
 
+    private let tabDragType = UTType.plainText
+
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 0) {
@@ -120,15 +123,18 @@ private struct WorkspaceTabBarView: View {
                                 store.closeTab(in: workspace, tabID: tab.id)
                             }
                         )
-                        .draggable(tab.id.uuidString)
-                        .dropDestination(for: String.self) { items, _ in
-                            handleTabDrop(items, targetTabID: tab.id)
-                        } isTargeted: { isTargeted in
-                            withAnimation(.easeInOut(duration: 0.12)) {
-                                let targetIndex = workspace.tabs.firstIndex(where: { $0.id == tab.id }) ?? 0
-                                dropInsertionIndex = isTargeted ? targetIndex : (dropInsertionIndex == targetIndex ? nil : dropInsertionIndex)
-                            }
+                        .onDrag {
+                            NSItemProvider(object: tab.id.uuidString as NSString)
                         }
+                        .onDrop(
+                            of: [tabDragType],
+                            delegate: WorkspaceTabDropDelegate(
+                                workspace: workspace,
+                                store: store,
+                                dropInsertionIndex: $dropInsertionIndex,
+                                target: .tab(tab.id)
+                            )
+                        )
                     }
 
                     tabInsertionMarker(for: index + 1)
@@ -174,42 +180,123 @@ private struct WorkspaceTabBarView: View {
     @ViewBuilder
     private func tabInsertionMarker(for insertionSlot: Int) -> some View {
         WorkspaceTabInsertionMarker(isActive: dropInsertionIndex == insertionSlot)
-            .dropDestination(for: String.self) { items, _ in
-                handleDrop(items, insertionSlot: insertionSlot)
-            } isTargeted: { isTargeted in
-                withAnimation(.easeInOut(duration: 0.12)) {
-                    dropInsertionIndex = isTargeted ? insertionSlot : (dropInsertionIndex == insertionSlot ? nil : dropInsertionIndex)
-                }
-            }
+            .onDrop(
+                of: [tabDragType],
+                delegate: WorkspaceTabDropDelegate(
+                    workspace: workspace,
+                    store: store,
+                    dropInsertionIndex: $dropInsertionIndex,
+                    target: .slot(insertionSlot)
+                )
+            )
+    }
+}
+
+private struct WorkspaceTabDropDelegate: DropDelegate {
+    enum Target {
+        case tab(UUID)
+        case slot(Int)
     }
 
-    private func handleDrop(_ items: [String], insertionSlot: Int) -> Bool {
-        defer { dropInsertionIndex = nil }
+    let workspace: WorkspaceModel
+    let store: WorkspaceStore
+    @Binding var dropInsertionIndex: Int?
+    let target: Target
 
-        guard let draggedValue = items.first,
-              let draggedTabID = UUID(uuidString: draggedValue),
-              let sourceIndex = workspace.tabs.firstIndex(where: { $0.id == draggedTabID }) else {
+    func validateDrop(info: DropInfo) -> Bool {
+        info.hasItemsConforming(to: [UTType.plainText.identifier])
+    }
+
+    func dropEntered(info: DropInfo) {
+        withAnimation(.easeInOut(duration: 0.12)) {
+            dropInsertionIndex = targetInsertionIndex(for: info)
+        }
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        withAnimation(.easeInOut(duration: 0.12)) {
+            dropInsertionIndex = targetInsertionIndex(for: info)
+        }
+        return DropProposal(operation: .move)
+    }
+
+    func dropExited(info: DropInfo) {
+        withAnimation(.easeInOut(duration: 0.12)) {
+            if dropInsertionIndex == targetInsertionIndex(for: info) {
+                dropInsertionIndex = nil
+            }
+        }
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        defer {
+            withAnimation(.easeInOut(duration: 0.12)) {
+                dropInsertionIndex = nil
+            }
+        }
+
+        guard let provider = info.itemProviders(for: [UTType.plainText.identifier]).first else {
             return false
         }
 
-        let finalIndex = sourceIndex < insertionSlot ? insertionSlot - 1 : insertionSlot
-        guard finalIndex != sourceIndex else { return false }
+        provider.loadItem(forTypeIdentifier: UTType.plainText.identifier, options: nil) { item, _ in
+            guard let draggedTabID = workspaceTabID(from: item) else { return }
 
-        store.moveTab(in: workspace, tabID: draggedTabID, to: finalIndex)
+            DispatchQueue.main.async {
+                moveTabIfNeeded(id: draggedTabID)
+            }
+        }
+
         return true
     }
 
-    private func handleTabDrop(_ items: [String], targetTabID: UUID) -> Bool {
-        guard let draggedValue = items.first,
-              let draggedTabID = UUID(uuidString: draggedValue),
-              let sourceIndex = workspace.tabs.firstIndex(where: { $0.id == draggedTabID }),
-              let targetIndex = workspace.tabs.firstIndex(where: { $0.id == targetTabID }) else {
-            dropInsertionIndex = nil
-            return false
-        }
+    private func moveTabIfNeeded(id draggedTabID: UUID) {
+        guard let sourceIndex = workspace.tabs.firstIndex(where: { $0.id == draggedTabID }) else { return }
 
-        let insertionSlot = sourceIndex < targetIndex ? targetIndex + 1 : targetIndex
-        return handleDrop(items, insertionSlot: insertionSlot)
+        let insertionSlot = resolvedInsertionSlot(for: draggedTabID)
+        let finalIndex = sourceIndex < insertionSlot ? insertionSlot - 1 : insertionSlot
+        guard finalIndex != sourceIndex else { return }
+
+        store.moveTab(in: workspace, tabID: draggedTabID, to: finalIndex)
+    }
+
+    private func resolvedInsertionSlot(for draggedTabID: UUID) -> Int {
+        switch target {
+        case .slot(let insertionSlot):
+            return insertionSlot
+        case .tab(let targetTabID):
+            guard let sourceIndex = workspace.tabs.firstIndex(where: { $0.id == draggedTabID }),
+                  let targetIndex = workspace.tabs.firstIndex(where: { $0.id == targetTabID }) else {
+                return dropInsertionIndex ?? 0
+            }
+            return sourceIndex < targetIndex ? targetIndex + 1 : targetIndex
+        }
+    }
+
+    private func targetInsertionIndex(for info: DropInfo) -> Int? {
+        switch target {
+        case .slot(let insertionSlot):
+            return insertionSlot
+        case .tab(let targetTabID):
+            guard info.hasItemsConforming(to: [UTType.plainText.identifier]),
+                  let targetIndex = workspace.tabs.firstIndex(where: { $0.id == targetTabID }) else {
+                return nil
+            }
+            return targetIndex
+        }
+    }
+
+    private func workspaceTabID(from item: NSSecureCoding?) -> UUID? {
+        switch item {
+        case let string as String:
+            return UUID(uuidString: string)
+        case let nsString as NSString:
+            return UUID(uuidString: nsString as String)
+        case let data as Data:
+            return String(data: data, encoding: .utf8).flatMap(UUID.init(uuidString:))
+        default:
+            return nil
+        }
     }
 }
 
