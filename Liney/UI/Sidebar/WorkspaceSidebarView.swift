@@ -1345,6 +1345,10 @@ private struct WorkspaceRowContent: View {
         return .none
     }
 
+    private var workspaceAgentStatus: AgentSessionStatus {
+        workspace.aggregatedAgentStatus
+    }
+
     var body: some View {
         HStack(spacing: 8 * uiScale) {
             SidebarItemIconView(
@@ -1352,7 +1356,8 @@ private struct WorkspaceRowContent: View {
                 size: 22 * uiScale,
                 activityIndicator: iconActivityIndicator,
                 activityPalette: appSettings.sidebarActivityIndicatorPalette,
-                isEmphasized: isSelected
+                isEmphasized: isSelected,
+                agentStatus: workspaceAgentStatus
             )
 
             VStack(alignment: .leading, spacing: 2) {
@@ -1456,6 +1461,10 @@ private struct WorktreeRowContent: View {
         return .none
     }
 
+    private var worktreeAgentStatus: AgentSessionStatus {
+        workspace.agentStatus(forWorktreePath: worktree.path)
+    }
+
     var body: some View {
         HStack(spacing: 8 * uiScale) {
             SidebarItemIconView(
@@ -1464,7 +1473,8 @@ private struct WorktreeRowContent: View {
                 usesCircularShape: true,
                 activityIndicator: iconActivityIndicator,
                 activityPalette: appSettings.sidebarActivityIndicatorPalette,
-                isEmphasized: isSelected
+                isEmphasized: isSelected,
+                agentStatus: worktreeAgentStatus
             )
             .frame(width: iconColumnWidth, alignment: .leading)
             Text(worktree.displayName)
