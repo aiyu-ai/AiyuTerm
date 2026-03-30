@@ -1510,6 +1510,7 @@ struct SidebarItemIconView: View {
     var activityIndicator: SidebarIconActivityIndicator = .none
     var activityPalette: SidebarIconPalette = .amber
     var isEmphasized: Bool = false
+    var agentStatus: AgentSessionStatus = .none
 
     private var palette: SidebarIconPaletteDescriptor {
         icon.palette.descriptor
@@ -1520,6 +1521,15 @@ struct SidebarItemIconView: View {
             cornerRadius: usesCircularShape ? size / 2 : max(7, size * 0.34),
             style: .continuous
         )
+    }
+
+    private var agentGlowColor: Color? {
+        switch agentStatus {
+        case .permissionNeeded: return Color(red: 1.0, green: 0.18, blue: 0.57)
+        case .taskCompleted: return Color(red: 0.19, green: 0.82, blue: 0.35)
+        case .error: return Color(red: 1.0, green: 0.27, blue: 0.23)
+        case .none: return nil
+        }
     }
 
     var body: some View {
@@ -1534,6 +1544,10 @@ struct SidebarItemIconView: View {
                     backgroundShape
                         .strokeBorder(palette.border, lineWidth: 1)
                 )
+                .shadow(
+                    color: (agentGlowColor ?? .clear).opacity(agentStatus.isActionable ? 0.5 : 0),
+                    radius: agentStatus.isActionable ? 8 : 0
+                )
 
             if activityIndicator == .working {
                 SidebarIconActivityBadge(
@@ -1543,6 +1557,11 @@ struct SidebarItemIconView: View {
                     isEmphasized: isEmphasized
                 )
                     .offset(x: 2, y: 2)
+            }
+
+            if agentStatus.isActionable {
+                AgentStatusOverlayBadge(status: agentStatus, size: size)
+                    .offset(x: size * 0.15, y: size * 0.15)
             }
         }
         .frame(width: size + 2, height: size + 2)
@@ -1663,6 +1682,97 @@ struct SidebarIconActivityBadge: View {
         withAnimation(.easeInOut(duration: pulseDuration).repeatForever(autoreverses: true)) {
             isAnimating = true
         }
+    }
+}
+
+private struct AgentStatusOverlayBadge: View {
+    let status: AgentSessionStatus
+    let size: CGFloat
+    @State private var isAnimating = false
+
+    private var badgeSize: CGFloat {
+        max(10, size * 0.48)
+    }
+
+    private var symbolName: String {
+        switch status {
+        case .permissionNeeded: return "exclamationmark"
+        case .taskCompleted: return "checkmark"
+        case .error: return "xmark"
+        case .none: return ""
+        }
+    }
+
+    private var gradientColors: [Color] {
+        switch status {
+        case .permissionNeeded:
+            return [Color(red: 1.0, green: 0.18, blue: 0.57), Color(red: 0.90, green: 0.0, blue: 0.31)]
+        case .taskCompleted:
+            return [Color(red: 0.19, green: 0.82, blue: 0.35), Color(red: 0.15, green: 0.66, blue: 0.27)]
+        case .error:
+            return [Color(red: 1.0, green: 0.27, blue: 0.23), Color(red: 0.84, green: 0.18, blue: 0.13)]
+        case .none:
+            return [.clear, .clear]
+        }
+    }
+
+    private var glowColor: Color {
+        gradientColors[0]
+    }
+
+    private var glowRadius: CGFloat {
+        switch status {
+        case .permissionNeeded: return isAnimating ? 12 : 6
+        case .taskCompleted, .error: return 8
+        case .none: return 0
+        }
+    }
+
+    private var glowOpacity: Double {
+        switch status {
+        case .permissionNeeded: return isAnimating ? 0.7 : 0.35
+        case .taskCompleted, .error: return 0.4
+        case .none: return 0
+        }
+    }
+
+    var body: some View {
+        Circle()
+            .fill(
+                LinearGradient(
+                    colors: gradientColors,
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .overlay(
+                Image(systemName: symbolName)
+                    .font(.system(size: max(5, badgeSize * 0.5), weight: .black))
+                    .foregroundStyle(.white)
+            )
+            .overlay(
+                Circle()
+                    .stroke(LineyTheme.sidebarBackground, lineWidth: size > 18 ? 2 : 1.5)
+            )
+            .frame(width: badgeSize, height: badgeSize)
+            .shadow(color: glowColor.opacity(glowOpacity), radius: glowRadius / 2)
+            .scaleEffect(status == .permissionNeeded && isAnimating ? 1.2 : 1.0)
+            .onAppear {
+                guard status == .permissionNeeded else { return }
+                withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+                    isAnimating = true
+                }
+            }
+            .onChange(of: status) { _, newValue in
+                if newValue == .permissionNeeded {
+                    isAnimating = false
+                    withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+                        isAnimating = true
+                    }
+                } else {
+                    isAnimating = false
+                }
+            }
     }
 }
 
