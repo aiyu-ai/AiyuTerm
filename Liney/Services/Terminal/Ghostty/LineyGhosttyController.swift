@@ -22,6 +22,7 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
     var onStatusChange: ((TerminalSurfaceStatusSnapshot) -> Void)?
     var onProcessExit: ((Int32?) -> Void)?
     var onWorkspaceAction: ((TerminalWorkspaceAction) -> Void)?
+    var onDesktopNotification: ((String, String?) -> Void)?
 
     var managedPID: Int32? { nil }
     var isManagedSessionRunning: Bool {
@@ -183,10 +184,10 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
             return true
 
         case GHOSTTY_ACTION_DESKTOP_NOTIFICATION:
-            LineyGhosttyNotificationCenter.shared.deliver(
-                title: action.action.desktop_notification.title.map(String.init(cString:)) ?? "Terminal",
-                body: action.action.desktop_notification.body.map(String.init(cString:))
-            )
+            let title = action.action.desktop_notification.title.map(String.init(cString:)) ?? "Terminal"
+            let body = action.action.desktop_notification.body.map(String.init(cString:))
+            LineyGhosttyNotificationCenter.shared.deliver(title: title, body: body)
+            onDesktopNotification?(title, body)
             return true
 
         case GHOSTTY_ACTION_RING_BELL:
