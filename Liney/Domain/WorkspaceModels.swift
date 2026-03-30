@@ -1385,3 +1385,27 @@ private extension PersistedWorkspaceState {
             .canvasState
     }
 }
+
+enum AgentSessionStatus: Equatable {
+    case none
+    case permissionNeeded
+    case taskCompleted
+    case error
+
+    var isActionable: Bool {
+        self != .none
+    }
+
+    private var priority: Int {
+        switch self {
+        case .permissionNeeded: return 3
+        case .error: return 2
+        case .taskCompleted: return 1
+        case .none: return 0
+        }
+    }
+
+    static func highestPriority(in statuses: [AgentSessionStatus]) -> AgentSessionStatus {
+        statuses.max(by: { $0.priority < $1.priority }) ?? .none
+    }
+}
