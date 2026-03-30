@@ -500,6 +500,7 @@ private final class FakeManagedTerminalSurfaceController: ManagedTerminalSession
     var onFocus: (() -> Void)?
     var onStatusChange: ((TerminalSurfaceStatusSnapshot) -> Void)?
     var onProcessExit: ((Int32?) -> Void)?
+    var onDesktopNotification: ((String, String?) -> Void)?
 
     var managedPID: Int32? = nil
     var isManagedSessionRunning = false
