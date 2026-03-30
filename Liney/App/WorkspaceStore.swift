@@ -143,6 +143,18 @@ final class WorkspaceStore: ObservableObject {
         appSettings.quickCommandCategories
     }
 
+    var agentPresets: [AgentPreset] {
+        appSettings.agentPresets
+    }
+
+    var preferredAgentPreset: AgentPreset? {
+        if let preferredAgentPresetID = appSettings.preferredAgentPresetID,
+           let preset = appSettings.agentPresets.first(where: { $0.id == preferredAgentPresetID }) {
+            return preset
+        }
+        return appSettings.agentPresets.first
+    }
+
     var quickCommandCategoryMap: [String: QuickCommandCategory] {
         QuickCommandCatalog.categoryMap(quickCommandCategories)
     }
@@ -472,7 +484,7 @@ final class WorkspaceStore: ObservableObject {
                     )
                 }
                 if let presetID = remoteTarget.agentPresetID,
-                   let preset = workspace.agentPresets.first(where: { $0.id == presetID }) {
+                   let preset = appSettings.agentPresets.first(where: { $0.id == presetID }) {
                     items.append(
                         CommandPaletteItem(
                             id: "remote-agent:\(workspace.id.uuidString):\(remoteTarget.id.uuidString)",
@@ -537,11 +549,11 @@ final class WorkspaceStore: ObservableObject {
                     CommandPaletteItem(
                         id: "workspace-agent:\(workspace.id.uuidString)",
                         title: localizedFormat("main.commandPalette.newAgentSessionInFormat", workspace.name),
-                        subtitle: workspace.agentPresets.first?.name,
+                        subtitle: preferredAgentPreset?.name,
                         group: .sessions,
                         keywords: ["ai", "agent", "codex"],
                         isGlobal: false,
-                        kind: .command(.createAgentSession(workspace.id, workspace.preferredAgentPreset))
+                        kind: .command(.createAgentSession(workspace.id, preferredAgentPreset))
                     )
                 )
             }
@@ -804,9 +816,19 @@ final class WorkspaceStore: ObservableObject {
             quickCommandRecentIDs: settings.quickCommandRecentIDs,
             releaseChannel: settings.releaseChannel,
             commandPaletteRecents: settings.commandPaletteRecents,
+            agentPresets: settings.agentPresets,
+            preferredAgentPresetID: settings.preferredAgentPresetID,
             keyboardShortcutOverrides: settings.keyboardShortcutOverrides
         )
         LocalizationManager.shared.updateSelectedLanguage(appSettings.appLanguage)
+        let validAgentPresetIDs = Set(appSettings.agentPresets.map(\.id))
+        for workspace in workspaces {
+            workspace.settings = normalizedWorkspaceSettings(
+                workspace.settings,
+                for: workspace,
+                validAgentPresetIDs: validAgentPresetIDs
+            )
+        }
         for workspace in workspaces {
             workspace.gitHubStatuses = [:]
         }
@@ -1355,8 +1377,8 @@ final class WorkspaceStore: ObservableObject {
             workspaceID: workspace.id,
             workspaceName: workspace.name,
             defaultWorkingDirectory: workspace.activeWorktreePath,
-            presets: workspace.agentPresets,
-            preferredPresetID: workspace.preferredAgentPresetID ?? workspace.agentPresets.first?.id ?? AgentPreset.claudeCode.id
+            presets: appSettings.agentPresets,
+            preferredPresetID: appSettings.preferredAgentPresetID ?? appSettings.agentPresets.first?.id ?? AgentPreset.claudeCode.id
         )
     }
 
@@ -1399,7 +1421,7 @@ final class WorkspaceStore: ObservableObject {
     func createAgentSession(workspaceID: UUID, draft: CreateAgentSessionDraft) {
         guard let configuration = draft.configuration,
               let workspaceIndex = workspaces.firstIndex(where: { $0.id == workspaceID }) else { return }
-        rememberAgentPresetSelection(workspaceIndex: workspaceIndex, selectedPresetID: draft.selectedPresetID)
+        rememberAgentPresetSelection(selectedPresetID: draft.selectedPresetID)
 
         createSession(
             in: workspaces[workspaceIndex],
@@ -1419,16 +1441,14 @@ final class WorkspaceStore: ObservableObject {
         )
     }
 
-    func rememberAgentPresetSelection(workspaceIndex: Int, selectedPresetID: UUID?) {
-        guard workspaces.indices.contains(workspaceIndex),
-              let selectedPresetID else { return }
-
+    func rememberAgentPresetSelection(selectedPresetID: UUID?) {
         let updatedSelection = lineyRememberedAgentPresetSelection(
-            currentPresets: workspaces[workspaceIndex].agentPresets,
+            currentPresets: appSettings.agentPresets,
             selectedPresetID: selectedPresetID
         )
-        workspaces[workspaceIndex].agentPresets = updatedSelection.presets
-        workspaces[workspaceIndex].preferredAgentPresetID = updatedSelection.preferredPresetID
+        appSettings.agentPresets = updatedSelection.presets
+        appSettings.preferredAgentPresetID = updatedSelection.preferredPresetID
+        persistAppSettings()
     }
 
     func createAgentSession(workspaceID: UUID, preset: AgentPreset) {
@@ -2451,7 +2471,8 @@ final class WorkspaceStore: ObservableObject {
 
     private func normalizedWorkspaceSettings(
         _ settings: WorkspaceSettings,
-        for workspace: WorkspaceModel
+        for workspace: WorkspaceModel,
+        validAgentPresetIDs: Set<UUID>? = nil
     ) -> WorkspaceSettings {
         var normalized = settings
 
@@ -2464,12 +2485,12 @@ final class WorkspaceStore: ObservableObject {
             normalized.agentPresets = AgentPreset.builtInPresets
         }
 
-        let validPresetIDs = Set(normalized.agentPresets.map(\.id))
+        let validPresetIDs = validAgentPresetIDs ?? Set(normalized.agentPresets.map(\.id))
         if let preferredAgentPresetID = normalized.preferredAgentPresetID,
            !validPresetIDs.contains(preferredAgentPresetID) {
-            normalized.preferredAgentPresetID = normalized.agentPresets.first?.id
+            normalized.preferredAgentPresetID = nil
         } else if normalized.preferredAgentPresetID == nil {
-            normalized.preferredAgentPresetID = normalized.agentPresets.first?.id
+            normalized.preferredAgentPresetID = nil
         }
 
         normalized.remoteTargets = normalized.remoteTargets.map { target in
@@ -2677,7 +2698,11 @@ final class WorkspaceStore: ObservableObject {
     private func openRemoteTargetAgent(workspaceID: UUID, targetID: UUID) {
         guard let workspace = workspace(for: workspaceID) else { return }
         do {
-            let plan = try remoteSessionCoordinator.agentPlan(workspace: workspace, targetID: targetID)
+            let plan = try remoteSessionCoordinator.agentPlan(
+                workspace: workspace,
+                targetID: targetID,
+                agentPresets: appSettings.agentPresets
+            )
             createSession(in: workspace, backendConfiguration: plan.backendConfiguration, workingDirectory: plan.workingDirectory)
             recordActivity(
                 in: workspace,
@@ -2797,7 +2822,7 @@ final class WorkspaceStore: ObservableObject {
         }
 
         if let presetID = workflow.agentPresetID,
-           let preset = workspace.agentPresets.first(where: { $0.id == presetID }),
+           let preset = appSettings.agentPresets.first(where: { $0.id == presetID }),
            workflow.agentMode != .none {
             launchWorkflowAgent(using: preset, mode: workflow.agentMode, in: workspace)
         }

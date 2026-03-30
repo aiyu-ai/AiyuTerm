@@ -271,6 +271,8 @@ struct AppSettings: Codable, Hashable {
     var quickCommandRecentIDs: [String]
     var releaseChannel: ReleaseChannel
     var commandPaletteRecents: [String: TimeInterval]
+    var agentPresets: [AgentPreset]
+    var preferredAgentPresetID: UUID?
     var keyboardShortcutOverrides: [String: KeyboardShortcutOverride]
 
     init(
@@ -303,9 +305,12 @@ struct AppSettings: Codable, Hashable {
         quickCommandRecentIDs: [String] = [],
         releaseChannel: ReleaseChannel = .stable,
         commandPaletteRecents: [String: TimeInterval] = [:],
+        agentPresets: [AgentPreset] = AgentPreset.builtInPresets,
+        preferredAgentPresetID: UUID? = AgentPreset.claudeCode.id,
         keyboardShortcutOverrides: [String: KeyboardShortcutOverride] = [:]
     ) {
         let normalizedKeyboardShortcutOverrides = LineyKeyboardShortcuts.normalizedOverrides(keyboardShortcutOverrides)
+        let normalizedAgentPresets = lineyNormalizedAgentPresets(agentPresets)
 
         self.appLanguage = appLanguage
         self.autoRefreshEnabled = autoRefreshEnabled
@@ -346,6 +351,13 @@ struct AppSettings: Codable, Hashable {
         )
         self.releaseChannel = releaseChannel
         self.commandPaletteRecents = commandPaletteRecents
+        self.agentPresets = normalizedAgentPresets
+        if let preferredAgentPresetID,
+           normalizedAgentPresets.contains(where: { $0.id == preferredAgentPresetID }) {
+            self.preferredAgentPresetID = preferredAgentPresetID
+        } else {
+            self.preferredAgentPresetID = normalizedAgentPresets.first?.id
+        }
     }
 }
 
@@ -380,6 +392,8 @@ extension AppSettings {
         case quickCommandRecentIDs
         case releaseChannel
         case commandPaletteRecents
+        case agentPresets
+        case preferredAgentPresetID
         case keyboardShortcutOverrides
     }
 
@@ -423,8 +437,22 @@ extension AppSettings {
             quickCommandRecentIDs: try container.decodeIfPresent([String].self, forKey: .quickCommandRecentIDs) ?? [],
             releaseChannel: try container.decodeIfPresent(ReleaseChannel.self, forKey: .releaseChannel) ?? .stable,
             commandPaletteRecents: try container.decodeIfPresent([String: TimeInterval].self, forKey: .commandPaletteRecents) ?? [:],
+            agentPresets: try container.decodeIfPresent([AgentPreset].self, forKey: .agentPresets) ?? AgentPreset.builtInPresets,
+            preferredAgentPresetID: try container.decodeIfPresent(UUID.self, forKey: .preferredAgentPresetID) ?? AgentPreset.claudeCode.id,
             keyboardShortcutOverrides: try container.decodeIfPresent([String: KeyboardShortcutOverride].self, forKey: .keyboardShortcutOverrides) ?? [:]
         )
+    }
+}
+
+private func lineyNormalizedAgentPresets(_ presets: [AgentPreset]) -> [AgentPreset] {
+    let filtered = presets.filter { $0.id != AgentPreset.deprecatedAiderPresetID }
+    if filtered.isEmpty {
+        return AgentPreset.builtInPresets
+    }
+
+    var seenIDs = Set<UUID>()
+    return filtered.filter { preset in
+        seenIDs.insert(preset.id).inserted
     }
 }
 

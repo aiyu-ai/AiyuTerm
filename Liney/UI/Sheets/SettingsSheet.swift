@@ -790,7 +790,7 @@ struct SettingsSheet: View {
                                                 remoteWorkingDirectory: nil,
                                                 remoteCommand: nil
                                             ),
-                                            agentPresetID: workspaceSettings.preferredAgentPresetID
+                                            agentPresetID: appSettings.preferredAgentPresetID
                                         )
                                     )
                                 }
@@ -840,7 +840,7 @@ struct SettingsSheet: View {
                                         set: { target.agentPresetID = $0 }
                                     )) {
                                         Text(localized("settings.workspace.remoteTarget.noAgent")).tag(Optional<UUID>.none)
-                                        ForEach(workspaceSettings.agentPresets) { preset in
+                                        ForEach(appSettings.agentPresets) { preset in
                                             Text(preset.name).tag(Optional(preset.id))
                                         }
                                     }
@@ -862,8 +862,8 @@ struct SettingsSheet: View {
                                             localSessionMode: .reuseFocused,
                                             runSetupScript: !workspaceSettings.setupScript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                                             runWorkspaceScript: !workspaceSettings.runScript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                                            agentPresetID: workspaceSettings.preferredAgentPresetID ?? workspaceSettings.agentPresets.first?.id,
-                                            agentMode: workspaceSettings.agentPresets.isEmpty ? .none : .splitRight
+                                            agentPresetID: appSettings.preferredAgentPresetID ?? appSettings.agentPresets.first?.id,
+                                            agentMode: appSettings.agentPresets.isEmpty ? .none : .splitRight
                                         )
                                     )
                                 }
@@ -903,7 +903,7 @@ struct SettingsSheet: View {
                                         set: { workflow.agentPresetID = $0 }
                                     )) {
                                         Text(localized("settings.workspace.workflow.noAgent")).tag(Optional<UUID>.none)
-                                        ForEach(workspaceSettings.agentPresets) { preset in
+                                        ForEach(appSettings.agentPresets) { preset in
                                             Text(preset.name).tag(Optional(preset.id))
                                         }
                                     }
@@ -942,53 +942,45 @@ struct SettingsSheet: View {
     private var agentPresetsSettingsView: some View {
         GroupBox(localized("settings.workspace.agentPresets")) {
             VStack(alignment: .leading, spacing: 12) {
-                workspaceSelector
+                Text(localized("settings.workspace.agentPresetsHint"))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
 
-                if selectedWorkspace != nil {
-                    Text(localized("settings.workspace.agentPresetsHint"))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
-
-                    HStack {
-                        Spacer()
-                        Button(localized("settings.workspace.addPreset")) {
-                            workspaceSettings.agentPresets.append(
-                                AgentPreset(
-                                    name: localized("defaults.agent.name"),
-                                    launchPath: "/usr/bin/env",
-                                    arguments: ["claude", "--resume"]
-                                )
+                HStack {
+                    Spacer()
+                    Button(localized("settings.workspace.addPreset")) {
+                        appSettings.agentPresets.append(
+                            AgentPreset(
+                                name: localized("defaults.agent.name"),
+                                launchPath: "/usr/bin/env",
+                                arguments: ["claude", "--resume"]
                             )
-                            if workspaceSettings.preferredAgentPresetID == nil {
-                                workspaceSettings.preferredAgentPresetID = workspaceSettings.agentPresets.last?.id
-                            }
+                        )
+                        if appSettings.preferredAgentPresetID == nil {
+                            appSettings.preferredAgentPresetID = appSettings.agentPresets.last?.id
                         }
                     }
+                }
 
-                    if workspaceSettings.agentPresets.isEmpty {
-                        Text(localized("settings.workspace.agentPresetsEmpty"))
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.secondary)
-                    }
-
-                    ForEach(Array(workspaceSettings.agentPresets.indices), id: \.self) { index in
-                        agentPresetCard(at: index)
-                    }
-
-                    if !workspaceSettings.agentPresets.isEmpty {
-                        Picker(localized("settings.workspace.agentPreset.preferred"), selection: Binding(
-                            get: { workspaceSettings.preferredAgentPresetID ?? workspaceSettings.agentPresets.first?.id },
-                            set: { workspaceSettings.preferredAgentPresetID = $0 }
-                        )) {
-                            ForEach(workspaceSettings.agentPresets) { preset in
-                                Text(preset.name).tag(Optional(preset.id))
-                            }
-                        }
-                    }
-                } else {
-                    Text(localized("settings.workspace.emptyState"))
+                if appSettings.agentPresets.isEmpty {
+                    Text(localized("settings.workspace.agentPresetsEmpty"))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
+                }
+
+                ForEach(Array(appSettings.agentPresets.indices), id: \.self) { index in
+                    agentPresetCard(at: index)
+                }
+
+                if !appSettings.agentPresets.isEmpty {
+                    Picker(localized("settings.workspace.agentPreset.preferred"), selection: Binding(
+                        get: { appSettings.preferredAgentPresetID ?? appSettings.agentPresets.first?.id },
+                        set: { appSettings.preferredAgentPresetID = $0 }
+                    )) {
+                        ForEach(appSettings.agentPresets) { preset in
+                            Text(preset.name).tag(Optional(preset.id))
+                        }
+                    }
                 }
             }
             .padding(.top, 8)
@@ -1043,7 +1035,7 @@ struct SettingsSheet: View {
 
     @ViewBuilder
     private func agentPresetCard(at index: Int) -> some View {
-        let presetBinding = $workspaceSettings.agentPresets[index]
+        let presetBinding = $appSettings.agentPresets[index]
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .center, spacing: 8) {
                 TextField(localized("settings.workspace.agentPreset.name"), text: presetBinding.name)
@@ -1063,7 +1055,7 @@ struct SettingsSheet: View {
                     Image(systemName: "arrow.down")
                 }
                 .help(localized("settings.workspace.agentPreset.moveDown"))
-                .disabled(index == workspaceSettings.agentPresets.index(before: workspaceSettings.agentPresets.endIndex))
+                .disabled(index == appSettings.agentPresets.index(before: appSettings.agentPresets.endIndex))
 
                 Button(role: .destructive) {
                     deleteAgentPreset(at: index)
@@ -1118,32 +1110,23 @@ struct SettingsSheet: View {
     }
 
     private func moveAgentPreset(from sourceIndex: Int, to destinationIndex: Int) {
-        guard workspaceSettings.agentPresets.indices.contains(sourceIndex),
-              workspaceSettings.agentPresets.indices.contains(destinationIndex),
+        guard appSettings.agentPresets.indices.contains(sourceIndex),
+              appSettings.agentPresets.indices.contains(destinationIndex),
               sourceIndex != destinationIndex else {
             return
         }
-        let preset = workspaceSettings.agentPresets.remove(at: sourceIndex)
-        workspaceSettings.agentPresets.insert(preset, at: destinationIndex)
+        let preset = appSettings.agentPresets.remove(at: sourceIndex)
+        appSettings.agentPresets.insert(preset, at: destinationIndex)
     }
 
     private func deleteAgentPreset(at index: Int) {
-        guard workspaceSettings.agentPresets.indices.contains(index) else { return }
+        guard appSettings.agentPresets.indices.contains(index) else { return }
 
-        let removedPresetID = workspaceSettings.agentPresets[index].id
-        workspaceSettings.agentPresets.remove(at: index)
+        let removedPresetID = appSettings.agentPresets[index].id
+        appSettings.agentPresets.remove(at: index)
 
-        if workspaceSettings.preferredAgentPresetID == removedPresetID {
-            workspaceSettings.preferredAgentPresetID = workspaceSettings.agentPresets.first?.id
-        }
-
-        for targetIndex in workspaceSettings.remoteTargets.indices where workspaceSettings.remoteTargets[targetIndex].agentPresetID == removedPresetID {
-            workspaceSettings.remoteTargets[targetIndex].agentPresetID = nil
-        }
-
-        for workflowIndex in workspaceSettings.workflows.indices where workspaceSettings.workflows[workflowIndex].agentPresetID == removedPresetID {
-            workspaceSettings.workflows[workflowIndex].agentPresetID = nil
-            workspaceSettings.workflows[workflowIndex].agentMode = .none
+        if appSettings.preferredAgentPresetID == removedPresetID {
+            appSettings.preferredAgentPresetID = appSettings.agentPresets.first?.id
         }
     }
 
