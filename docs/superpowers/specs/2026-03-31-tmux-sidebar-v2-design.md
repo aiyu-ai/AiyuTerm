@@ -16,6 +16,7 @@ Redesign the tmux integration from a small bottom panel to a first-class sidebar
 - Agent status badges on tmux session rows (permission/completed/error)
 - Handle tmux not installed gracefully
 - Kill session requires confirmation
+- Session name validation: reject names containing shell metacharacters
 
 ## Sidebar Layout
 
@@ -63,36 +64,118 @@ Visible on hover, same button style as existing `SidebarInlineIconButton`:
 
 Header actions (always visible):
 - `↻` Refresh session list
-- `+` Create new session (prompts for name)
+- `+` Create new session (prompts for name, validates no shell metacharacters)
 
 ## Terminal Attach
 
 When user clicks a tmux session:
 
-1. If a terminal is already attached to this session, switch focus to it (don't create duplicate)
-2. Otherwise, create a new pane in the current workspace using:
+1. Look up the session's stable ID (`sessionID`) in the app-level attach registry
+2. If already attached (ShellSession exists and is alive), switch focus to it (don't create duplicate)
+3. Otherwise, create a new pane in the current workspace using:
    - Engine: `TerminalEngineKind.libghosttyPreferred` (Ghostty)
-   - Backend: `SessionBackendConfiguration.local(shellArguments: ["-lc", "tmux attach -t <session>"])`
-3. Record the mapping: tmux session name → ShellSession ID
-4. The terminal runs the same Ghostty engine as all workspace terminals
+   - Backend: argv-based invocation, NOT shell string interpolation (see Security section)
+4. Register the mapping: tmux session ID → ShellSession ID in the app-level coordinator
+5. The terminal runs the same Ghostty engine as all workspace terminals
+
+### Security: Safe Command Construction
+
+Session names are user-controlled input. To prevent shell injection:
+
+1. **Validation on create/rename**: reject session names containing shell metacharacters (`;`, `|`, `&`, `$`, `` ` ``, `(`, `)`, `{`, `}`, `'`, `"`, `\`, newlines). Only allow alphanumeric, `-`, `_`, `.`.
+2. **Attach command**: use argv-style invocation instead of `-lc` string interpolation:
+   ```swift
+   // WRONG: shell string interpolation
+   .local(shellArguments: ["-lc", "tmux attach -t \(session)"])
+   
+   // CORRECT: direct tmux invocation via /usr/bin/env
+   SessionBackendConfiguration(
+       kind: .localShell,
+       localShell: LocalShellSessionConfiguration(
+           shellPath: "/usr/bin/env",
+           shellArguments: ["tmux", "attach", "-t", sessionName]
+       ),
+       ssh: nil, agent: nil
+   )
+   ```
+3. **TmuxService CLI calls**: already use argv-style via `ShellCommandRunner` (safe by construction)
+
+## Session Identity: Stable tmux IDs
+
+### Problem
+
+Tmux session names are mutable (rename) and can change outside Liney. Using names as mapping keys causes:
+- Broken mappings after rename
+- Duplicate attaches
+- Agent badges on wrong rows
+
+### Solution
+
+Use tmux's immutable session ID (`#{session_id}`, format: `$0`, `$1`, `$2`, ...) as the primary identity:
+
+```swift
+struct TmuxSession: Identifiable, Equatable {
+    let sessionID: String      // immutable, e.g. "$0", "$1"
+    let name: String           // display name, mutable
+    let isAttached: Bool
+    let windowCount: Int
+    var id: String { sessionID }
+}
+```
+
+Parsing format updated:
+```
+tmux list-sessions -F "#{session_id}\t#{session_name}\t#{session_attached}\t#{session_windows}"
+```
+
+All mappings and operations use `sessionID`:
+- Attach registry: `[sessionID: ShellSessionID]`
+- Rename: `tmux rename-session -t $0 new-name` (target by ID)
+- Kill/detach: target by ID
+
+## App-Level Attach Coordinator
+
+### Problem
+
+Each Liney window has its own `WorkspaceStore`. If tmux attach tracking is per-store, cross-window dedup fails.
+
+### Solution
+
+A singleton `TmuxAttachCoordinator` shared across all window contexts:
+
+```swift
+@MainActor
+final class TmuxAttachCoordinator {
+    static let shared = TmuxAttachCoordinator()
+    
+    // sessionID → (workspaceStoreID, shellSessionID)
+    private var attachments: [String: (UUID, UUID)] = []
+    
+    func isAttached(_ sessionID: String) -> Bool
+    func register(sessionID: String, storeID: UUID, shellSessionID: UUID)
+    func unregister(sessionID: String)
+    func shellSessionID(for sessionID: String) -> UUID?
+}
+```
+
+- On attach click: check coordinator first, if already attached anywhere, switch focus
+- On terminal close: unregister from coordinator
+- On app quit: coordinator is cleared (tmux sessions persist independently)
 
 ## Agent Status Badge on Tmux Sessions
-
-For agent status badges to work inside tmux terminals:
 
 ### Detection Chain
 ```
 Claude Code (inside tmux) → OSC 9 passthrough → Ghostty → ShellSession.agentStatus
 ```
 
-Requires `set -g allow-passthrough on` in user's tmux config (documented in setup guide).
+Requires `set -g allow-passthrough on` in user's tmux config.
 
-### Mapping: TmuxSession → ShellSession
+### Mapping via TmuxAttachCoordinator
 
-- `TmuxPanelStore` maintains a dictionary: `[String: UUID]` mapping tmux session name to ShellSession ID
-- When user clicks a session, store the ShellSession ID in this mapping
-- When rendering tmux session rows, look up the ShellSession via this mapping and read its `agentStatus`
-- When ShellSession terminates or is closed, remove the mapping entry
+- Coordinator holds `sessionID → shellSessionID` mapping
+- Tmux session row reads agentStatus via: `coordinator.shellSessionID(for:)` → find ShellSession → read `.agentStatus`
+- When ShellSession's agentStatus changes, `onAgentStatusChange` fires → `objectWillChange.send()` propagates to sidebar
 
 ### Badge Rendering
 
@@ -100,7 +183,7 @@ Same `AgentStatusOverlayBadge` view used for workspace icons:
 - Permission needed: hot magenta glow + pulse
 - Task completed: green glow
 - Error: red glow
-- Clearing: keyboard activity (2s delay) + notification + worktree switch
+- Clearing: keyboard activity (2s delay) + notification
 
 ## Refresh Behavior
 
@@ -110,6 +193,18 @@ Same `AgentStatusOverlayBadge` view used for workspace icons:
 - **No polling**: no auto-refresh timer
 
 ## Data Model Changes
+
+### TmuxSession (updated)
+
+```swift
+struct TmuxSession: Identifiable, Equatable {
+    let sessionID: String      // immutable tmux ID ($0, $1, ...)
+    let name: String           // display name
+    let isAttached: Bool
+    let windowCount: Int
+    var id: String { sessionID }
+}
+```
 
 ### AppSettings additions
 
@@ -128,50 +223,62 @@ Remove all window-related methods and state. Simplify to session-only:
 @Published var isAvailable: Bool = false
 @Published var isLoading: Bool = false
 @Published var errorMessage: String?
-var sessionToShellSession: [String: UUID] = [:]  // tmux name → ShellSession ID
 ```
 
 Methods:
 - `checkAvailability()`
 - `refresh()`
-- `createSession(name:)`
-- `killSession(name:)`
-- `renameSession(oldName:newName:)`
-- `detachSession(name:)`
-- `attachConfiguration(session:) -> SessionBackendConfiguration`
-- `registerShellSession(tmuxSession:shellSessionID:)`
-- `unregisterShellSession(tmuxSession:)`
-- `agentStatus(for tmuxSession:, in workspaceStore:) -> AgentSessionStatus`
+- `createSession(name:)` -- validates name
+- `killSession(sessionID:)`
+- `renameSession(sessionID:newName:)` -- validates new name
+- `detachSession(sessionID:)`
+- `attachConfiguration(sessionName:) -> SessionBackendConfiguration` -- argv-based, safe
+
+### Session Name Validation
+
+```swift
+static func isValidSessionName(_ name: String) -> Bool {
+    let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_."))
+    return !name.isEmpty && name.unicodeScalars.allSatisfy { allowed.contains($0) }
+}
+```
+
+## Files to Create
+
+| File | Purpose |
+|------|---------|
+| `Liney/App/TmuxAttachCoordinator.swift` | App-level singleton for cross-window attach tracking |
 
 ## Files to Modify (from v1)
 
 | File | Change |
 |------|--------|
-| `Liney/App/TmuxPanelStore.swift` | Remove window methods, add session→ShellSession mapping, add agentStatus lookup |
-| `Liney/UI/Sidebar/TmuxPanelView.swift` | Rewrite as session-only list with workspace-style rows, remove window tree |
+| `Liney/Services/Tmux/TmuxModels.swift` | Add `sessionID` to TmuxSession, update TmuxError |
+| `Liney/Services/Tmux/TmuxService.swift` | Update parsing format to include session_id, add name validation, remove window methods, argv-based attach |
+| `Liney/App/TmuxPanelStore.swift` | Remove window methods, use sessionID for operations, delegate attach tracking to coordinator |
+| `Liney/UI/Sidebar/TmuxPanelView.swift` | Rewrite as session-only list with workspace-style rows, agent status badge |
 | `Liney/UI/Sidebar/WorkspaceSidebarView.swift` | Replace bottom panel embedding with split layout + draggable divider |
 | `Liney/Domain/AppSettings.swift` | Add `tmuxSidebarSplitRatio` property |
-| `Liney/App/WorkspaceStore.swift` | Wire attach click to register session→ShellSession mapping |
+| `Liney/App/WorkspaceStore.swift` | Wire attach click through coordinator |
+| `Tests/TmuxServiceTests.swift` | Update parsing tests for sessionID, add name validation tests, remove window tests |
 
 ## Files to Keep (from v1, no changes)
 
 | File | Reason |
 |------|--------|
-| `Liney/Services/Tmux/TmuxModels.swift` | TmuxSession, TmuxError still needed |
-| `Liney/Services/Tmux/TmuxService.swift` | CLI wrapper still used (session operations) |
-| `Tests/TmuxServiceTests.swift` | Parsing tests still valid |
-
-## Files to Clean Up (from v1)
-
-Remove window-related parsing tests from `TmuxServiceTests.swift` if window methods are removed from TmuxService.
+| (none -- all v1 files need updates for sessionID) | |
 
 ## New Tests
 
 | Test | Coverage |
 |------|----------|
-| Session→ShellSession mapping register/unregister | TmuxPanelStore |
-| agentStatus lookup returns correct status | TmuxPanelStore |
-| agentStatus returns .none when no mapping | TmuxPanelStore |
+| Parse sessions with sessionID field | TmuxService |
+| Session name validation accepts valid names | TmuxService |
+| Session name validation rejects shell metacharacters | TmuxService |
+| Attach configuration uses argv not shell string | TmuxService |
+| Coordinator register/unregister/lookup | TmuxAttachCoordinator |
+| Coordinator isAttached returns correct state | TmuxAttachCoordinator |
+| agentStatus lookup via coordinator | TmuxPanelStore |
 | Split ratio persistence | AppSettings |
 
 ## Out of Scope
