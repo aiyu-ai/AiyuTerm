@@ -1200,8 +1200,7 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             item: Any?,
             childIndex index: Int
         ) -> Bool {
-            guard item == nil,
-                  let payload = info.draggingPasteboard.string(forType: Self.workspaceDragType)
+            guard let payload = info.draggingPasteboard.string(forType: Self.workspaceDragType)
             else {
                 return false
             }
