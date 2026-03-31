@@ -16,7 +16,7 @@ Redesign the tmux integration from a small bottom panel to a first-class sidebar
 - Agent status badges on tmux session rows (permission/completed/error)
 - Handle tmux not installed gracefully
 - Kill session requires confirmation
-- Session name validation: reject names containing shell metacharacters
+- Session name validation: only allow alphanumeric, `-`, `_`, `.` (no spaces or special characters)
 
 ## Sidebar Layout
 
@@ -35,10 +35,11 @@ Redesign the tmux integration from a small bottom panel to a first-class sidebar
 +---------------------------+
 ```
 
-- Divider: 5px purple-tinted bar with centered handle pill, draggable
+- Divider: implemented via `NSSplitView` (macOS native split view component with built-in drag support)
 - Top section: existing workspace outline view + "Open Folder" button
-- Bottom section: TMUX header + scrollable session list
+- Bottom section: TMUX header + scrollable session list (NSHostingView wrapping SwiftUI)
 - Default split ratio: 60% workspaces / 40% tmux
+- Minimum height for each section: 100pt
 - Persist split ratio in AppSettings
 
 ## Session Row Rendering
@@ -47,7 +48,7 @@ Each tmux session row matches workspace row visual style:
 
 - **Icon**: 18pt rounded rect, purple gradient (#8B5CF6 → #6D28D9), white "T" letter
 - **Primary label**: session name (same font as workspace name)
-- **Secondary label**: "attached" or "detached" (same font as branch name)
+- **Secondary label**: "attached" or "detached" + window count (e.g. "attached · 3 win") (same font as branch name)
 - **Status dot**: green (attached) / gray (detached), right-aligned
 - **Selection**: purple highlight with border (matching workspace blue selection)
 - **Agent status badge**: overlay on icon when agentStatus is actionable (same as workspace badges)
@@ -78,27 +79,19 @@ When user clicks a tmux session:
 4. Register the mapping: tmux session ID → ShellSession ID in the app-level coordinator
 5. The terminal runs the same Ghostty engine as all workspace terminals
 
-### Security: Safe Command Construction
+### Session Name Validation & Command Construction
 
-Session names are user-controlled input. To prevent shell injection:
+Session names are validated on create/rename to only allow alphanumeric, `-`, `_`, `.` characters. No spaces or special characters. This eliminates shell injection concerns entirely.
 
-1. **Validation on create/rename**: reject session names containing shell metacharacters (`;`, `|`, `&`, `$`, `` ` ``, `(`, `)`, `{`, `}`, `'`, `"`, `\`, newlines). Only allow alphanumeric, `-`, `_`, `.`.
-2. **Attach command**: use argv-style invocation instead of `-lc` string interpolation:
-   ```swift
-   // WRONG: shell string interpolation
-   .local(shellArguments: ["-lc", "tmux attach -t \(session)"])
-   
-   // CORRECT: direct tmux invocation via /usr/bin/env
-   SessionBackendConfiguration(
-       kind: .localShell,
-       localShell: LocalShellSessionConfiguration(
-           shellPath: "/usr/bin/env",
-           shellArguments: ["tmux", "attach", "-t", sessionName]
-       ),
-       ssh: nil, agent: nil
-   )
-   ```
-3. **TmuxService CLI calls**: already use argv-style via `ShellCommandRunner` (safe by construction)
+Attach command uses login shell with `-lc` (consistent with existing tmux restore pattern in ShellSession):
+```swift
+.local(shellArguments: ["-lc", "tmux attach -t \(validatedSessionName)"])
+```
+
+This is safe because the session name is validated and matches `[a-zA-Z0-9._-]+`. Using `-lc` ensures:
+- User's shell profile is loaded (PATH, environment)
+- Shell exists to fall back to if tmux detaches/exits
+- Consistent with how Liney already handles tmux sessions (`restorableBackendConfiguration`)
 
 ## Session Identity: Stable tmux IDs
 
@@ -158,7 +151,9 @@ final class TmuxAttachCoordinator {
 }
 ```
 
-- On attach click: check coordinator first, if already attached anywhere, switch focus
+- On attach click: check coordinator first
+  - If attached in current window/store: switch focus to that pane
+  - If attached in another window: show a brief inline hint "Already attached in another window" (no cross-window navigation)
 - On terminal close: unregister from coordinator
 - On app quit: coordinator is cleared (tmux sessions persist independently)
 
@@ -175,7 +170,7 @@ Requires `set -g allow-passthrough on` in user's tmux config.
 
 - Coordinator holds `sessionID → shellSessionID` mapping
 - Tmux session row reads agentStatus via: `coordinator.shellSessionID(for:)` → find ShellSession → read `.agentStatus`
-- When ShellSession's agentStatus changes, `onAgentStatusChange` fires → `objectWillChange.send()` propagates to sidebar
+- Propagation: `ShellSession.onAgentStatusChange` callback also triggers `TmuxPanelStore.objectWillChange.send()` (wired when registering the attach mapping), so the tmux sidebar row re-renders
 
 ### Badge Rendering
 
@@ -236,10 +231,12 @@ Methods:
 
 ### Session Name Validation
 
+Only alphanumeric, `-`, `_`, `.` allowed. No spaces. Validated on create and rename. Invalid names show inline error.
+
 ```swift
 static func isValidSessionName(_ name: String) -> Bool {
-    let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_."))
-    return !name.isEmpty && name.unicodeScalars.allSatisfy { allowed.contains($0) }
+    let pattern = "^[a-zA-Z0-9._-]+$"
+    return !name.isEmpty && name.range(of: pattern, options: .regularExpression) != nil
 }
 ```
 
