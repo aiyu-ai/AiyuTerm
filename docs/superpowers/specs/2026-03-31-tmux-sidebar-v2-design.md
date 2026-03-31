@@ -252,7 +252,7 @@ static func isValidSessionName(_ name: String) -> Bool {
 | File | Change |
 |------|--------|
 | `Liney/Services/Tmux/TmuxModels.swift` | Add `sessionID` to TmuxSession, update TmuxError |
-| `Liney/Services/Tmux/TmuxService.swift` | Update parsing format to include session_id, add name validation, remove window methods, argv-based attach |
+| `Liney/Services/Tmux/TmuxService.swift` | Update parsing format to include session_id, add name validation, remove window methods, -lc based attach |
 | `Liney/App/TmuxPanelStore.swift` | Remove window methods, use sessionID for operations, delegate attach tracking to coordinator |
 | `Liney/UI/Sidebar/TmuxPanelView.swift` | Rewrite as session-only list with workspace-style rows, agent status badge |
 | `Liney/UI/Sidebar/WorkspaceSidebarView.swift` | Replace bottom panel embedding with split layout + draggable divider |
