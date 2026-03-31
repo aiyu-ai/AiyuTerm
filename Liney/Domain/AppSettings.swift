@@ -262,6 +262,7 @@ struct AppSettings: Codable, Hashable {
     var sidebarShowsWorkspaceBadges: Bool
     var sidebarShowsWorktreeBadges: Bool
     var tmuxPanelCollapsed: Bool
+    var tmuxSidebarSplitRatio: Double
     var sidebarActivityIndicatorPalette: SidebarIconPalette
     var defaultRepositoryIcon: SidebarItemIcon
     var defaultLocalTerminalIcon: SidebarItemIcon
@@ -299,6 +300,7 @@ struct AppSettings: Codable, Hashable {
         sidebarShowsWorkspaceBadges: Bool = true,
         sidebarShowsWorktreeBadges: Bool = true,
         tmuxPanelCollapsed: Bool = true,
+        tmuxSidebarSplitRatio: Double = 0.6,
         sidebarActivityIndicatorPalette: SidebarIconPalette = .amber,
         defaultRepositoryIcon: SidebarItemIcon = .repositoryDefault,
         defaultLocalTerminalIcon: SidebarItemIcon = .localTerminalDefault,
@@ -341,6 +343,7 @@ struct AppSettings: Codable, Hashable {
         self.sidebarShowsWorkspaceBadges = sidebarShowsWorkspaceBadges
         self.sidebarShowsWorktreeBadges = sidebarShowsWorktreeBadges
         self.tmuxPanelCollapsed = tmuxPanelCollapsed
+        self.tmuxSidebarSplitRatio = tmuxSidebarSplitRatio
         self.sidebarActivityIndicatorPalette = sidebarActivityIndicatorPalette
         self.defaultRepositoryIcon = defaultRepositoryIcon
         self.defaultLocalTerminalIcon = defaultLocalTerminalIcon
@@ -398,6 +401,7 @@ extension AppSettings {
         case sidebarShowsWorkspaceBadges
         case sidebarShowsWorktreeBadges
         case tmuxPanelCollapsed
+        case tmuxSidebarSplitRatio
         case sidebarActivityIndicatorPalette
         case defaultRepositoryIcon
         case defaultLocalTerminalIcon
@@ -446,6 +450,7 @@ extension AppSettings {
             sidebarShowsWorkspaceBadges: try container.decodeIfPresent(Bool.self, forKey: .sidebarShowsWorkspaceBadges) ?? true,
             sidebarShowsWorktreeBadges: try container.decodeIfPresent(Bool.self, forKey: .sidebarShowsWorktreeBadges) ?? true,
             tmuxPanelCollapsed: try container.decodeIfPresent(Bool.self, forKey: .tmuxPanelCollapsed) ?? true,
+            tmuxSidebarSplitRatio: try container.decodeIfPresent(Double.self, forKey: .tmuxSidebarSplitRatio) ?? 0.6,
             sidebarActivityIndicatorPalette: try container.decodeIfPresent(SidebarIconPalette.self, forKey: .sidebarActivityIndicatorPalette) ?? .amber,
             defaultRepositoryIcon: try container.decodeIfPresent(SidebarItemIcon.self, forKey: .defaultRepositoryIcon) ?? .repositoryDefault,
             defaultLocalTerminalIcon: try container.decodeIfPresent(SidebarItemIcon.self, forKey: .defaultLocalTerminalIcon) ?? .localTerminalDefault,
