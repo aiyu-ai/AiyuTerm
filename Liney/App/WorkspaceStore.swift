@@ -15,6 +15,7 @@ extension Notification.Name {
 
 @MainActor
 final class WorkspaceStore: ObservableObject {
+    let id = UUID()
     private let activityLogLimit = 120
 
     @Published var workspaces: [WorkspaceModel] = []
@@ -1211,17 +1212,31 @@ final class WorkspaceStore: ObservableObject {
         persist()
     }
 
-    func createTmuxPane(in workspace: WorkspaceModel, configuration: SessionBackendConfiguration) {
+    func attachTmuxSession(sessionID: String, in workspace: WorkspaceModel) {
+        let coordinator = TmuxAttachCoordinator.shared
+
+        if coordinator.isAttached(sessionID) {
+            if let shellID = coordinator.shellSessionID(for: sessionID),
+               let session = workspace.sessionController.sessions[shellID] {
+                workspace.sessionController.focus(shellID)
+                return
+            }
+        }
+
+        guard let config = tmuxPanelStore.attachConfiguration(sessionID: sessionID) else { return }
+
         let snapshot = PaneSnapshot(
             id: UUID(),
             preferredWorkingDirectory: workspace.activeWorktreePath,
             preferredEngine: .libghosttyPreferred,
-            backendConfiguration: configuration
+            backendConfiguration: config
         )
         workspace.createPane(
             splitAxis: workspace.layout == nil ? nil : .vertical,
             snapshot: snapshot
         )
+
+        coordinator.register(sessionID: sessionID, storeID: id, shellSessionID: snapshot.id)
         persist()
     }
 
