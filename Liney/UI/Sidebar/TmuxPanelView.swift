@@ -4,61 +4,71 @@
 //
 //  Author: everettjf
 //
-//  NOTE: This file is a temporary stub during Task 2 migration.
-//  It will be fully rewritten in Task 6.
-//
 
 import SwiftUI
 
 struct TmuxPanelView: View {
     @ObservedObject var store: TmuxPanelStore
-    @Binding var isCollapsed: Bool
-    let onAttachWindow: (SessionBackendConfiguration) -> Void
+    let coordinator: TmuxAttachCoordinator
+    let onAttachSession: (String) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
-            Rectangle()
-                .fill(LineyTheme.border)
-                .frame(height: 1)
+            TmuxHeaderView(store: store)
 
-            TmuxPanelHeaderView(
-                store: store,
-                isCollapsed: $isCollapsed
-            )
-
-            if !isCollapsed {
-                TmuxPanelContentView(
-                    store: store,
-                    onAttachWindow: onAttachWindow
-                )
+            if !store.isAvailable {
+                TmuxNotInstalledView()
+            } else if let error = store.errorMessage {
+                Text(error)
+                    .font(.system(size: 10))
+                    .foregroundStyle(LineyTheme.danger)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+            } else if store.sessions.isEmpty && !store.isLoading {
+                Text("No sessions")
+                    .font(.system(size: 10))
+                    .foregroundStyle(LineyTheme.mutedText)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 2) {
+                        ForEach(store.sessions) { session in
+                            TmuxSessionRow(
+                                session: session,
+                                store: store,
+                                coordinator: coordinator,
+                                onAttach: { onAttachSession(session.sessionID) }
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 8)
+                }
             }
         }
         .background(LineyTheme.sidebarBackground)
         .onAppear {
             store.checkAvailability()
+            if store.isAvailable && store.sessions.isEmpty {
+                store.refresh()
+            }
         }
     }
 }
 
 // MARK: - Header
 
-private struct TmuxPanelHeaderView: View {
+private struct TmuxHeaderView: View {
     @ObservedObject var store: TmuxPanelStore
-    @Binding var isCollapsed: Bool
+    @State private var showNewSessionPrompt = false
+    @State private var newSessionName = ""
 
     var body: some View {
         HStack(spacing: 6) {
-            Button(action: { withAnimation(.easeInOut(duration: 0.2)) { isCollapsed.toggle() } }) {
-                Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
-                    .frame(width: 12)
-            }
-            .buttonStyle(.plain)
-
             Text("TMUX")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(LineyTheme.mutedText)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
 
             if !store.sessions.isEmpty {
                 Text("\(store.sessions.count)")
@@ -71,71 +81,55 @@ private struct TmuxPanelHeaderView: View {
 
             Spacer()
 
-            if !isCollapsed {
-                if store.isLoading {
-                    ProgressView()
-                        .scaleEffect(0.5)
-                        .frame(width: 16, height: 16)
-                } else {
-                    Button(action: { store.refresh() }) {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                Button(action: { store.createSession(name: "new-\(Int.random(in: 100...999))") }) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 9, weight: .semibold))
+            if store.isLoading {
+                ProgressView()
+                    .scaleEffect(0.5)
+                    .frame(width: 16, height: 16)
+            } else {
+                Button(action: { store.refresh() }) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
                 }
                 .buttonStyle(.plain)
             }
+
+            Button(action: { showNewSessionPrompt = true }) {
+                Image(systemName: "plus")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
+            }
+            .buttonStyle(.plain)
+            .popover(isPresented: $showNewSessionPrompt) {
+                VStack(spacing: 8) {
+                    Text("New Session")
+                        .font(.system(size: 11, weight: .semibold))
+                    TextField("session-name", text: $newSessionName)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 11))
+                        .frame(width: 160)
+                    HStack {
+                        Button("Cancel") { showNewSessionPrompt = false }
+                            .buttonStyle(.plain)
+                            .font(.system(size: 10))
+                        Spacer()
+                        Button("Create") {
+                            if !newSessionName.isEmpty {
+                                store.createSession(name: newSessionName)
+                                newSessionName = ""
+                                showNewSessionPrompt = false
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
+                    }
+                }
+                .padding(12)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-    }
-}
-
-// MARK: - Content
-
-private struct TmuxPanelContentView: View {
-    @ObservedObject var store: TmuxPanelStore
-
-    let onAttachWindow: (SessionBackendConfiguration) -> Void
-
-    var body: some View {
-        if !store.isAvailable {
-            TmuxNotInstalledView()
-        } else if let error = store.errorMessage {
-            Text(error)
-                .font(.system(size: 10))
-                .foregroundStyle(LineyTheme.danger)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 8)
-        } else if store.sessions.isEmpty {
-            Text("No sessions")
-                .font(.system(size: 10))
-                .foregroundStyle(LineyTheme.mutedText)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 8)
-        } else {
-            ScrollView {
-                LazyVStack(spacing: 1) {
-                    ForEach(store.sessions) { session in
-                        TmuxSessionRowView(
-                            session: session,
-                            store: store,
-                            onAttachWindow: onAttachWindow
-                        )
-                    }
-                }
-                .padding(.horizontal, 8)
-                .padding(.bottom, 8)
-            }
-            .frame(maxHeight: 200)
-        }
     }
 }
 
@@ -151,52 +145,70 @@ private struct TmuxNotInstalledView: View {
                 .font(.system(size: 9, design: .monospaced))
                 .foregroundStyle(LineyTheme.mutedText.opacity(0.6))
         }
-        .padding(.vertical, 12)
+        .padding(.vertical, 16)
         .frame(maxWidth: .infinity)
     }
 }
 
 // MARK: - Session Row
 
-private struct TmuxSessionRowView: View {
+private struct TmuxSessionRow: View {
     let session: TmuxSession
     let store: TmuxPanelStore
-    let onAttachWindow: (SessionBackendConfiguration) -> Void
+    let coordinator: TmuxAttachCoordinator
+    let onAttach: () -> Void
     @State private var isHovering = false
     @State private var isRenaming = false
     @State private var renameText = ""
     @State private var showKillConfirm = false
 
     var body: some View {
-        HStack(spacing: 5) {
-            Circle()
-                .fill(session.isAttached ? LineyTheme.success : LineyTheme.mutedText.opacity(0.4))
-                .frame(width: 6, height: 6)
+        HStack(spacing: 8) {
+            // Purple "T" icon (agent badge will be wired in a separate task)
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color(red: 0.55, green: 0.36, blue: 0.96), Color(red: 0.43, green: 0.16, blue: 0.85)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 22, height: 22)
+                .overlay(
+                    Text("T")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white)
+                )
 
-            if isRenaming {
-                TextField("name", text: $renameText, onCommit: {
-                    if !renameText.isEmpty && renameText != session.name {
-                        store.renameSession(sessionID: session.sessionID, newName: renameText)
-                    }
-                    isRenaming = false
-                })
-                .textFieldStyle(.plain)
-                .font(.system(size: 10, weight: .medium))
-                .onExitCommand { isRenaming = false }
-            } else {
-                Text(session.name)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(session.isAttached ? Color.white.opacity(0.9) : LineyTheme.mutedText)
-                    .lineLimit(1)
-                    .onTapGesture(count: 2) {
-                        renameText = session.name
-                        isRenaming = true
-                    }
-                    .onTapGesture(count: 1) {
-                        if let config = store.attachConfiguration(sessionID: session.sessionID) {
-                            onAttachWindow(config)
+            // Labels
+            VStack(alignment: .leading, spacing: 2) {
+                if isRenaming {
+                    TextField("name", text: $renameText, onCommit: {
+                        if !renameText.isEmpty && renameText != session.name {
+                            store.renameSession(sessionID: session.sessionID, newName: renameText)
                         }
-                    }
+                        isRenaming = false
+                    })
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12, weight: .semibold))
+                    .onExitCommand { isRenaming = false }
+                } else {
+                    Text(session.name)
+                        .font(.system(size: 12, weight: .semibold))
+                        .lineLimit(1)
+                        .onTapGesture(count: 2) {
+                            renameText = session.name
+                            isRenaming = true
+                        }
+                        .onTapGesture(count: 1) {
+                            onAttach()
+                        }
+                }
+
+                Text("\(session.isAttached ? "attached" : "detached") \u{00B7} \(session.windowCount) win")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundStyle(LineyTheme.mutedText)
+                    .lineLimit(1)
             }
 
             Spacer()
@@ -216,16 +228,16 @@ private struct TmuxSessionRowView: View {
                         showKillConfirm = true
                     }
                 }
-            } else if !isHovering {
-                Text("\(session.windowCount)")
-                    .font(.system(size: 9, weight: .medium, design: .monospaced))
-                    .foregroundStyle(LineyTheme.mutedText.opacity(0.6))
+            } else {
+                Circle()
+                    .fill(session.isAttached ? LineyTheme.success : LineyTheme.mutedText.opacity(0.4))
+                    .frame(width: 6, height: 6)
             }
         }
         .padding(.horizontal, 6)
-        .padding(.vertical, 4)
+        .padding(.vertical, 5)
         .background(
-            RoundedRectangle(cornerRadius: 5, style: .continuous)
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(isHovering ? Color(red: 0.55, green: 0.36, blue: 0.96).opacity(0.08) : .clear)
         )
         .onHover { isHovering = $0 }
@@ -235,7 +247,7 @@ private struct TmuxSessionRowView: View {
                 store.killSession(sessionID: session.sessionID)
             }
         } message: {
-            Text("This will terminate all windows and processes in this session.")
+            Text("This will terminate all windows and processes.")
         }
     }
 }
@@ -244,21 +256,20 @@ private struct TmuxSessionRowView: View {
 
 private struct TmuxInlineButton: View {
     let systemName: String
-    var size: CGFloat = 8
     var isDanger: Bool = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: size, weight: .semibold))
-                .frame(width: 15, height: 15)
+                .font(.system(size: 9, weight: .semibold))
+                .frame(width: 18, height: 18)
         }
         .buttonStyle(.plain)
         .foregroundStyle(isDanger ? LineyTheme.danger : LineyTheme.secondaryText)
         .background(
             (isDanger ? LineyTheme.danger.opacity(0.1) : Color.white.opacity(0.06)),
-            in: RoundedRectangle(cornerRadius: 3, style: .continuous)
+            in: RoundedRectangle(cornerRadius: 4, style: .continuous)
         )
     }
 }
