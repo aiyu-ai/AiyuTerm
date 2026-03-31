@@ -4,6 +4,9 @@
 //
 //  Author: everettjf
 //
+//  NOTE: This file is a temporary stub during Task 2 migration.
+//  It will be fully rewritten in Task 6.
+//
 
 import SwiftUI
 
@@ -123,8 +126,6 @@ private struct TmuxPanelContentView: View {
                     ForEach(store.sessions) { session in
                         TmuxSessionRowView(
                             session: session,
-                            isExpanded: store.expandedSessions.contains(session.name),
-                            windows: store.windowsBySession[session.name] ?? [],
                             store: store,
                             onAttachWindow: onAttachWindow
                         )
@@ -159,8 +160,6 @@ private struct TmuxNotInstalledView: View {
 
 private struct TmuxSessionRowView: View {
     let session: TmuxSession
-    let isExpanded: Bool
-    let windows: [TmuxWindow]
     let store: TmuxPanelStore
     let onAttachWindow: (SessionBackendConfiguration) -> Void
     @State private var isHovering = false
@@ -169,197 +168,75 @@ private struct TmuxSessionRowView: View {
     @State private var showKillConfirm = false
 
     var body: some View {
-        VStack(spacing: 1) {
-            HStack(spacing: 5) {
-                Button(action: { store.toggleSession(session.name) }) {
-                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 7, weight: .bold))
-                        .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
-                        .frame(width: 10)
-                }
-                .buttonStyle(.plain)
-
-                Circle()
-                    .fill(session.isAttached ? LineyTheme.success : LineyTheme.mutedText.opacity(0.4))
-                    .frame(width: 6, height: 6)
-
-                if isRenaming {
-                    TextField("name", text: $renameText, onCommit: {
-                        if !renameText.isEmpty && renameText != session.name {
-                            store.renameSession(oldName: session.name, newName: renameText)
-                        }
-                        isRenaming = false
-                    })
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 10, weight: .medium))
-                    .onExitCommand { isRenaming = false }
-                } else {
-                    Text(session.name)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(session.isAttached ? Color.white.opacity(0.9) : LineyTheme.mutedText)
-                        .lineLimit(1)
-                        .onTapGesture(count: 2) {
-                            renameText = session.name
-                            isRenaming = true
-                        }
-                }
-
-                Spacer()
-
-                if isHovering && !isRenaming {
-                    HStack(spacing: 3) {
-                        TmuxInlineButton(systemName: "plus") {
-                            store.createWindow(session: session.name, name: nil)
-                        }
-                        TmuxInlineButton(systemName: "pencil") {
-                            renameText = session.name
-                            isRenaming = true
-                        }
-                        if session.isAttached {
-                            TmuxInlineButton(systemName: "eject") {
-                                store.detachSession(name: session.name)
-                            }
-                        }
-                        TmuxInlineButton(systemName: "xmark", isDanger: true) {
-                            showKillConfirm = true
-                        }
-                    }
-                } else if !isHovering {
-                    Text("\(session.windowCount)")
-                        .font(.system(size: 9, weight: .medium, design: .monospaced))
-                        .foregroundStyle(LineyTheme.mutedText.opacity(0.6))
-                }
-            }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(isHovering ? Color(red: 0.55, green: 0.36, blue: 0.96).opacity(0.08) : .clear)
-            )
-            .onHover { isHovering = $0 }
-            .alert("Kill session '\(session.name)'?", isPresented: $showKillConfirm) {
-                Button("Cancel", role: .cancel) {}
-                Button("Kill", role: .destructive) {
-                    store.killSession(name: session.name)
-                }
-            } message: {
-                Text("This will terminate all windows and processes in this session.")
-            }
-
-            if isExpanded {
-                ForEach(windows) { window in
-                    TmuxWindowRowView(
-                        window: window,
-                        store: store,
-                        onAttach: {
-                            let config = store.attachConfiguration(session: window.sessionName, windowIndex: window.index)
-                            onAttachWindow(config)
-                        },
-                        allSessions: store.sessions
-                    )
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Window Row
-
-private struct TmuxWindowRowView: View {
-    let window: TmuxWindow
-    let store: TmuxPanelStore
-    let onAttach: () -> Void
-    let allSessions: [TmuxSession]
-    @State private var isHovering = false
-    @State private var isRenaming = false
-    @State private var renameText = ""
-    @State private var showMoveMenu = false
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "diamond.fill")
-                .font(.system(size: 5))
-                .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96).opacity(0.6))
+        HStack(spacing: 5) {
+            Circle()
+                .fill(session.isAttached ? LineyTheme.success : LineyTheme.mutedText.opacity(0.4))
+                .frame(width: 6, height: 6)
 
             if isRenaming {
                 TextField("name", text: $renameText, onCommit: {
-                    if !renameText.isEmpty && renameText != window.name {
-                        store.renameWindow(session: window.sessionName, index: window.index, newName: renameText)
+                    if !renameText.isEmpty && renameText != session.name {
+                        store.renameSession(sessionID: session.sessionID, newName: renameText)
                     }
                     isRenaming = false
                 })
                 .textFieldStyle(.plain)
-                .font(.system(size: 9, weight: .medium))
+                .font(.system(size: 10, weight: .medium))
                 .onExitCommand { isRenaming = false }
             } else {
-                Text("\(window.index): \(window.name)")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(window.isActive ? Color.white.opacity(0.85) : LineyTheme.mutedText)
+                Text(session.name)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(session.isAttached ? Color.white.opacity(0.9) : LineyTheme.mutedText)
                     .lineLimit(1)
                     .onTapGesture(count: 2) {
-                        renameText = window.name
+                        renameText = session.name
                         isRenaming = true
                     }
                     .onTapGesture(count: 1) {
-                        onAttach()
+                        if let config = store.attachConfiguration(sessionID: session.sessionID) {
+                            onAttachWindow(config)
+                        }
                     }
-            }
-
-            if window.isActive && !isHovering {
-                Text("*")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
             }
 
             Spacer()
 
             if isHovering && !isRenaming {
-                HStack(spacing: 2) {
-                    TmuxInlineButton(systemName: "arrow.up.right", size: 7) {
-                        onAttach()
-                    }
-                    TmuxInlineButton(systemName: "pencil", size: 7) {
-                        renameText = window.name
+                HStack(spacing: 3) {
+                    TmuxInlineButton(systemName: "pencil") {
+                        renameText = session.name
                         isRenaming = true
                     }
-                    TmuxInlineButton(systemName: "arrow.left.arrow.right", size: 7) {
-                        showMoveMenu = true
-                    }
-                    .popover(isPresented: $showMoveMenu) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Move to:")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(LineyTheme.secondaryText)
-                                .padding(.horizontal, 8)
-                                .padding(.top, 6)
-                            ForEach(allSessions.filter({ $0.name != window.sessionName })) { target in
-                                Button(target.name) {
-                                    store.moveWindow(session: window.sessionName, index: window.index, targetSession: target.name)
-                                    showMoveMenu = false
-                                }
-                                .buttonStyle(.plain)
-                                .font(.system(size: 10))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                            }
+                    if session.isAttached {
+                        TmuxInlineButton(systemName: "eject") {
+                            store.detachSession(sessionID: session.sessionID)
                         }
-                        .padding(.vertical, 4)
-                        .frame(minWidth: 120)
                     }
-                    TmuxInlineButton(systemName: "xmark", size: 7, isDanger: true) {
-                        store.killWindow(session: window.sessionName, index: window.index)
+                    TmuxInlineButton(systemName: "xmark", isDanger: true) {
+                        showKillConfirm = true
                     }
                 }
+            } else if !isHovering {
+                Text("\(session.windowCount)")
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .foregroundStyle(LineyTheme.mutedText.opacity(0.6))
             }
         }
-        .padding(.leading, 20)
-        .padding(.trailing, 6)
-        .padding(.vertical, 2)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
         .background(
-            RoundedRectangle(cornerRadius: 4, style: .continuous)
-                .fill(isHovering ? Color(red: 0.55, green: 0.36, blue: 0.96).opacity(0.06) : .clear)
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .fill(isHovering ? Color(red: 0.55, green: 0.36, blue: 0.96).opacity(0.08) : .clear)
         )
         .onHover { isHovering = $0 }
+        .alert("Kill session '\(session.name)'?", isPresented: $showKillConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Kill", role: .destructive) {
+                store.killSession(sessionID: session.sessionID)
+            }
+        } message: {
+            Text("This will terminate all windows and processes in this session.")
+        }
     }
 }
 

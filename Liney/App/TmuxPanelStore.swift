@@ -11,11 +11,15 @@ import Foundation
 @MainActor
 final class TmuxPanelStore: ObservableObject {
     @Published var sessions: [TmuxSession] = []
-    @Published var windowsBySession: [String: [TmuxWindow]] = [:]
-    @Published var expandedSessions: Set<String> = []
     @Published var isAvailable: Bool = false
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
+
+    private let coordinator: TmuxAttachCoordinator
+
+    init(coordinator: TmuxAttachCoordinator = .shared) {
+        self.coordinator = coordinator
+    }
 
     func checkAvailability() {
         Task {
@@ -29,19 +33,9 @@ final class TmuxPanelStore: ObservableObject {
         errorMessage = nil
         Task {
             do {
-                let loadedSessions = try await TmuxService.listSessions()
-                sessions = loadedSessions
-                for sessionName in expandedSessions {
-                    if loadedSessions.contains(where: { $0.name == sessionName }) {
-                        let windows = try await TmuxService.listWindows(session: sessionName)
-                        windowsBySession[sessionName] = windows
-                    } else {
-                        windowsBySession.removeValue(forKey: sessionName)
-                    }
-                }
-                expandedSessions = expandedSessions.filter { name in
-                    loadedSessions.contains(where: { $0.name == name })
-                }
+                let loaded = try await TmuxService.listSessions()
+                sessions = loaded
+                coordinator.cleanup(activeSessionIDs: Set(loaded.map(\.sessionID)))
                 isLoading = false
             } catch {
                 errorMessage = error.localizedDescription
@@ -50,16 +44,13 @@ final class TmuxPanelStore: ObservableObject {
         }
     }
 
-    func toggleSession(_ name: String) {
-        if expandedSessions.contains(name) {
-            expandedSessions.remove(name)
-        } else {
-            expandedSessions.insert(name)
-            loadWindows(for: name)
-        }
-    }
+    // MARK: - Session operations
 
     func createSession(name: String) {
+        guard TmuxSessionNameValidator.isValid(name) else {
+            errorMessage = TmuxError.invalidSessionName(name).localizedDescription
+            return
+        }
         Task {
             do {
                 try await TmuxService.createSession(name: name)
@@ -70,10 +61,11 @@ final class TmuxPanelStore: ObservableObject {
         }
     }
 
-    func killSession(name: String) {
+    func killSession(sessionID: String) {
         Task {
             do {
-                try await TmuxService.killSession(name: name)
+                try await TmuxService.killSession(sessionID: sessionID)
+                coordinator.unregister(sessionID: sessionID)
                 refresh()
             } catch {
                 errorMessage = error.localizedDescription
@@ -81,14 +73,14 @@ final class TmuxPanelStore: ObservableObject {
         }
     }
 
-    func renameSession(oldName: String, newName: String) {
+    func renameSession(sessionID: String, newName: String) {
+        guard TmuxSessionNameValidator.isValid(newName) else {
+            errorMessage = TmuxError.invalidSessionName(newName).localizedDescription
+            return
+        }
         Task {
             do {
-                try await TmuxService.renameSession(oldName: oldName, newName: newName)
-                if expandedSessions.contains(oldName) {
-                    expandedSessions.remove(oldName)
-                    expandedSessions.insert(newName)
-                }
+                try await TmuxService.renameSession(sessionID: sessionID, newName: newName)
                 refresh()
             } catch {
                 errorMessage = error.localizedDescription
@@ -96,10 +88,10 @@ final class TmuxPanelStore: ObservableObject {
         }
     }
 
-    func detachSession(name: String) {
+    func detachSession(sessionID: String) {
         Task {
             do {
-                try await TmuxService.detachSession(name: name)
+                try await TmuxService.detachSession(sessionID: sessionID)
                 refresh()
             } catch {
                 errorMessage = error.localizedDescription
@@ -107,66 +99,16 @@ final class TmuxPanelStore: ObservableObject {
         }
     }
 
-    func createWindow(session: String, name: String?) {
-        Task {
-            do {
-                try await TmuxService.createWindow(session: session, name: name)
-                loadWindows(for: session)
-                refresh()
-            } catch {
-                errorMessage = error.localizedDescription
-            }
-        }
-    }
+    // MARK: - Attach
 
-    func killWindow(session: String, index: Int) {
-        Task {
-            do {
-                try await TmuxService.killWindow(session: session, index: index)
-                loadWindows(for: session)
-                refresh()
-            } catch {
-                errorMessage = error.localizedDescription
-            }
-        }
-    }
-
-    func renameWindow(session: String, index: Int, newName: String) {
-        Task {
-            do {
-                try await TmuxService.renameWindow(session: session, index: index, newName: newName)
-                loadWindows(for: session)
-            } catch {
-                errorMessage = error.localizedDescription
-            }
-        }
-    }
-
-    func moveWindow(session: String, index: Int, targetSession: String) {
-        Task {
-            do {
-                try await TmuxService.moveWindow(session: session, index: index, targetSession: targetSession)
-                refresh()
-            } catch {
-                errorMessage = error.localizedDescription
-            }
-        }
-    }
-
-    func attachConfiguration(session: String, windowIndex: Int) -> SessionBackendConfiguration {
-        let shellArgs = TmuxService.attachArguments(session: session, windowIndex: windowIndex)
+    func attachConfiguration(sessionID: String) -> SessionBackendConfiguration? {
+        guard let session = sessions.first(where: { $0.sessionID == sessionID }) else { return nil }
+        let shellArgs = TmuxService.attachArguments(sessionName: session.name)
         let defaultShell = LocalShellSessionConfiguration.default
         return .local(shellPath: defaultShell.shellPath, shellArguments: shellArgs)
     }
 
-    private func loadWindows(for session: String) {
-        Task {
-            do {
-                let windows = try await TmuxService.listWindows(session: session)
-                windowsBySession[session] = windows
-            } catch {
-                errorMessage = error.localizedDescription
-            }
-        }
+    func sessionName(for sessionID: String) -> String? {
+        sessions.first(where: { $0.sessionID == sessionID })?.name
     }
 }
