@@ -89,6 +89,7 @@ final class ShellSession: ObservableObject, Identifiable {
         didSet {
             if agentStatus != oldValue {
                 onAgentStatusChange?(agentStatus)
+                updateAgentStatusPolling()
             }
         }
     }
@@ -101,6 +102,7 @@ final class ShellSession: ObservableObject, Identifiable {
     private let processReaper: @Sendable (TerminalLaunchConfiguration) -> Void
     private var launchConfiguration: TerminalLaunchConfiguration
     private var isFocusedInWorkspace = false
+    private var agentStatusPollTimer: Timer?
 
     init(snapshot: PaneSnapshot) {
         let launchConfiguration = Self.makeLaunchConfiguration(
@@ -186,6 +188,33 @@ final class ShellSession: ObservableObject, Identifiable {
                 if detected != .none {
                     self.agentStatus = detected
                 } else if self.agentStatus.isActionable {
+                    self.agentStatus = .none
+                }
+            }
+        }
+    }
+
+    private func updateAgentStatusPolling() {
+        agentStatusPollTimer?.invalidate()
+        agentStatusPollTimer = nil
+
+        guard agentStatus.isActionable,
+              let ghosttyController = surfaceController as? LineyGhosttyController else { return }
+
+        agentStatusPollTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] timer in
+            DispatchQueue.main.async {
+                guard let self else {
+                    timer.invalidate()
+                    return
+                }
+                guard self.agentStatus.isActionable else {
+                    timer.invalidate()
+                    self.agentStatusPollTimer = nil
+                    return
+                }
+                let currentTitle = ghosttyController.currentTitle
+                let detected = AgentSessionStatusDetector.detectFromTitle(currentTitle)
+                if detected == .none {
                     self.agentStatus = .none
                 }
             }
