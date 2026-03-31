@@ -148,6 +148,12 @@ final class ShellSession: ObservableObject, Identifiable {
         surfaceController.onTitleChange = { [weak self] title in
             guard let self, !title.isEmpty else { return }
             self.title = title
+            let detected = AgentSessionStatusDetector.detectFromTitle(title)
+            if detected != .none {
+                self.agentStatus = detected
+            } else if self.agentStatus == .permissionNeeded {
+                self.agentStatus = .none
+            }
         }
         surfaceController.onWorkingDirectoryChange = { [weak self] directory in
             self?.reportedWorkingDirectory = directory
