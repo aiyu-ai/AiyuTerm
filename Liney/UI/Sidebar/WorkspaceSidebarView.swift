@@ -78,6 +78,22 @@ private struct WorkspaceOutlineSidebar: NSViewRepresentable {
     func updateNSView(_ nsView: SidebarOutlineContainerView, context: Context) {
         context.coordinator.store = store
         nsView.setOpenRepositoryAction(onOpenRepository)
+        nsView.setTmuxPanelContent(AnyView(
+            TmuxPanelView(
+                store: store.tmuxPanelStore,
+                isCollapsed: Binding(
+                    get: { store.appSettings.tmuxPanelCollapsed },
+                    set: { newValue in
+                        store.appSettings.tmuxPanelCollapsed = newValue
+                        store.persist()
+                    }
+                ),
+                onAttachWindow: { configuration in
+                    guard let workspace = store.workspaces.first(where: { $0.id == store.selectedWorkspaceID }) else { return }
+                    store.createTmuxPane(in: workspace, configuration: configuration)
+                }
+            )
+        ))
         context.coordinator.apply(
             workspaces: store.sidebarWorkspaces,
             selectedWorkspaceID: store.selectedWorkspaceID,
@@ -1038,6 +1054,7 @@ private final class SidebarOutlineContainerView: NSView {
     private let scrollView = NSScrollView()
     private let contentView = SidebarScrollContentView()
     private let footerHostingView = NSHostingView(rootView: AnyView(EmptyView()))
+    private let tmuxPanelHostingView = NSHostingView(rootView: AnyView(EmptyView()))
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -1076,6 +1093,9 @@ private final class SidebarOutlineContainerView: NSView {
         footerHostingView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(footerHostingView)
 
+        tmuxPanelHostingView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(tmuxPanelHostingView)
+
         let footerSeparator = NSBox()
         footerSeparator.boxType = .separator
         footerSeparator.translatesAutoresizingMaskIntoConstraints = false
@@ -1085,7 +1105,11 @@ private final class SidebarOutlineContainerView: NSView {
             scrollView.leadingAnchor.constraint(equalTo: leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: trailingAnchor),
             scrollView.topAnchor.constraint(equalTo: topAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: footerSeparator.topAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: tmuxPanelHostingView.topAnchor),
+
+            tmuxPanelHostingView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            tmuxPanelHostingView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            tmuxPanelHostingView.bottomAnchor.constraint(equalTo: footerSeparator.topAnchor),
 
             footerSeparator.leadingAnchor.constraint(equalTo: leadingAnchor),
             footerSeparator.trailingAnchor.constraint(equalTo: trailingAnchor),
@@ -1114,6 +1138,10 @@ private final class SidebarOutlineContainerView: NSView {
 
     func setOpenRepositoryAction(_ action: @escaping () -> Void) {
         footerHostingView.rootView = AnyView(SidebarOpenRepositoryRow(action: action))
+    }
+
+    func setTmuxPanelContent(_ view: AnyView) {
+        tmuxPanelHostingView.rootView = view
     }
 
     func relayout() {
