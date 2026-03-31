@@ -1055,6 +1055,30 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             (item as? SidebarNodeItem)?.isExpandable ?? false
         }
 
+        func outlineView(_ outlineView: NSOutlineView, shouldShowOutlineCellForItem item: Any) -> Bool {
+            guard let node = item as? SidebarNodeItem else { return false }
+            switch node.kind {
+            case .group:
+                return false
+            case .workspace, .branch:
+                return node.isExpandable
+            case .worktree:
+                return false
+            }
+        }
+
+        func outlineView(_ outlineView: NSOutlineView, shouldSelectItem item: Any) -> Bool {
+            guard let node = item as? SidebarNodeItem else { return true }
+            guard case .group = node.kind else { return true }
+
+            if outlineView.isItemExpanded(node) {
+                outlineView.collapseItem(node)
+            } else {
+                outlineView.expandItem(node)
+            }
+            return false
+        }
+
         func outlineView(_ outlineView: NSOutlineView, child index: Int, ofItem item: Any?) -> Any {
             let nodes = (item as? SidebarNodeItem)?.children ?? rootNodes
             return nodes[index]
@@ -1067,7 +1091,12 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             cell.identifier = identifier
             let row = outlineView.row(forItem: node)
             let isSelected = row >= 0 && outlineView.selectedRowIndexes.contains(row)
-            cell.apply(node: node, store: store, isSelected: isSelected)
+            cell.apply(
+                node: node,
+                store: store,
+                isSelected: isSelected,
+                isExpanded: outlineView.isItemExpanded(node)
+            )
             return cell
         }
 
@@ -1187,9 +1216,17 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             if item == nil {
                 return .move
             }
-            if let node = item as? SidebarNodeItem,
-               case .group = node.kind {
-                return .move
+            if let node = item as? SidebarNodeItem {
+                switch node.kind {
+                case .group:
+                    return .move
+                case .workspace(let workspace):
+                    if workspace.groupName != nil {
+                        return .move
+                    }
+                case .branch, .worktree:
+                    break
+                }
             }
             return []
         }
@@ -1212,6 +1249,14 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             if let node = item as? SidebarNodeItem,
                case .group(let name) = node.kind {
                 store?.assignWorkspaces(ids: ids, toGroupNamed: name)
+                outlineView.expandItem(node)
+                return true
+            }
+
+            if let node = item as? SidebarNodeItem,
+               case .workspace(let workspace) = node.kind,
+               let groupName = workspace.groupName {
+                store?.assignWorkspaces(ids: ids, toGroupNamed: groupName)
                 return true
             }
 
@@ -1403,7 +1448,16 @@ private final class SidebarOutlineView: NSOutlineView {
         let isExpandable = item?.isExpandable ?? false
         let isTopLevel = item?.isTopLevelNode ?? false
         let disclosureEnd: CGFloat = 16
-        if !isExpandable {
+        if case .group = item?.kind {
+            frame.origin.x = disclosureEnd
+            frame.size.width = bounds.width - disclosureEnd - 6
+        } else if case .workspace = item?.kind {
+            let shift = frame.origin.x - disclosureEnd
+            if shift > 0 {
+                frame.origin.x -= shift
+                frame.size.width += shift
+            }
+        } else if !isExpandable {
             if isTopLevel {
                 frame.origin.x = disclosureEnd
                 frame.size.width = bounds.width - disclosureEnd - 6
@@ -1466,8 +1520,15 @@ private final class SidebarOutlineRowView: NSTableRowView {
 private final class SidebarOutlineCellView: NSTableCellView {
     private var hostingView: NSHostingView<AnyView>?
 
-    func apply(node: SidebarNodeItem, store: WorkspaceStore?, isSelected: Bool) {
-        let rootView = AnyView(SidebarNodeRow(node: node, store: store, isSelected: isSelected))
+    func apply(node: SidebarNodeItem, store: WorkspaceStore?, isSelected: Bool, isExpanded: Bool) {
+        let rootView = AnyView(
+            SidebarNodeRow(
+                node: node,
+                store: store,
+                isSelected: isSelected,
+                isExpanded: isExpanded
+            )
+        )
         if let hostingView {
             hostingView.rootView = rootView
         } else {
@@ -1489,13 +1550,14 @@ private struct SidebarNodeRow: View {
     let node: SidebarNodeItem
     let store: WorkspaceStore?
     let isSelected: Bool
+    let isExpanded: Bool
 
     var body: some View {
         switch node.kind {
         case .workspace(let workspace):
             WorkspaceRowContent(workspace: workspace, store: store, isSelected: isSelected)
         case .group(let name):
-            WorkspaceGroupRowContent(name: name, childCount: node.children.count, isSelected: isSelected)
+            WorkspaceGroupRowContent(name: name, childCount: node.children.count, isExpanded: isExpanded)
         case .branch:
             EmptyView()
         case .worktree(let workspace, let worktree):
@@ -1507,21 +1569,25 @@ private struct SidebarNodeRow: View {
 private struct WorkspaceGroupRowContent: View {
     let name: String
     let childCount: Int
-    let isSelected: Bool
+    let isExpanded: Bool
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "folder.fill")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(isSelected ? Color.white.opacity(0.95) : LineyTheme.accent)
+        HStack(spacing: 6) {
+            Image(systemName: isExpanded ? "folder.open" : "folder")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(LineyTheme.accent.opacity(0.9))
             Text(name)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(LineyTheme.secondaryText)
                 .lineLimit(1)
             Spacer()
-            SidebarInfoBadge(text: "\(childCount)", tone: isSelected ? .neutral : .accent)
+            Text("\(childCount)")
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .foregroundStyle(LineyTheme.mutedText)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 1)
         .padding(.horizontal, 2)
+        .textCase(.uppercase)
     }
 }
 
