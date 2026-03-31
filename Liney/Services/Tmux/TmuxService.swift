@@ -9,8 +9,6 @@ import Foundation
 
 enum TmuxService {
 
-    static let tmuxExecutablePath = "/usr/bin/env"
-
     private static let runner = ShellCommandRunner()
 
     // MARK: - Query
@@ -27,7 +25,7 @@ enum TmuxService {
     static func listSessions() async throws -> [TmuxSession] {
         do {
             let result = try await runTmux(arguments: [
-                "list-sessions", "-F", "#{session_name}\t#{session_attached}\t#{session_windows}"
+                "list-sessions", "-F", "#{session_id}\t#{session_name}\t#{session_attached}\t#{session_windows}"
             ])
             return parseSessions(from: result.stdout)
         } catch TmuxError.noServerRunning {
@@ -35,79 +33,50 @@ enum TmuxService {
         }
     }
 
-    static func listWindows(session: String) async throws -> [TmuxWindow] {
-        let result = try await runTmux(arguments: [
-            "list-windows", "-t", session, "-F", "#{window_index}\t#{window_name}\t#{window_active}"
-        ])
-        return parseWindows(from: result.stdout, sessionName: session)
-    }
-
     // MARK: - Session operations
 
     static func createSession(name: String) async throws {
+        guard TmuxSessionNameValidator.isValid(name) else {
+            throw TmuxError.invalidSessionName(name)
+        }
         try await runTmux(arguments: ["new-session", "-d", "-s", name])
     }
 
-    static func killSession(name: String) async throws {
-        try await runTmux(arguments: ["kill-session", "-t", name])
+    static func killSession(sessionID: String) async throws {
+        try await runTmux(arguments: ["kill-session", "-t", sessionID])
     }
 
-    static func renameSession(oldName: String, newName: String) async throws {
-        try await runTmux(arguments: ["rename-session", "-t", oldName, newName])
-    }
-
-    static func detachSession(name: String) async throws {
-        try await runTmux(arguments: ["detach-client", "-t", name])
-    }
-
-    // MARK: - Window operations
-
-    static func createWindow(session: String, name: String?) async throws {
-        var args = ["new-window", "-t", session]
-        if let name, !name.isEmpty {
-            args += ["-n", name]
+    static func renameSession(sessionID: String, newName: String) async throws {
+        guard TmuxSessionNameValidator.isValid(newName) else {
+            throw TmuxError.invalidSessionName(newName)
         }
-        try await runTmux(arguments: args)
+        try await runTmux(arguments: ["rename-session", "-t", sessionID, newName])
     }
 
-    static func killWindow(session: String, index: Int) async throws {
-        try await runTmux(arguments: ["kill-window", "-t", "\(session):\(index)"])
+    static func detachSession(sessionID: String) async throws {
+        try await runTmux(arguments: ["detach-client", "-t", sessionID])
     }
 
-    static func renameWindow(session: String, index: Int, newName: String) async throws {
-        try await runTmux(arguments: ["rename-window", "-t", "\(session):\(index)", newName])
-    }
+    // MARK: - Attach
 
-    static func moveWindow(session: String, index: Int, targetSession: String) async throws {
-        try await runTmux(arguments: ["move-window", "-s", "\(session):\(index)", "-t", targetSession])
-    }
-
-    // MARK: - Attach helpers
-
-    static func attachArguments(session: String, windowIndex: Int) -> [String] {
-        let escapedSession = session.contains(" ") ? "'\(session)'" : session
-        return ["-lc", "tmux attach -t \(escapedSession) \\; select-window -t \(windowIndex)"]
+    static func attachArguments(sessionName: String) -> [String] {
+        ["-lc", "tmux attach -t \(sessionName)"]
     }
 
     // MARK: - Parsing
 
     static func parseSessions(from output: String) -> [TmuxSession] {
         output.split(whereSeparator: \.isNewline).compactMap { line in
-            let parts = line.split(separator: "\t", maxSplits: 2).map(String.init)
-            guard parts.count == 3,
-                  let attached = Int(parts[1]),
-                  let windowCount = Int(parts[2]) else { return nil }
-            return TmuxSession(name: parts[0], isAttached: attached > 0, windowCount: windowCount)
-        }
-    }
-
-    static func parseWindows(from output: String, sessionName: String) -> [TmuxWindow] {
-        output.split(whereSeparator: \.isNewline).compactMap { line in
-            let parts = line.split(separator: "\t", maxSplits: 2).map(String.init)
-            guard parts.count == 3,
-                  let index = Int(parts[0]),
-                  let active = Int(parts[2]) else { return nil }
-            return TmuxWindow(sessionName: sessionName, index: index, name: parts[1], isActive: active > 0)
+            let parts = line.split(separator: "\t", maxSplits: 3).map(String.init)
+            guard parts.count == 4,
+                  let attached = Int(parts[2]),
+                  let windowCount = Int(parts[3]) else { return nil }
+            return TmuxSession(
+                sessionID: parts[0],
+                name: parts[1],
+                isAttached: attached > 0,
+                windowCount: windowCount
+            )
         }
     }
 
