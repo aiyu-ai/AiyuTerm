@@ -85,10 +85,17 @@ final class ShellSession: ObservableObject, Identifiable {
     @Published var rows: Int = 24
     @Published var cols: Int = 80
     @Published var surfaceStatus = TerminalSurfaceStatusSnapshot()
-    @Published var agentStatus: AgentSessionStatus = .none
+    @Published var agentStatus: AgentSessionStatus = .none {
+        didSet {
+            if agentStatus != oldValue {
+                onAgentStatusChange?(agentStatus)
+            }
+        }
+    }
 
     var onWorkspaceAction: ((TerminalWorkspaceAction) -> Void)?
     var onFocus: (() -> Void)?
+    var onAgentStatusChange: ((AgentSessionStatus) -> Void)?
 
     private let surfaceController: ManagedTerminalSessionSurfaceController
     private let processReaper: @Sendable (TerminalLaunchConfiguration) -> Void

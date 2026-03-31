@@ -866,6 +866,9 @@ final class WorkspaceModel: ObservableObject, Identifiable {
                 guard let self, self.sessionController.focusedPaneID != paneID else { return }
                 self.focusPane(paneID)
             }
+            session.onAgentStatusChange = { [weak self] _ in
+                self?.objectWillChange.send()
+            }
         }
     }
 
