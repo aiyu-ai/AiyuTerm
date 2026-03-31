@@ -97,4 +97,29 @@ final class AgentSessionStatusDetectorTests: XCTestCase {
         )
         XCTAssertEqual(result, .permissionNeeded)
     }
+
+    func testDetectsRealClaudeCodePermissionNotification() {
+        let result = AgentSessionStatusDetector.detect(
+            title: "Claude Code",
+            body: "Claude needs your permission to use Web Search"
+        )
+        XCTAssertEqual(result, .permissionNeeded)
+    }
+
+    // MARK: - Title-based detection
+
+    func testDetectsPermissionFromStarTitle() {
+        let result = AgentSessionStatusDetector.detectFromTitle("\u{2733} Claude Code")
+        XCTAssertEqual(result, .permissionNeeded)
+    }
+
+    func testReturnsNoneForSpinnerTitle() {
+        let result = AgentSessionStatusDetector.detectFromTitle("\u{2802} Claude Code")
+        XCTAssertEqual(result, .none)
+    }
+
+    func testReturnsNoneForPlainTitle() {
+        let result = AgentSessionStatusDetector.detectFromTitle("Claude Code")
+        XCTAssertEqual(result, .none)
+    }
 }

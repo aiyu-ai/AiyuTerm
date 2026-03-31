@@ -14,8 +14,9 @@ enum AgentSessionStatusDetector {
         let keywords: [String]
     }
 
-    private static let rules: [Rule] = [
+    private static let notificationRules: [Rule] = [
         Rule(status: .permissionNeeded, keywords: [
+            "needs your permission",
             "permission needed",
             "waiting for user to approve",
             "requires approval",
@@ -38,7 +39,7 @@ enum AgentSessionStatusDetector {
 
         let lowercasedBody = body.lowercased()
 
-        for rule in rules {
+        for rule in notificationRules {
             for keyword in rule.keywords {
                 if lowercasedBody.contains(keyword) {
                     return rule.status
@@ -46,6 +47,12 @@ enum AgentSessionStatusDetector {
             }
         }
 
+        return .none
+    }
+
+    static func detectFromTitle(_ title: String) -> AgentSessionStatus {
+        let trimmed = title.trimmingCharacters(in: .whitespaces)
+        if trimmed.hasPrefix("\u{2733}") { return .permissionNeeded }
         return .none
     }
 }
