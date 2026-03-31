@@ -8,18 +8,11 @@
 import Foundation
 
 struct TmuxSession: Identifiable, Equatable {
+    let sessionID: String
     let name: String
     let isAttached: Bool
     let windowCount: Int
-    var id: String { name }
-}
-
-struct TmuxWindow: Identifiable, Equatable {
-    let sessionName: String
-    let index: Int
-    let name: String
-    let isActive: Bool
-    var id: String { "\(sessionName):\(index)" }
+    var id: String { sessionID }
 }
 
 enum TmuxError: LocalizedError {
@@ -27,6 +20,7 @@ enum TmuxError: LocalizedError {
     case noServerRunning
     case commandFailed(String)
     case parseError(String)
+    case invalidSessionName(String)
 
     var errorDescription: String? {
         switch self {
@@ -38,6 +32,15 @@ enum TmuxError: LocalizedError {
             return "tmux command failed: \(message)"
         case .parseError(let message):
             return "Failed to parse tmux output: \(message)"
+        case .invalidSessionName(let name):
+            return "Invalid session name: \(name). Only alphanumeric, dash, underscore, and dot allowed."
         }
+    }
+}
+
+enum TmuxSessionNameValidator {
+    static func isValid(_ name: String) -> Bool {
+        let pattern = "^[a-zA-Z0-9._-]+$"
+        return !name.isEmpty && name.range(of: pattern, options: .regularExpression) != nil
     }
 }
