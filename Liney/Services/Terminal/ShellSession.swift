@@ -89,7 +89,6 @@ final class ShellSession: ObservableObject, Identifiable {
         didSet {
             if agentStatus != oldValue {
                 onAgentStatusChange?(agentStatus)
-                scheduleAgentStatusAutoClear()
             }
         }
     }
@@ -102,7 +101,6 @@ final class ShellSession: ObservableObject, Identifiable {
     private let processReaper: @Sendable (TerminalLaunchConfiguration) -> Void
     private var launchConfiguration: TerminalLaunchConfiguration
     private var isFocusedInWorkspace = false
-    private var agentStatusClearTask: DispatchWorkItem?
 
     init(snapshot: PaneSnapshot) {
         let launchConfiguration = Self.makeLaunchConfiguration(
@@ -157,12 +155,6 @@ final class ShellSession: ObservableObject, Identifiable {
         surfaceController.onTitleChange = { [weak self] title in
             guard let self, !title.isEmpty else { return }
             self.title = title
-            let detected = AgentSessionStatusDetector.detectFromTitle(title)
-            if detected != .none {
-                self.agentStatus = detected
-            } else if self.agentStatus.isActionable {
-                self.agentStatus = .none
-            }
         }
         surfaceController.onWorkingDirectoryChange = { [weak self] directory in
             self?.reportedWorkingDirectory = directory
@@ -192,21 +184,6 @@ final class ShellSession: ObservableObject, Identifiable {
                 }
             }
         }
-    }
-
-    private func scheduleAgentStatusAutoClear() {
-        agentStatusClearTask?.cancel()
-        agentStatusClearTask = nil
-
-        guard agentStatus.isActionable else { return }
-
-        let clearDelay: TimeInterval = agentStatus == .permissionNeeded ? 8 : 15
-        let task = DispatchWorkItem { [weak self] in
-            guard let self, self.agentStatus.isActionable else { return }
-            self.agentStatus = .none
-        }
-        agentStatusClearTask = task
-        DispatchQueue.main.asyncAfter(deadline: .now() + clearDelay, execute: task)
     }
 
     var nsView: NSView {
