@@ -35,6 +35,7 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
     }
 
     var currentSurface: ghostty_surface_t? { terminalView.surface }
+    var currentTitle: String { latestTitle }
 
     private let terminalView: LineyGhosttySurfaceView
     private var launchConfiguration: TerminalLaunchConfiguration
