@@ -49,6 +49,7 @@ final class WorkspaceStore: ObservableObject {
     private let gitRepositoryService = GitRepositoryService()
     private let updaterController = AppUpdaterController.shared
     private let remoteSessionCoordinator = RemoteSessionCoordinator()
+    let tmuxPanelStore = TmuxPanelStore()
     private let metadataWatchService = WorkspaceMetadataWatchService.shared
     private let sleepPreventionController = SleepPreventionController()
     private var persistsWorkspaceState: Bool
@@ -1202,6 +1203,20 @@ final class WorkspaceStore: ObservableObject {
             preferredWorkingDirectory: workingDirectory,
             preferredEngine: .libghosttyPreferred,
             backendConfiguration: backendConfiguration
+        )
+        workspace.createPane(
+            splitAxis: workspace.layout == nil ? nil : .vertical,
+            snapshot: snapshot
+        )
+        persist()
+    }
+
+    func createTmuxPane(in workspace: WorkspaceModel, configuration: SessionBackendConfiguration) {
+        let snapshot = PaneSnapshot(
+            id: UUID(),
+            preferredWorkingDirectory: workspace.activeWorktreePath,
+            preferredEngine: .libghosttyPreferred,
+            backendConfiguration: configuration
         )
         workspace.createPane(
             splitAxis: workspace.layout == nil ? nil : .vertical,
