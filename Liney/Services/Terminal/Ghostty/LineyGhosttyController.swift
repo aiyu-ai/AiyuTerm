@@ -23,6 +23,7 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
     var onProcessExit: ((Int32?) -> Void)?
     var onWorkspaceAction: ((TerminalWorkspaceAction) -> Void)?
     var onDesktopNotification: ((String, String?) -> Void)?
+    var onKeyboardActivity: (() -> Void)?
 
     var managedPID: Int32? { nil }
     var isManagedSessionRunning: Bool {
@@ -812,6 +813,8 @@ private final class LineyGhosttySurfaceView: NSView {
             super.keyDown(with: event)
             return
         }
+
+        controller?.onKeyboardActivity?()
 
         logArrowKeyDebug(event, phase: "keyDown")
 

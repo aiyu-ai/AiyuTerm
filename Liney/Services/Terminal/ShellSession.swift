@@ -102,6 +102,7 @@ final class ShellSession: ObservableObject, Identifiable {
     private var launchConfiguration: TerminalLaunchConfiguration
     private var isFocusedInWorkspace = false
     private var lastTitleIndicatedPermission = false
+    private var agentStatusClearTask: DispatchWorkItem?
 
     init(snapshot: PaneSnapshot) {
         let launchConfiguration = Self.makeLaunchConfiguration(
@@ -188,6 +189,16 @@ final class ShellSession: ObservableObject, Identifiable {
                 } else if self.agentStatus.isActionable {
                     self.agentStatus = .none
                 }
+            }
+            ghosttyController.onKeyboardActivity = { [weak self] in
+                guard let self, self.agentStatus == .permissionNeeded else { return }
+                self.agentStatusClearTask?.cancel()
+                let task = DispatchWorkItem { [weak self] in
+                    guard let self, self.agentStatus == .permissionNeeded else { return }
+                    self.agentStatus = .none
+                }
+                self.agentStatusClearTask = task
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: task)
             }
         }
     }
