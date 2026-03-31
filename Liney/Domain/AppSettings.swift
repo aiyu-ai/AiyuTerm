@@ -261,6 +261,7 @@ struct AppSettings: Codable, Hashable {
     var sidebarShowsSecondaryLabels: Bool
     var sidebarShowsWorkspaceBadges: Bool
     var sidebarShowsWorktreeBadges: Bool
+    var tmuxPanelCollapsed: Bool
     var sidebarActivityIndicatorPalette: SidebarIconPalette
     var defaultRepositoryIcon: SidebarItemIcon
     var defaultLocalTerminalIcon: SidebarItemIcon
@@ -297,6 +298,7 @@ struct AppSettings: Codable, Hashable {
         sidebarShowsSecondaryLabels: Bool = true,
         sidebarShowsWorkspaceBadges: Bool = true,
         sidebarShowsWorktreeBadges: Bool = true,
+        tmuxPanelCollapsed: Bool = true,
         sidebarActivityIndicatorPalette: SidebarIconPalette = .amber,
         defaultRepositoryIcon: SidebarItemIcon = .repositoryDefault,
         defaultLocalTerminalIcon: SidebarItemIcon = .localTerminalDefault,
@@ -338,6 +340,7 @@ struct AppSettings: Codable, Hashable {
         self.sidebarShowsSecondaryLabels = sidebarShowsSecondaryLabels
         self.sidebarShowsWorkspaceBadges = sidebarShowsWorkspaceBadges
         self.sidebarShowsWorktreeBadges = sidebarShowsWorktreeBadges
+        self.tmuxPanelCollapsed = tmuxPanelCollapsed
         self.sidebarActivityIndicatorPalette = sidebarActivityIndicatorPalette
         self.defaultRepositoryIcon = defaultRepositoryIcon
         self.defaultLocalTerminalIcon = defaultLocalTerminalIcon
@@ -394,6 +397,7 @@ extension AppSettings {
         case sidebarShowsSecondaryLabels
         case sidebarShowsWorkspaceBadges
         case sidebarShowsWorktreeBadges
+        case tmuxPanelCollapsed
         case sidebarActivityIndicatorPalette
         case defaultRepositoryIcon
         case defaultLocalTerminalIcon
@@ -441,6 +445,7 @@ extension AppSettings {
             sidebarShowsSecondaryLabels: try container.decodeIfPresent(Bool.self, forKey: .sidebarShowsSecondaryLabels) ?? true,
             sidebarShowsWorkspaceBadges: try container.decodeIfPresent(Bool.self, forKey: .sidebarShowsWorkspaceBadges) ?? true,
             sidebarShowsWorktreeBadges: try container.decodeIfPresent(Bool.self, forKey: .sidebarShowsWorktreeBadges) ?? true,
+            tmuxPanelCollapsed: try container.decodeIfPresent(Bool.self, forKey: .tmuxPanelCollapsed) ?? true,
             sidebarActivityIndicatorPalette: try container.decodeIfPresent(SidebarIconPalette.self, forKey: .sidebarActivityIndicatorPalette) ?? .amber,
             defaultRepositoryIcon: try container.decodeIfPresent(SidebarItemIcon.self, forKey: .defaultRepositoryIcon) ?? .repositoryDefault,
             defaultLocalTerminalIcon: try container.decodeIfPresent(SidebarItemIcon.self, forKey: .defaultLocalTerminalIcon) ?? .localTerminalDefault,
