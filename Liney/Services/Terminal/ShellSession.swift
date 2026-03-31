@@ -101,7 +101,6 @@ final class ShellSession: ObservableObject, Identifiable {
     private let processReaper: @Sendable (TerminalLaunchConfiguration) -> Void
     private var launchConfiguration: TerminalLaunchConfiguration
     private var isFocusedInWorkspace = false
-    private var lastTitleIndicatedPermission = false
     private var agentStatusClearTask: DispatchWorkItem?
 
     init(snapshot: PaneSnapshot) {
@@ -157,14 +156,6 @@ final class ShellSession: ObservableObject, Identifiable {
         surfaceController.onTitleChange = { [weak self] title in
             guard let self, !title.isEmpty else { return }
             self.title = title
-            let titleIsPermission = AgentSessionStatusDetector.detectFromTitle(title) == .permissionNeeded
-            if titleIsPermission && self.agentStatus != .permissionNeeded {
-                self.agentStatus = .permissionNeeded
-            }
-            if self.lastTitleIndicatedPermission && !titleIsPermission && self.agentStatus == .permissionNeeded {
-                self.agentStatus = .none
-            }
-            self.lastTitleIndicatedPermission = titleIsPermission
         }
         surfaceController.onWorkingDirectoryChange = { [weak self] directory in
             self?.reportedWorkingDirectory = directory
