@@ -24,6 +24,7 @@ struct TmuxWindow: Identifiable, Equatable {
 
 enum TmuxError: LocalizedError {
     case notInstalled
+    case noServerRunning
     case commandFailed(String)
     case parseError(String)
 
@@ -31,6 +32,8 @@ enum TmuxError: LocalizedError {
         switch self {
         case .notInstalled:
             return "tmux is not installed"
+        case .noServerRunning:
+            return "No tmux server running"
         case .commandFailed(let message):
             return "tmux command failed: \(message)"
         case .parseError(let message):
