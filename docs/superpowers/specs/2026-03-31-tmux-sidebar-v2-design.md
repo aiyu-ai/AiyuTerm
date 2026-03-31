@@ -75,7 +75,7 @@ When user clicks a tmux session:
 2. If already attached (ShellSession exists and is alive), switch focus to it (don't create duplicate)
 3. Otherwise, create a new pane in the current workspace using:
    - Engine: `TerminalEngineKind.libghosttyPreferred` (Ghostty)
-   - Backend: argv-based invocation, NOT shell string interpolation (see Security section)
+   - Backend: login shell with `-lc` and validated session name (see Security section)
 4. Register the mapping: tmux session ID → ShellSession ID in the app-level coordinator
 5. The terminal runs the same Ghostty engine as all workspace terminals
 
@@ -185,6 +185,7 @@ Same `AgentStatusOverlayBadge` view used for workspace icons:
 - **Auto-refresh**: when tmux section becomes visible (first expand or app launch with non-collapsed state)
 - **Manual refresh**: click ↻ button in TMUX header
 - **After operations**: refresh after create/rename/detach/kill session
+- **Stale cleanup**: on refresh, remove coordinator entries for sessions that no longer exist (handles external `tmux kill-session`)
 - **No polling**: no auto-refresh timer
 
 ## Data Model Changes
@@ -227,7 +228,7 @@ Methods:
 - `killSession(sessionID:)`
 - `renameSession(sessionID:newName:)` -- validates new name
 - `detachSession(sessionID:)`
-- `attachConfiguration(sessionName:) -> SessionBackendConfiguration` -- argv-based, safe
+- `attachConfiguration(sessionID:) -> SessionBackendConfiguration` -- looks up current name from sessions list by ID, uses -lc with validated name
 
 ### Session Name Validation
 
@@ -272,7 +273,7 @@ static func isValidSessionName(_ name: String) -> Bool {
 | Parse sessions with sessionID field | TmuxService |
 | Session name validation accepts valid names | TmuxService |
 | Session name validation rejects shell metacharacters | TmuxService |
-| Attach configuration uses argv not shell string | TmuxService |
+| Attach configuration uses validated session name with -lc | TmuxService |
 | Coordinator register/unregister/lookup | TmuxAttachCoordinator |
 | Coordinator isAttached returns correct state | TmuxAttachCoordinator |
 | agentStatus lookup via coordinator | TmuxPanelStore |
