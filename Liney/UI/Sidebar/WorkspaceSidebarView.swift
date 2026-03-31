@@ -78,6 +78,11 @@ private struct WorkspaceOutlineSidebar: NSViewRepresentable {
     func updateNSView(_ nsView: SidebarOutlineContainerView, context: Context) {
         context.coordinator.store = store
         nsView.setOpenRepositoryAction(onOpenRepository)
+        nsView.onSplitRatioChange = { [weak store] ratio in
+            store?.appSettings.tmuxSidebarSplitRatio = ratio
+            store?.persist()
+        }
+        nsView.applySplitRatio(CGFloat(store.appSettings.tmuxSidebarSplitRatio))
         nsView.setTmuxPanelContent(AnyView(
             TmuxPanelView(
                 store: store.tmuxPanelStore,
@@ -1044,15 +1049,36 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
         }
 }
 
-private final class SidebarOutlineContainerView: NSView {
+private final class SidebarOutlineContainerView: NSView, NSSplitViewDelegate {
     let outlineView = SidebarOutlineView()
+    private let splitView = NSSplitView()
+    private let topPane = NSView()
+    private let bottomPane = NSView()
     private let scrollView = NSScrollView()
     private let contentView = SidebarScrollContentView()
     private let footerHostingView = NSHostingView(rootView: AnyView(EmptyView()))
     private let tmuxPanelHostingView = NSHostingView(rootView: AnyView(EmptyView()))
+    private var splitRatio: CGFloat = 0.6
+    var onSplitRatioChange: ((Double) -> Void)?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
+
+        splitView.translatesAutoresizingMaskIntoConstraints = false
+        splitView.isVertical = false
+        splitView.dividerStyle = .thin
+        splitView.delegate = self
+        addSubview(splitView)
+
+        NSLayoutConstraint.activate([
+            splitView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            splitView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            splitView.topAnchor.constraint(equalTo: topAnchor),
+            splitView.bottomAnchor.constraint(equalTo: bottomAnchor),
+        ])
+
+        // Top pane: workspace outline + footer
+        topPane.translatesAutoresizingMaskIntoConstraints = false
 
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.borderType = .noBorder
@@ -1083,38 +1109,48 @@ private final class SidebarOutlineContainerView: NSView {
 
         contentView.outlineView = outlineView
         scrollView.documentView = contentView
-        addSubview(scrollView)
+        topPane.addSubview(scrollView)
 
         footerHostingView.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(footerHostingView)
-
-        tmuxPanelHostingView.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(tmuxPanelHostingView)
+        topPane.addSubview(footerHostingView)
 
         let footerSeparator = NSBox()
         footerSeparator.boxType = .separator
         footerSeparator.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(footerSeparator)
+        topPane.addSubview(footerSeparator)
 
         NSLayoutConstraint.activate([
-            scrollView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            scrollView.topAnchor.constraint(equalTo: topAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: tmuxPanelHostingView.topAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: topPane.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: topPane.trailingAnchor),
+            scrollView.topAnchor.constraint(equalTo: topPane.topAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: footerSeparator.topAnchor),
 
-            tmuxPanelHostingView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            tmuxPanelHostingView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            tmuxPanelHostingView.bottomAnchor.constraint(equalTo: footerSeparator.topAnchor),
-
-            footerSeparator.leadingAnchor.constraint(equalTo: leadingAnchor),
-            footerSeparator.trailingAnchor.constraint(equalTo: trailingAnchor),
+            footerSeparator.leadingAnchor.constraint(equalTo: topPane.leadingAnchor),
+            footerSeparator.trailingAnchor.constraint(equalTo: topPane.trailingAnchor),
             footerSeparator.bottomAnchor.constraint(equalTo: footerHostingView.topAnchor, constant: -4),
 
-            footerHostingView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
-            footerHostingView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
-            footerHostingView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -10),
+            footerHostingView.leadingAnchor.constraint(equalTo: topPane.leadingAnchor, constant: 8),
+            footerHostingView.trailingAnchor.constraint(equalTo: topPane.trailingAnchor, constant: -8),
+            footerHostingView.bottomAnchor.constraint(equalTo: topPane.bottomAnchor, constant: -10),
             footerHostingView.heightAnchor.constraint(equalToConstant: 34),
         ])
+
+        splitView.addSubview(topPane)
+
+        // Bottom pane: tmux panel
+        bottomPane.translatesAutoresizingMaskIntoConstraints = false
+        tmuxPanelHostingView.translatesAutoresizingMaskIntoConstraints = false
+        bottomPane.addSubview(tmuxPanelHostingView)
+
+        NSLayoutConstraint.activate([
+            tmuxPanelHostingView.leadingAnchor.constraint(equalTo: bottomPane.leadingAnchor),
+            tmuxPanelHostingView.trailingAnchor.constraint(equalTo: bottomPane.trailingAnchor),
+            tmuxPanelHostingView.topAnchor.constraint(equalTo: bottomPane.topAnchor),
+            tmuxPanelHostingView.bottomAnchor.constraint(equalTo: bottomPane.bottomAnchor),
+        ])
+
+        splitView.addSubview(bottomPane)
+        splitView.adjustSubviews()
     }
 
     required init?(coder: NSCoder) {
@@ -1124,6 +1160,13 @@ private final class SidebarOutlineContainerView: NSView {
     override func layout() {
         super.layout()
         updateContentLayout()
+    }
+
+    func applySplitRatio(_ ratio: CGFloat) {
+        splitRatio = max(0.2, min(0.8, ratio))
+        let totalHeight = splitView.bounds.height
+        guard totalHeight > 0 else { return }
+        splitView.setPosition(totalHeight * splitRatio, ofDividerAt: 0)
     }
 
     func reloadOutlineData() {
@@ -1144,24 +1187,48 @@ private final class SidebarOutlineContainerView: NSView {
     }
 
     private func updateContentLayout() {
-        let visibleWidth = max(scrollView.contentSize.width, bounds.width)
-        let visibleHeight = max(scrollView.contentSize.height, bounds.height)
+        let visibleWidth = max(scrollView.contentSize.width, topPane.bounds.width)
+        let visibleHeight = max(scrollView.contentSize.height, topPane.bounds.height)
         let outlineHeight = outlineContentHeight()
         contentView.outlineHeight = outlineHeight
         let requiredHeight = contentView.requiredHeight(forWidth: visibleWidth)
         contentView.frame = NSRect(
             x: 0,
-            y: 0,
+            y: max(0, visibleHeight - requiredHeight),
             width: visibleWidth,
-            height: max(visibleHeight, requiredHeight)
+            height: max(requiredHeight, visibleHeight)
         )
-        contentView.needsLayout = true
+        outlineView.sizeLastColumnToFit()
     }
 
     private func outlineContentHeight() -> CGFloat {
+        var total: CGFloat = 0
         let rowCount = outlineView.numberOfRows
-        guard rowCount > 0 else { return 0 }
-        return ceil(outlineView.rect(ofRow: rowCount - 1).maxY)
+        for row in 0..<rowCount {
+            total += outlineView.frameOfCell(atColumn: 0, row: row).height
+            total += outlineView.intercellSpacing.height
+        }
+        return total
+    }
+
+    // MARK: - NSSplitViewDelegate
+
+    func splitView(_ splitView: NSSplitView, constrainMinCoordinate proposedMinimumPosition: CGFloat, ofSubviewAt dividerIndex: Int) -> CGFloat {
+        100
+    }
+
+    func splitView(_ splitView: NSSplitView, constrainMaxCoordinate proposedMaximumPosition: CGFloat, ofSubviewAt dividerIndex: Int) -> CGFloat {
+        splitView.bounds.height - 100
+    }
+
+    func splitViewDidResizeSubviews(_ notification: Notification) {
+        let totalHeight = splitView.bounds.height
+        guard totalHeight > 0 else { return }
+        let newRatio = topPane.bounds.height / totalHeight
+        if abs(newRatio - splitRatio) > 0.01 {
+            splitRatio = newRatio
+            onSplitRatioChange?(Double(newRatio))
+        }
     }
 }
 
