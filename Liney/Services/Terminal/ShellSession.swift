@@ -89,7 +89,7 @@ final class ShellSession: ObservableObject, Identifiable {
         didSet {
             if agentStatus != oldValue {
                 onAgentStatusChange?(agentStatus)
-                updateAgentStatusPolling()
+                scheduleAgentStatusAutoClear()
             }
         }
     }
@@ -102,7 +102,7 @@ final class ShellSession: ObservableObject, Identifiable {
     private let processReaper: @Sendable (TerminalLaunchConfiguration) -> Void
     private var launchConfiguration: TerminalLaunchConfiguration
     private var isFocusedInWorkspace = false
-    private var agentStatusPollTimer: Timer?
+    private var agentStatusClearTask: DispatchWorkItem?
 
     init(snapshot: PaneSnapshot) {
         let launchConfiguration = Self.makeLaunchConfiguration(
@@ -194,31 +194,19 @@ final class ShellSession: ObservableObject, Identifiable {
         }
     }
 
-    private func updateAgentStatusPolling() {
-        agentStatusPollTimer?.invalidate()
-        agentStatusPollTimer = nil
+    private func scheduleAgentStatusAutoClear() {
+        agentStatusClearTask?.cancel()
+        agentStatusClearTask = nil
 
-        guard agentStatus.isActionable,
-              let ghosttyController = surfaceController as? LineyGhosttyController else { return }
+        guard agentStatus.isActionable else { return }
 
-        agentStatusPollTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] timer in
-            DispatchQueue.main.async {
-                guard let self else {
-                    timer.invalidate()
-                    return
-                }
-                guard self.agentStatus.isActionable else {
-                    timer.invalidate()
-                    self.agentStatusPollTimer = nil
-                    return
-                }
-                let currentTitle = ghosttyController.currentTitle
-                let detected = AgentSessionStatusDetector.detectFromTitle(currentTitle)
-                if detected == .none {
-                    self.agentStatus = .none
-                }
-            }
+        let clearDelay: TimeInterval = agentStatus == .permissionNeeded ? 8 : 15
+        let task = DispatchWorkItem { [weak self] in
+            guard let self, self.agentStatus.isActionable else { return }
+            self.agentStatus = .none
         }
+        agentStatusClearTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + clearDelay, execute: task)
     }
 
     var nsView: NSView {
