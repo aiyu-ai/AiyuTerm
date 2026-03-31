@@ -25,10 +25,14 @@ enum TmuxService {
     }
 
     static func listSessions() async throws -> [TmuxSession] {
-        let result = try await runTmux(arguments: [
-            "list-sessions", "-F", "#{session_name}\t#{session_attached}\t#{session_windows}"
-        ])
-        return parseSessions(from: result.stdout)
+        do {
+            let result = try await runTmux(arguments: [
+                "list-sessions", "-F", "#{session_name}\t#{session_attached}\t#{session_windows}"
+            ])
+            return parseSessions(from: result.stdout)
+        } catch TmuxError.noServerRunning {
+            return []
+        }
     }
 
     static func listWindows(session: String) async throws -> [TmuxWindow] {
@@ -119,7 +123,10 @@ enum TmuxService {
         }
         guard result.exitCode == 0 else {
             let message = result.stderr.trimmingCharacters(in: .whitespacesAndNewlines)
-            if message.contains("no server running") || message.contains("not found") {
+            if message.contains("no server running") || message.contains("No such file or directory") {
+                throw TmuxError.noServerRunning
+            }
+            if message.contains("not found") {
                 throw TmuxError.notInstalled
             }
             throw TmuxError.commandFailed(message)
