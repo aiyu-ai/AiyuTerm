@@ -158,7 +158,7 @@ final class ShellSession: ObservableObject, Identifiable {
             let detected = AgentSessionStatusDetector.detectFromTitle(title)
             if detected != .none {
                 self.agentStatus = detected
-            } else if self.agentStatus == .permissionNeeded {
+            } else if self.agentStatus.isActionable {
                 self.agentStatus = .none
             }
         }
@@ -185,6 +185,8 @@ final class ShellSession: ObservableObject, Identifiable {
                 let detected = AgentSessionStatusDetector.detect(title: title, body: body)
                 if detected != .none {
                     self.agentStatus = detected
+                } else if self.agentStatus.isActionable {
+                    self.agentStatus = .none
                 }
             }
         }
