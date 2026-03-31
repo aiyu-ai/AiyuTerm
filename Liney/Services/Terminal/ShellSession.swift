@@ -158,6 +158,9 @@ final class ShellSession: ObservableObject, Identifiable {
             guard let self, !title.isEmpty else { return }
             self.title = title
             let titleIsPermission = AgentSessionStatusDetector.detectFromTitle(title) == .permissionNeeded
+            if titleIsPermission && self.agentStatus != .permissionNeeded {
+                self.agentStatus = .permissionNeeded
+            }
             if self.lastTitleIndicatedPermission && !titleIsPermission && self.agentStatus == .permissionNeeded {
                 self.agentStatus = .none
             }
