@@ -49,10 +49,7 @@ struct TmuxPanelView: View {
         }
         .background(LineyTheme.sidebarBackground)
         .onAppear {
-            store.checkAvailability()
-            if store.isAvailable && store.sessions.isEmpty {
-                store.refresh()
-            }
+            store.checkAvailabilityAndRefresh()
         }
     }
 }
