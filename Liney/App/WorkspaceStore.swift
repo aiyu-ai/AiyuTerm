@@ -1216,11 +1216,17 @@ final class WorkspaceStore: ObservableObject {
         let coordinator = TmuxAttachCoordinator.shared
 
         if coordinator.isAttached(sessionID) {
-            if let shellID = coordinator.shellSessionID(for: sessionID),
-               let session = workspace.sessionController.sessions[shellID] {
+            if let ownerStoreID = coordinator.storeID(for: sessionID), ownerStoreID == id,
+               let shellID = coordinator.shellSessionID(for: sessionID),
+               workspace.sessionController.sessions[shellID] != nil {
                 workspace.sessionController.focus(shellID)
                 return
             }
+            if let ownerStoreID = coordinator.storeID(for: sessionID), ownerStoreID != id {
+                tmuxPanelStore.errorMessage = "Already attached in another window"
+                return
+            }
+            coordinator.unregister(sessionID: sessionID)
         }
 
         guard let config = tmuxPanelStore.attachConfiguration(sessionID: sessionID) else { return }

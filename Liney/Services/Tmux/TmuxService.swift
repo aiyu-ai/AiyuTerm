@@ -59,8 +59,8 @@ enum TmuxService {
 
     // MARK: - Attach
 
-    static func attachArguments(sessionName: String) -> [String] {
-        ["-lc", "tmux attach -t \(sessionName)"]
+    static func attachArguments(sessionID: String) -> [String] {
+        ["-lc", "tmux attach -t \(sessionID)"]
     }
 
     // MARK: - Parsing

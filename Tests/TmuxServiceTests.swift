@@ -42,9 +42,9 @@ final class TmuxServiceTests: XCTestCase {
 
     // MARK: - Attach arguments
 
-    func testAttachArgumentsForSession() {
-        let args = TmuxService.attachArguments(sessionName: "dev-server")
-        XCTAssertEqual(args, ["-lc", "tmux attach -t dev-server"])
+    func testAttachArgumentsUsesSessionID() {
+        let args = TmuxService.attachArguments(sessionID: "$0")
+        XCTAssertEqual(args, ["-lc", "tmux attach -t $0"])
     }
 
     // MARK: - Session name validation
