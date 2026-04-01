@@ -305,6 +305,9 @@ struct WorkspaceSettings: Codable, Hashable {
     var remoteTargets: [RemoteWorkspaceTarget]
     var workflows: [WorkspaceWorkflow]
     var preferredWorkflowID: UUID?
+    var tmuxSessionID: String?
+
+    var isTmuxManaged: Bool { tmuxSessionID != nil }
 
     init(
         isPinned: Bool = false,
@@ -317,7 +320,8 @@ struct WorkspaceSettings: Codable, Hashable {
         preferredAgentPresetID: UUID? = AgentPreset.claudeCode.id,
         remoteTargets: [RemoteWorkspaceTarget] = [],
         workflows: [WorkspaceWorkflow] = [],
-        preferredWorkflowID: UUID? = nil
+        preferredWorkflowID: UUID? = nil,
+        tmuxSessionID: String? = nil
     ) {
         self.isPinned = isPinned
         self.isArchived = isArchived
@@ -330,6 +334,7 @@ struct WorkspaceSettings: Codable, Hashable {
         self.remoteTargets = remoteTargets
         self.workflows = workflows
         self.preferredWorkflowID = preferredWorkflowID
+        self.tmuxSessionID = tmuxSessionID
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -344,6 +349,7 @@ struct WorkspaceSettings: Codable, Hashable {
         case remoteTargets
         case workflows
         case preferredWorkflowID
+        case tmuxSessionID
     }
 
     init(from decoder: Decoder) throws {
@@ -359,7 +365,8 @@ struct WorkspaceSettings: Codable, Hashable {
             preferredAgentPresetID: try container.decodeIfPresent(UUID.self, forKey: .preferredAgentPresetID) ?? AgentPreset.claudeCode.id,
             remoteTargets: try container.decodeIfPresent([RemoteWorkspaceTarget].self, forKey: .remoteTargets) ?? [],
             workflows: try container.decodeIfPresent([WorkspaceWorkflow].self, forKey: .workflows) ?? [],
-            preferredWorkflowID: try container.decodeIfPresent(UUID.self, forKey: .preferredWorkflowID)
+            preferredWorkflowID: try container.decodeIfPresent(UUID.self, forKey: .preferredWorkflowID),
+            tmuxSessionID: try container.decodeIfPresent(String.self, forKey: .tmuxSessionID)
         )
     }
 }
