@@ -529,7 +529,13 @@ struct MainWindowView: View {
         }
         .sheet(item: $store.renameWorkspaceRequest) { request in
             RenameWorkspaceSheet(request: request) { name in
-                store.renameWorkspace(id: request.workspaceID, to: name)
+                if request.isGroupCreation {
+                    store.createWorkspaceGroup(named: name, workspaceIDs: request.groupWorkspaceIDs)
+                } else if request.isGroupRename, let groupID = request.groupID {
+                    store.renameWorkspaceGroup(groupID, to: name)
+                } else {
+                    store.renameWorkspace(id: request.workspaceID, to: name)
+                }
             }
         }
         .sheet(item: $store.createWorktreeRequest) { request in

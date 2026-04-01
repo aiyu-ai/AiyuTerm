@@ -127,6 +127,7 @@ private struct SidebarOpenRepositoryRow: View {
 @MainActor
 private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSource, NSOutlineViewDelegate {
     private static let workspaceDragType = NSPasteboard.PasteboardType("com.liney.workspace.ids")
+    private static let groupDragType = NSPasteboard.PasteboardType("com.liney.group.id")
 
     weak var container: SidebarOutlineContainerView?
     weak var store: WorkspaceStore?
@@ -137,6 +138,8 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
     private var isApplyingSelection = false
     private var isRestoringExpansion = false
     private var isUserDrivenSelection = false
+    private var suppressSelectionSync = false
+    private var pinnedSelectionNodeID: String?
     private var lastDataFingerprint: String = ""
 
     init(store: WorkspaceStore) {
@@ -162,7 +165,7 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
         }
         container.outlineView.target = self
         container.outlineView.doubleAction = #selector(handleDoubleClick(_:))
-        container.outlineView.registerForDraggedTypes([Self.workspaceDragType])
+        container.outlineView.registerForDraggedTypes([Self.workspaceDragType, Self.groupDragType])
     }
 
     func apply(
@@ -180,12 +183,14 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             rootNodes = buildNodes(from: workspaces)
             nodeLookup = Dictionary(uniqueKeysWithValues: rootNodes.flatMap { $0.flattened() }.map { ($0.id, $0) })
 
+            isApplyingSelection = true
             container?.reloadOutlineData()
-            guard let outlineView = container?.outlineView else { return }
+            guard let outlineView = container?.outlineView else { isApplyingSelection = false; return }
             isRestoringExpansion = true
             restoreExpansionState(on: outlineView)
             isRestoringExpansion = false
             container?.relayout()
+            isApplyingSelection = false
             synchronizeSelection(on: outlineView, selectedWorkspaceID: selectedWorkspaceID)
         } else {
             guard let outlineView = container?.outlineView else { return }
@@ -196,6 +201,10 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
     private func dataFingerprint(workspaces: [WorkspaceModel], query: String) -> String {
         var parts: [String] = [query]
         if let settings = store?.appSettings {
+            let groupFingerprint = settings.workspaceGroups.map { g in
+                "\(g.id)|\(g.name)|\(g.icon.symbolName)|\(g.icon.palette.rawValue)|\(g.isExpanded)|\(g.workspaceIDs.map(\.uuidString).joined(separator: ","))"
+            }.joined(separator: ";")
+            parts.append("groups:\(groupFingerprint)")
             parts.append(
                 [
                     settings.sidebarShowsSecondaryLabels.description,
@@ -228,22 +237,48 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
     }
 
         private func buildNodes(from workspaces: [WorkspaceModel]) -> [SidebarNodeItem] {
-            workspaces.compactMap { workspace in
-                let workspaceMatches = currentQuery.isEmpty || workspace.matchesSidebarQuery(currentQuery)
-                let visibleWorktrees = workspace.supportsRepositoryFeatures
-                    ? filteredWorktrees(for: workspace, workspaceMatches: workspaceMatches)
-                    : []
-                guard workspaceMatches || !visibleWorktrees.isEmpty else { return nil }
+            let groups = store?.appSettings.workspaceGroups ?? []
+            let groupedWorkspaceIDs = Set(groups.flatMap(\.workspaceIDs))
+            let workspaceByID = Dictionary(uniqueKeysWithValues: workspaces.map { ($0.id, $0) })
 
-                let children: [SidebarNodeItem]
-                if workspace.supportsRepositoryFeatures, visibleWorktrees.count > 1 {
-                    children = makeWorktreeNodes(for: workspace, worktrees: visibleWorktrees)
-                } else {
-                    children = []
+            var result: [SidebarNodeItem] = []
+
+            for group in groups {
+                let groupWorkspaceNodes = group.workspaceIDs.compactMap { id -> SidebarNodeItem? in
+                    guard let workspace = workspaceByID[id] else { return nil }
+                    return makeWorkspaceNode(workspace)
                 }
 
-                return .workspace(workspace: workspace, children: children)
+                let matchesQuery = currentQuery.isEmpty || group.name.lowercased().contains(currentQuery)
+                if matchesQuery || !groupWorkspaceNodes.isEmpty {
+                    result.append(.group(group: group, children: groupWorkspaceNodes))
+                }
             }
+
+            for workspace in workspaces where !groupedWorkspaceIDs.contains(workspace.id) {
+                if let node = makeWorkspaceNode(workspace) {
+                    result.append(node)
+                }
+            }
+
+            return result
+        }
+
+        private func makeWorkspaceNode(_ workspace: WorkspaceModel) -> SidebarNodeItem? {
+            let workspaceMatches = currentQuery.isEmpty || workspace.matchesSidebarQuery(currentQuery)
+            let visibleWorktrees = workspace.supportsRepositoryFeatures
+                ? filteredWorktrees(for: workspace, workspaceMatches: workspaceMatches)
+                : []
+            guard workspaceMatches || !visibleWorktrees.isEmpty else { return nil }
+
+            let children: [SidebarNodeItem]
+            if workspace.supportsRepositoryFeatures, visibleWorktrees.count > 1 {
+                children = makeWorktreeNodes(for: workspace, worktrees: visibleWorktrees)
+            } else {
+                children = []
+            }
+
+            return .workspace(workspace: workspace, children: children)
         }
 
         private func filteredWorktrees(for workspace: WorkspaceModel, workspaceMatches: Bool) -> [WorktreeModel] {
@@ -264,11 +299,29 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
         }
 
         private func restoreExpansionState(on outlineView: NSOutlineView) {
-            for workspaceNode in rootNodes {
-                if workspaceNode.workspace?.isSidebarExpanded == true {
-                    outlineView.expandItem(workspaceNode)
-                } else {
-                    outlineView.collapseItem(workspaceNode)
+            for node in rootNodes {
+                switch node.kind {
+                case .group(let group):
+                    if group.isExpanded {
+                        outlineView.expandItem(node)
+                    } else {
+                        outlineView.collapseItem(node)
+                    }
+                    for child in node.children {
+                        if child.workspace?.isSidebarExpanded == true {
+                            outlineView.expandItem(child)
+                        } else {
+                            outlineView.collapseItem(child)
+                        }
+                    }
+                case .workspace:
+                    if node.workspace?.isSidebarExpanded == true {
+                        outlineView.expandItem(node)
+                    } else {
+                        outlineView.collapseItem(node)
+                    }
+                default:
+                    break
                 }
             }
         }
@@ -276,19 +329,24 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
         private func synchronizeSelection(on outlineView: NSOutlineView, selectedWorkspaceID: UUID?) {
             guard !rootNodes.isEmpty else { return }
             if isUserDrivenSelection { isUserDrivenSelection = false; return }
+            if suppressSelectionSync { return }
 
             let candidateIDs: [String] = {
+                if let pinned = pinnedSelectionNodeID, nodeLookup[pinned] != nil {
+                    return [pinned]
+                }
+
                 guard let selectedWorkspaceID,
                       let selectedWorkspace = store?.workspaces.first(where: { $0.id == selectedWorkspaceID }) else {
                     return rootNodes.first.map { [$0.id] } ?? []
                 }
 
                 var ids: [String] = []
+                ids.append("workspace:\(selectedWorkspace.id.uuidString)")
                 let worktreeID = "worktree:\(selectedWorkspace.id.uuidString):\(selectedWorkspace.activeWorktreePath)"
                 if nodeLookup[worktreeID] != nil {
                     ids.append(worktreeID)
                 }
-                ids.append("workspace:\(selectedWorkspace.id.uuidString)")
                 return ids
             }()
 
@@ -338,6 +396,8 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
 
             if effectiveNodes.count == 1, let node = effectiveNodes.first {
                 switch node.kind {
+                case .group(let group):
+                    return makeGroupMenu(group: group)
                 case .workspace(let workspace):
                     return makeWorkspaceMenu(workspace: workspace)
                 case .branch:
@@ -387,8 +447,83 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             addMenuItem(to: menu, title: localized("sidebar.menu.revealSelectedInFinder"), action: #selector(revealSelectedPaths(_:)), representedObject: paths)
 
             menu.addItem(.separator())
+
+            let groups = store?.appSettings.workspaceGroups ?? []
+            addMenuItem(to: menu, title: localized("sidebar.menu.group.createGroupFromSelected"), action: #selector(createGroupForWorkspace(_:)), representedObject: workspaceIDs)
+            if !groups.isEmpty {
+                let groupItem = NSMenuItem(title: localized("sidebar.menu.moveToGroup"), action: nil, keyEquivalent: "")
+                let groupSubmenu = NSMenu()
+                for group in groups {
+                    addMenuItem(to: groupSubmenu, title: group.name, action: #selector(moveWorkspaceToGroup(_:)), representedObject: SidebarActionMoveToGroup(workspaceIDs: workspaceIDs, groupID: group.id))
+                }
+                menu.setSubmenu(groupSubmenu, for: groupItem)
+                menu.addItem(groupItem)
+            }
+
+            menu.addItem(.separator())
             addMenuItem(to: menu, title: localized("sidebar.menu.removeSelectedWorkspaces"), action: #selector(removeSelectedWorkspaces(_:)), representedObject: workspaceIDs)
             return menu
+        }
+
+        private func makeGroupMenu(group: WorkspaceGroup) -> NSMenu {
+            let menu = NSMenu()
+
+            addMenuItem(to: menu, title: localized("sidebar.menu.group.refresh"), action: #selector(refreshGroup(_:)), representedObject: group.id)
+            addMenuItem(to: menu, title: localized("sidebar.menu.group.fetch"), action: #selector(fetchGroup(_:)), representedObject: group.id)
+
+            menu.addItem(.separator())
+            addMenuItem(to: menu, title: localized("sidebar.menu.group.rename"), action: #selector(renameGroup(_:)), representedObject: group)
+            addMenuItem(to: menu, title: localized("sidebar.menu.group.customizeIcon"), action: #selector(customizeGroupIcon(_:)), representedObject: group.id)
+
+            menu.addItem(.separator())
+            addMenuItem(to: menu, title: localized("sidebar.menu.group.remove"), action: #selector(removeGroup(_:)), representedObject: group.id)
+
+            return menu
+        }
+
+        @objc private func refreshGroup(_ sender: NSMenuItem) {
+            guard let groupID = sender.representedObject as? UUID else { return }
+            store?.refreshWorkspacesInGroup(groupID)
+        }
+
+        @objc private func fetchGroup(_ sender: NSMenuItem) {
+            guard let groupID = sender.representedObject as? UUID else { return }
+            store?.fetchWorkspacesInGroup(groupID)
+        }
+
+        @objc private func renameGroup(_ sender: NSMenuItem) {
+            guard let group = sender.representedObject as? WorkspaceGroup else { return }
+            store?.renameWorkspaceRequest = RenameWorkspaceRequest(
+                workspaceID: UUID(),
+                currentName: group.name,
+                isGroupRename: true,
+                groupID: group.id
+            )
+        }
+
+        @objc private func customizeGroupIcon(_ sender: NSMenuItem) {
+            guard let groupID = sender.representedObject as? UUID else { return }
+            store?.presentSidebarIconCustomization(for: .workspaceGroup(groupID))
+        }
+
+        @objc private func removeGroup(_ sender: NSMenuItem) {
+            guard let groupID = sender.representedObject as? UUID else { return }
+            store?.removeWorkspaceGroup(groupID)
+        }
+
+        @objc private func createGroupForWorkspace(_ sender: NSMenuItem) {
+            guard let ids = sender.representedObject as? [UUID] else { return }
+            store?.requestCreateWorkspaceGroup(for: ids)
+        }
+
+        @objc private func moveWorkspaceToGroup(_ sender: NSMenuItem) {
+            guard let payload = sender.representedObject as? SidebarActionMoveToGroup else { return }
+            store?.assignWorkspaces(ids: payload.workspaceIDs, toGroup: payload.groupID)
+        }
+
+        @objc private func removeWorkspaceFromGroup(_ sender: NSMenuItem) {
+            guard let workspaceID = sender.representedObject as? UUID else { return }
+            store?.removeWorkspacesFromAllGroups(ids: [workspaceID])
         }
 
         private func makeWorkspaceMenu(workspace: WorkspaceModel) -> NSMenu {
@@ -506,6 +641,39 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
                 action: #selector(openWorkspaceSettings(_:)),
                 representedObject: workspace.id
             )
+
+            menu.addItem(.separator())
+
+            let groups = store?.appSettings.workspaceGroups ?? []
+            let currentGroup = store?.workspaceGroupForWorkspace(workspace.id)
+
+            if !groups.isEmpty || currentGroup != nil {
+                let groupItem = NSMenuItem(title: localized("sidebar.menu.moveToGroup"), action: nil, keyEquivalent: "")
+                let groupSubmenu = NSMenu()
+
+                addMenuItem(to: groupSubmenu, title: localized("sidebar.menu.group.newGroup"), action: #selector(createGroupForWorkspace(_:)), representedObject: [workspace.id])
+
+                if currentGroup != nil {
+                    addMenuItem(to: groupSubmenu, title: localized("sidebar.menu.group.removeFromGroup"), action: #selector(removeWorkspaceFromGroup(_:)), representedObject: workspace.id)
+                }
+
+                if !groups.isEmpty {
+                    groupSubmenu.addItem(.separator())
+                }
+
+                for group in groups {
+                    let item = addMenuItem(to: groupSubmenu, title: group.name, action: #selector(moveWorkspaceToGroup(_:)), representedObject: SidebarActionMoveToGroup(workspaceIDs: [workspace.id], groupID: group.id))
+                    if currentGroup?.id == group.id {
+                        item.state = .on
+                    }
+                }
+
+                menu.setSubmenu(groupSubmenu, for: groupItem)
+                menu.addItem(groupItem)
+            } else {
+                addMenuItem(to: menu, title: localized("sidebar.menu.group.createGroup"), action: #selector(createGroupForWorkspace(_:)), representedObject: [workspace.id])
+            }
+
             addMenuItem(
                 to: menu,
                 title: localized("sidebar.menu.removeWorkspace"),
@@ -853,6 +1021,13 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
 
         private func performDefaultAction(for node: SidebarNodeItem, modifierFlags: NSEvent.ModifierFlags) {
             switch node.kind {
+            case .group:
+                guard let outlineView = container?.outlineView else { return }
+                if outlineView.isItemExpanded(node) {
+                    outlineView.collapseItem(node)
+                } else {
+                    outlineView.expandItem(node)
+                }
             case .workspace(let workspace):
                 store?.selectWorkspace(workspace)
                 if modifierFlags.contains(.option) {
@@ -920,6 +1095,8 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
         func outlineView(_ outlineView: NSOutlineView, heightOfRowByItem item: Any) -> CGFloat {
             guard let node = item as? SidebarNodeItem else { return 48 }
             switch node.kind {
+            case .group:
+                return 32
             case .workspace:
                 return 36
             case .branch:
@@ -942,11 +1119,20 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             guard nodes.count == 1, let node = nodes.first else { return }
 
             switch node.kind {
+            case .group:
+                pinnedSelectionNodeID = node.id
+                suppressSelectionSync = true
+                isUserDrivenSelection = true
             case .workspace(let workspace):
+                pinnedSelectionNodeID = node.id
+                suppressSelectionSync = false
                 store?.selectWorkspace(workspace)
             case .branch(let workspace, _, _):
+                pinnedSelectionNodeID = nil
+                suppressSelectionSync = false
                 store?.selectWorkspace(workspace)
             case .worktree(let workspace, let worktree):
+                pinnedSelectionNodeID = node.id
                 isUserDrivenSelection = true
                 store?.selectWorkspace(workspace)
                 if workspace.supportsRepositoryFeatures {
@@ -958,9 +1144,16 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
         func outlineViewItemDidExpand(_ notification: Notification) {
             guard !isRestoringExpansion,
                   let node = notification.userInfo?["NSObject"] as? SidebarNodeItem else { return }
-            if case .workspace(let workspace) = node.kind, !workspace.isSidebarExpanded {
-                workspace.isSidebarExpanded = true
-                store?.persist()
+            switch node.kind {
+            case .group(let group):
+                store?.setWorkspaceGroupExpanded(group.id, isExpanded: true)
+            case .workspace(let workspace):
+                if !workspace.isSidebarExpanded {
+                    workspace.isSidebarExpanded = true
+                    store?.persist()
+                }
+            default:
+                break
             }
             container?.relayout()
         }
@@ -968,18 +1161,30 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
         func outlineViewItemDidCollapse(_ notification: Notification) {
             guard !isRestoringExpansion,
                   let node = notification.userInfo?["NSObject"] as? SidebarNodeItem else { return }
-            if case .workspace(let workspace) = node.kind, workspace.isSidebarExpanded {
-                workspace.isSidebarExpanded = false
-                store?.persist()
+            switch node.kind {
+            case .group(let group):
+                store?.setWorkspaceGroupExpanded(group.id, isExpanded: false)
+            case .workspace(let workspace):
+                if workspace.isSidebarExpanded {
+                    workspace.isSidebarExpanded = false
+                    store?.persist()
+                }
+            default:
+                break
             }
             container?.relayout()
         }
 
         func outlineView(_ outlineView: NSOutlineView, pasteboardWriterForItem item: Any) -> NSPasteboardWriting? {
-            guard let node = item as? SidebarNodeItem,
-                  node.isWorkspaceNode,
-                  let workspace = node.workspace
-            else {
+            guard let node = item as? SidebarNodeItem else { return nil }
+
+            if let group = node.groupModel {
+                let pasteboardItem = NSPasteboardItem()
+                pasteboardItem.setString(group.id.uuidString, forType: Self.groupDragType)
+                return pasteboardItem
+            }
+
+            guard node.isWorkspaceNode, let workspace = node.workspace else {
                 return nil
             }
 
@@ -1008,6 +1213,16 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             proposedItem item: Any?,
             proposedChildIndex index: Int
         ) -> NSDragOperation {
+            let isGroupDrag = info.draggingPasteboard.string(forType: Self.groupDragType) != nil
+
+            if isGroupDrag {
+                guard item == nil else { return [] }
+                return .move
+            }
+
+            if let node = item as? SidebarNodeItem, node.isGroupNode {
+                return .move
+            }
             guard item == nil else { return [] }
             return .move
         }
@@ -1018,9 +1233,15 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             item: Any?,
             childIndex index: Int
         ) -> Bool {
-            guard item == nil,
-                  let payload = info.draggingPasteboard.string(forType: Self.workspaceDragType)
-            else {
+            if let groupIDString = info.draggingPasteboard.string(forType: Self.groupDragType),
+               let groupID = UUID(uuidString: groupIDString) {
+                guard item == nil else { return false }
+                let targetIndex = index == -1 ? (store?.appSettings.workspaceGroups.count ?? 0) : index
+                store?.moveWorkspaceGroup(groupID, toIndex: targetIndex)
+                return true
+            }
+
+            guard let payload = info.draggingPasteboard.string(forType: Self.workspaceDragType) else {
                 return false
             }
 
@@ -1028,6 +1249,13 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
                 .split(whereSeparator: \.isNewline)
                 .compactMap { UUID(uuidString: String($0)) }
             guard !ids.isEmpty else { return false }
+
+            if let node = item as? SidebarNodeItem, let group = node.groupModel {
+                store?.moveWorkspacesIntoGroup(ids: ids, groupID: group.id, atIndex: index == -1 ? group.workspaceIDs.count : index)
+                return true
+            }
+
+            store?.removeWorkspacesFromAllGroups(ids: ids)
             store?.moveWorkspaces(withIDs: ids, toRootIndex: index == -1 ? rootNodes.count : index)
             return true
         }
@@ -1299,12 +1527,72 @@ private struct SidebarNodeRow: View {
 
     var body: some View {
         switch node.kind {
+        case .group(let group):
+            GroupRowContent(group: group, childCount: node.children.count, store: store, isSelected: isSelected)
         case .workspace(let workspace):
             WorkspaceRowContent(workspace: workspace, store: store, isSelected: isSelected)
         case .branch:
             EmptyView()
         case .worktree(let workspace, let worktree):
             WorktreeRowContent(workspace: workspace, worktree: worktree, store: store, isSelected: isSelected)
+        }
+    }
+}
+
+private struct GroupRowContent: View {
+    let group: WorkspaceGroup
+    let childCount: Int
+    let store: WorkspaceStore?
+    let isSelected: Bool
+    @State private var isHovering = false
+
+    private var appSettings: AppSettings {
+        store?.appSettings ?? AppSettings()
+    }
+
+    private var uiScale: CGFloat {
+        CGFloat(appSettings.uiScale)
+    }
+
+    private var iconPalette: SidebarIconPaletteDescriptor {
+        group.icon.palette.descriptor
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 6 * uiScale) {
+                Image(systemName: group.icon.symbolName)
+                    .font(.system(size: 10 * uiScale, weight: .bold))
+                    .foregroundStyle(iconPalette.foreground.opacity(0.85))
+
+                Text(group.name)
+                    .font(.system(size: 11 * uiScale, weight: .bold, design: .rounded))
+                    .foregroundStyle(isSelected ? LineyTheme.tertiaryText : LineyTheme.mutedText)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+
+                Spacer(minLength: 4)
+
+                Text("\(childCount)")
+                    .font(.system(size: 9 * uiScale, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(LineyTheme.mutedText.opacity(0.7))
+            }
+            .padding(.vertical, 4 * uiScale)
+            .padding(.leading, 2 * uiScale)
+            .padding(.trailing, 8 * uiScale)
+
+            Rectangle()
+                .fill(LineyTheme.border.opacity(0.5))
+                .frame(height: 0.5)
+                .padding(.leading, 2 * uiScale)
+                .padding(.trailing, 8 * uiScale)
+        }
+        .background(
+            LineyTheme.subtleFill.opacity(isHovering ? 0.8 : 0),
+            in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+        )
+        .onHover { isInside in
+            isHovering = isInside
         }
     }
 }
@@ -2127,9 +2415,15 @@ private struct SidebarActionWorkflow {
     let workflowID: UUID
 }
 
+private struct SidebarActionMoveToGroup {
+    let workspaceIDs: [UUID]
+    let groupID: UUID
+}
+
 @MainActor
 private final class SidebarNodeItem: NSObject {
     enum Kind {
+        case group(WorkspaceGroup)
         case workspace(WorkspaceModel)
         case branch(workspace: WorkspaceModel, label: String, worktrees: [WorktreeModel])
         case worktree(workspace: WorkspaceModel, worktree: WorktreeModel)
@@ -2138,6 +2432,14 @@ private final class SidebarNodeItem: NSObject {
     let id: String
     let kind: Kind
     let children: [SidebarNodeItem]
+
+    static func group(group: WorkspaceGroup, children: [SidebarNodeItem]) -> SidebarNodeItem {
+        SidebarNodeItem(
+            id: "group:\(group.id.uuidString)",
+            kind: .group(group),
+            children: children
+        )
+    }
 
     static func workspace(workspace: WorkspaceModel, children: [SidebarNodeItem]) -> SidebarNodeItem {
         SidebarNodeItem(
@@ -2174,6 +2476,11 @@ private final class SidebarNodeItem: NSObject {
         !children.isEmpty
     }
 
+    var isGroupNode: Bool {
+        if case .group = kind { return true }
+        return false
+    }
+
     var isWorkspaceNode: Bool {
         if case .workspace = kind {
             return true
@@ -2181,8 +2488,15 @@ private final class SidebarNodeItem: NSObject {
         return false
     }
 
+    var groupModel: WorkspaceGroup? {
+        guard case .group(let group) = kind else { return nil }
+        return group
+    }
+
     var workspace: WorkspaceModel? {
         switch kind {
+        case .group:
+            return nil
         case .workspace(let workspace):
             return workspace
         case .branch(let workspace, _, _):
@@ -2199,6 +2513,8 @@ private final class SidebarNodeItem: NSObject {
 
     var path: String? {
         switch kind {
+        case .group:
+            return nil
         case .workspace(let workspace):
             return workspace.activeWorktreePath
         case .branch:
@@ -2210,6 +2526,8 @@ private final class SidebarNodeItem: NSObject {
 
     var representedWorktrees: [WorktreeModel] {
         switch kind {
+        case .group:
+            return []
         case .workspace:
             return []
         case .branch(_, _, let worktrees):

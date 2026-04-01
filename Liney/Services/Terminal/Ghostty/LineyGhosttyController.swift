@@ -977,6 +977,11 @@ private final class LineyGhosttySurfaceView: NSView {
             return false
         }
 
+        if shouldPreferRawKeyEvent(for: event) {
+            keyDown(with: event)
+            return true
+        }
+
         let flags = bindingFlags(for: event, on: surface)
         if lineyGhosttyShouldAttemptMenuKeyEquivalent(
             bindingFlags: flags,
