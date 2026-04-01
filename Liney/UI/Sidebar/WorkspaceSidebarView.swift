@@ -1554,35 +1554,43 @@ private struct GroupRowContent: View {
         CGFloat(appSettings.uiScale)
     }
 
+    private var iconPalette: SidebarIconPaletteDescriptor {
+        group.icon.palette.descriptor
+    }
+
     var body: some View {
-        HStack(spacing: 7 * uiScale) {
-            SidebarItemIconView(
-                icon: group.icon,
-                size: 20 * uiScale,
-                isEmphasized: isSelected
-            )
+        VStack(spacing: 0) {
+            HStack(spacing: 6 * uiScale) {
+                Image(systemName: group.icon.symbolName)
+                    .font(.system(size: 10 * uiScale, weight: .bold))
+                    .foregroundStyle(iconPalette.foreground.opacity(0.85))
 
-            Text(group.name)
-                .font(.system(size: 11 * uiScale, weight: .bold))
-                .foregroundStyle(isSelected ? LineyTheme.tertiaryText : LineyTheme.secondaryText)
-                .lineLimit(1)
-                .truncationMode(.tail)
+                Text(group.name.uppercased())
+                    .font(.system(size: 10 * uiScale, weight: .heavy, design: .rounded))
+                    .tracking(0.8)
+                    .foregroundStyle(isSelected ? LineyTheme.tertiaryText : LineyTheme.mutedText)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
 
-            Spacer(minLength: 4)
+                Spacer(minLength: 4)
 
-            Text("\(childCount)")
-                .font(.system(size: 9 * uiScale, weight: .semibold, design: .monospaced))
-                .foregroundStyle(LineyTheme.mutedText)
-                .padding(.horizontal, 5)
-                .padding(.vertical, 1)
-                .background(LineyTheme.subtleFill, in: Capsule())
+                Text("\(childCount)")
+                    .font(.system(size: 9 * uiScale, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(LineyTheme.mutedText.opacity(0.7))
+            }
+            .padding(.vertical, 4 * uiScale)
+            .padding(.leading, 2 * uiScale)
+            .padding(.trailing, 8 * uiScale)
+
+            Rectangle()
+                .fill(LineyTheme.border.opacity(0.5))
+                .frame(height: 0.5)
+                .padding(.leading, 2 * uiScale)
+                .padding(.trailing, 8 * uiScale)
         }
-        .padding(.vertical, 3 * uiScale)
-        .padding(.leading, 2 * uiScale)
-        .padding(.trailing, 8 * uiScale)
         .background(
-            LineyTheme.subtleFill.opacity(isHovering ? 1 : 0),
-            in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+            LineyTheme.subtleFill.opacity(isHovering ? 0.8 : 0),
+            in: RoundedRectangle(cornerRadius: 6, style: .continuous)
         )
         .onHover { isInside in
             isHovering = isInside
