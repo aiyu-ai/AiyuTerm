@@ -110,7 +110,7 @@ final class WorkspaceStore: ObservableObject {
     }
 
     var sidebarWorkspaces: [WorkspaceModel] {
-        let visible = workspaces.filter { appSettings.showArchivedWorkspaces || !$0.isArchived }
+        let visible = workspaces.filter { !$0.settings.isTmuxManaged && (appSettings.showArchivedWorkspaces || !$0.isArchived) }
         return visible.enumerated().sorted { lhs, rhs in
             if lhs.element.isPinned != rhs.element.isPinned {
                 return lhs.element.isPinned && !rhs.element.isPinned
@@ -1212,38 +1212,52 @@ final class WorkspaceStore: ObservableObject {
         persist()
     }
 
-    func attachTmuxSession(sessionID: String, in workspace: WorkspaceModel) {
-        let coordinator = TmuxAttachCoordinator.shared
-
-        if coordinator.isAttached(sessionID) {
-            if let ownerStoreID = coordinator.storeID(for: sessionID), ownerStoreID == id,
-               let shellID = coordinator.shellSessionID(for: sessionID),
-               workspace.sessionController.sessions[shellID] != nil {
-                workspace.sessionController.focus(shellID)
-                return
-            }
-            if let ownerStoreID = coordinator.storeID(for: sessionID), ownerStoreID != id {
-                tmuxPanelStore.errorMessage = "Already attached in another window"
-                return
-            }
-            coordinator.unregister(sessionID: sessionID)
+    func attachTmuxSession(sessionID: String) {
+        if let existing = workspaces.first(where: { $0.settings.tmuxSessionID == sessionID }) {
+            selectWorkspace(existing)
+            return
         }
 
         guard let config = tmuxPanelStore.attachConfiguration(sessionID: sessionID) else { return }
 
-        let snapshot = PaneSnapshot(
+        let sessionName = tmuxPanelStore.sessionName(for: sessionID) ?? sessionID
+        let cwd = NSHomeDirectory()
+        let pane = PaneSnapshot(
             id: UUID(),
-            preferredWorkingDirectory: workspace.activeWorktreePath,
+            preferredWorkingDirectory: cwd,
             preferredEngine: .libghosttyPreferred,
             backendConfiguration: config
         )
-        workspace.createPane(
-            splitAxis: workspace.layout == nil ? nil : .vertical,
-            snapshot: snapshot
+        let tab = WorkspaceTabStateRecord(
+            title: sessionName,
+            layout: .pane(PaneLeaf(paneID: pane.id)),
+            panes: [pane],
+            focusedPaneID: pane.id,
+            zoomedPaneID: nil
         )
-
-        coordinator.register(sessionID: sessionID, storeID: id, shellSessionID: snapshot.id)
-        persist()
+        var worktreeState = WorktreeSessionStateRecord.makeDefault(for: cwd)
+        worktreeState.tabs = [tab]
+        worktreeState.selectedTabID = tab.id
+        var settings = WorkspaceSettings()
+        settings.tmuxSessionID = sessionID
+        let record = WorkspaceRecord(
+            id: UUID(),
+            kind: .localTerminal,
+            name: sessionName,
+            repositoryRoot: cwd,
+            activeWorktreePath: cwd,
+            worktreeStates: [worktreeState],
+            isSidebarExpanded: false,
+            settings: settings
+        )
+        let workspace = WorkspaceModel(record: record)
+        workspace.currentBranch = "tmux"
+        workspace.head = sessionName
+        workspace.worktrees = [
+            WorktreeModel(path: cwd, branch: "tmux", head: sessionName, isMainWorktree: true, isLocked: false, lockReason: nil)
+        ]
+        workspaces.append(workspace)
+        selectWorkspace(workspace)
     }
 
     func createSession(in workspace: WorkspaceModel, for worktree: WorktreeModel) {

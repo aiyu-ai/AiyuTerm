@@ -82,9 +82,7 @@ private struct WorkspaceOutlineSidebar: NSViewRepresentable {
                 store: store.tmuxPanelStore,
                 coordinator: TmuxAttachCoordinator.shared,
                 onAttachSession: { [weak store] sessionID in
-                    guard let store,
-                          let workspace = store.workspaces.first(where: { $0.id == store.selectedWorkspaceID }) else { return }
-                    store.attachTmuxSession(sessionID: sessionID, in: workspace)
+                    store?.attachTmuxSession(sessionID: sessionID)
                 }
             )
         ))
