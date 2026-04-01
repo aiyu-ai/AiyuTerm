@@ -11,39 +11,43 @@ struct TmuxPanelView: View {
     @ObservedObject var store: TmuxPanelStore
     let coordinator: TmuxAttachCoordinator
     let onAttachSession: (String) -> Void
+    @Binding var isCollapsed: Bool
+    let onCollapseChange: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
-            TmuxHeaderView(store: store)
+            TmuxHeaderView(store: store, isCollapsed: $isCollapsed, onCollapseChange: onCollapseChange)
 
-            if !store.isAvailable {
-                TmuxNotInstalledView()
-            } else if let error = store.errorMessage {
-                Text(error)
-                    .font(.system(size: 10))
-                    .foregroundStyle(LineyTheme.danger)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-            } else if store.sessions.isEmpty && !store.isLoading {
-                Text("No sessions")
-                    .font(.system(size: 10))
-                    .foregroundStyle(LineyTheme.mutedText)
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: .infinity)
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 2) {
-                        ForEach(store.sessions) { session in
-                            TmuxSessionRow(
-                                session: session,
-                                store: store,
-                                coordinator: coordinator,
-                                onAttach: { onAttachSession(session.sessionID) }
-                            )
+            if !isCollapsed {
+                if !store.isAvailable {
+                    TmuxNotInstalledView()
+                } else if let error = store.errorMessage {
+                    Text(error)
+                        .font(.system(size: 10))
+                        .foregroundStyle(LineyTheme.danger)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                } else if store.sessions.isEmpty && !store.isLoading {
+                    Text("No sessions")
+                        .font(.system(size: 10))
+                        .foregroundStyle(LineyTheme.mutedText)
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity)
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 2) {
+                            ForEach(store.sessions) { session in
+                                TmuxSessionRow(
+                                    session: session,
+                                    store: store,
+                                    coordinator: coordinator,
+                                    onAttach: { onAttachSession(session.sessionID) }
+                                )
+                            }
                         }
+                        .padding(.horizontal, 8)
+                        .padding(.bottom, 8)
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.bottom, 8)
                 }
             }
         }
@@ -58,11 +62,24 @@ struct TmuxPanelView: View {
 
 private struct TmuxHeaderView: View {
     @ObservedObject var store: TmuxPanelStore
+    @Binding var isCollapsed: Bool
+    let onCollapseChange: () -> Void
     @State private var showNewSessionPrompt = false
     @State private var newSessionName = ""
 
     var body: some View {
         HStack(spacing: 6) {
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.2)) { isCollapsed.toggle() }
+                onCollapseChange()
+            }) {
+                Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
+                    .frame(width: 12)
+            }
+            .buttonStyle(.plain)
+
             Text("TMUX")
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
@@ -78,55 +95,64 @@ private struct TmuxHeaderView: View {
 
             Spacer()
 
-            if store.isLoading {
-                ProgressView()
-                    .scaleEffect(0.5)
-                    .frame(width: 16, height: 16)
-            } else {
-                Button(action: { store.refresh() }) {
-                    Image(systemName: "arrow.clockwise")
+            if !isCollapsed {
+                if store.isLoading {
+                    ProgressView()
+                        .scaleEffect(0.5)
+                        .frame(width: 16, height: 16)
+                } else {
+                    Button(action: { store.refresh() }) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            if !isCollapsed {
+                Button(action: { showNewSessionPrompt = true }) {
+                    Image(systemName: "plus")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
                 }
                 .buttonStyle(.plain)
-            }
-
-            Button(action: { showNewSessionPrompt = true }) {
-                Image(systemName: "plus")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
-            }
-            .buttonStyle(.plain)
-            .popover(isPresented: $showNewSessionPrompt) {
-                VStack(spacing: 8) {
-                    Text("New Session")
-                        .font(.system(size: 11, weight: .semibold))
-                    TextField("session-name", text: $newSessionName)
-                        .textFieldStyle(.roundedBorder)
-                        .font(.system(size: 11))
-                        .frame(width: 160)
-                    HStack {
-                        Button("Cancel") { showNewSessionPrompt = false }
-                            .buttonStyle(.plain)
-                            .font(.system(size: 10))
-                        Spacer()
-                        Button("Create") {
-                            if !newSessionName.isEmpty {
-                                store.createSession(name: newSessionName)
-                                newSessionName = ""
-                                showNewSessionPrompt = false
+                .popover(isPresented: $showNewSessionPrompt) {
+                    VStack(spacing: 8) {
+                        Text("New Session")
+                            .font(.system(size: 11, weight: .semibold))
+                        TextField("session-name", text: $newSessionName)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(size: 11))
+                            .frame(width: 160)
+                        HStack {
+                            Button("Cancel") { showNewSessionPrompt = false }
+                                .buttonStyle(.plain)
+                                .font(.system(size: 10))
+                            Spacer()
+                            Button("Create") {
+                                if !newSessionName.isEmpty {
+                                    store.createSession(name: newSessionName)
+                                    newSessionName = ""
+                                    showNewSessionPrompt = false
+                                }
                             }
+                            .buttonStyle(.plain)
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
                         }
-                        .buttonStyle(.plain)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
                     }
+                    .padding(12)
                 }
-                .padding(12)
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.easeInOut(duration: 0.2)) { isCollapsed.toggle() }
+            onCollapseChange()
+        }
     }
 }
 

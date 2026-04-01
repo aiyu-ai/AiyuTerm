@@ -76,13 +76,31 @@ private struct WorkspaceOutlineSidebar: NSViewRepresentable {
             store?.appSettings.tmuxSidebarSplitRatio = ratio
             store?.persist()
         }
-        container.applySplitRatio(CGFloat(store.appSettings.tmuxSidebarSplitRatio))
+        if store.appSettings.tmuxPanelCollapsed {
+            container.collapseTmuxPanel()
+        } else {
+            container.applySplitRatio(CGFloat(store.appSettings.tmuxSidebarSplitRatio))
+        }
         container.setTmuxPanelContent(AnyView(
             TmuxPanelView(
                 store: store.tmuxPanelStore,
                 coordinator: TmuxAttachCoordinator.shared,
                 onAttachSession: { [weak store] sessionID in
                     store?.attachTmuxSession(sessionID: sessionID)
+                },
+                isCollapsed: Binding(
+                    get: { [weak store] in store?.appSettings.tmuxPanelCollapsed ?? true },
+                    set: { [weak store] in store?.appSettings.tmuxPanelCollapsed = $0 }
+                ),
+                onCollapseChange: { [weak store, weak container] in
+                    guard let store, let container else { return }
+                    let collapsed = store.appSettings.tmuxPanelCollapsed
+                    if collapsed {
+                        container.collapseTmuxPanel()
+                    } else {
+                        container.applySplitRatio(CGFloat(store.appSettings.tmuxSidebarSplitRatio))
+                    }
+                    store.persist()
                 }
             )
         ))
@@ -1167,6 +1185,12 @@ private final class SidebarOutlineContainerView: NSView, NSSplitViewDelegate {
         splitView.setPosition(totalHeight * splitRatio, ofDividerAt: 0)
     }
 
+    func collapseTmuxPanel() {
+        let totalHeight = splitView.bounds.height
+        guard totalHeight > 0 else { return }
+        splitView.setPosition(totalHeight - 30, ofDividerAt: 0)
+    }
+
     func reloadOutlineData() {
         outlineView.reloadData()
         updateContentLayout()
@@ -1216,7 +1240,7 @@ private final class SidebarOutlineContainerView: NSView, NSSplitViewDelegate {
     }
 
     func splitView(_ splitView: NSSplitView, constrainMaxCoordinate proposedMaximumPosition: CGFloat, ofSubviewAt dividerIndex: Int) -> CGFloat {
-        splitView.bounds.height - 100
+        splitView.bounds.height - 30
     }
 
     func splitViewDidResizeSubviews(_ notification: Notification) {
