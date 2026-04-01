@@ -196,13 +196,6 @@ private struct TmuxSessionRow: View {
                     Text(session.name)
                         .font(.system(size: 12, weight: .semibold))
                         .lineLimit(1)
-                        .onTapGesture(count: 2) {
-                            renameText = session.name
-                            isRenaming = true
-                        }
-                        .onTapGesture(count: 1) {
-                            onAttach()
-                        }
                 }
 
                 Text("\(session.isAttached ? "attached" : "detached") \u{00B7} \(session.windowCount) win")
@@ -240,6 +233,10 @@ private struct TmuxSessionRow: View {
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(isHovering ? Color(red: 0.55, green: 0.36, blue: 0.96).opacity(0.08) : .clear)
         )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if !isRenaming { onAttach() }
+        }
         .onHover { isHovering = $0 }
         .alert("Kill session '\(session.name)'?", isPresented: $showKillConfirm) {
             Button("Cancel", role: .cancel) {}
