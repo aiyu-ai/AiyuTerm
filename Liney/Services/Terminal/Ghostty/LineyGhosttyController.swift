@@ -606,8 +606,18 @@ private final class LineyGhosttySurfaceView: NSView {
         syncSurfaceMetrics()
     }
 
+    override func layout() {
+        super.layout()
+        syncSurfaceMetrics()
+    }
+
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
+        syncSurfaceMetrics()
+    }
+
+    override func setBoundsSize(_ newSize: NSSize) {
+        super.setBoundsSize(newSize)
         syncSurfaceMetrics()
     }
 
