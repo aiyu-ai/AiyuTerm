@@ -1271,7 +1271,10 @@ private final class SidebarOutlineCellView: NSTableCellView {
     private var hostingView: NSHostingView<AnyView>?
 
     func apply(node: SidebarNodeItem, store: WorkspaceStore?, isSelected: Bool) {
-        let rootView = AnyView(SidebarNodeRow(node: node, store: store, isSelected: isSelected))
+        let rootView = AnyView(
+            SidebarNodeRow(node: node, store: store, isSelected: isSelected)
+                .transaction { $0.animation = nil }
+        )
         if let hostingView {
             hostingView.rootView = rootView
         } else {
@@ -1354,15 +1357,17 @@ private struct WorkspaceRowContent: View {
                 Text(workspace.name)
                     .font(.system(size: 12 * uiScale, weight: .semibold))
                     .lineLimit(1)
+                    .truncationMode(.tail)
                 if appSettings.sidebarShowsSecondaryLabels {
                     Text(workspace.supportsRepositoryFeatures ? workspace.currentBranch : workspace.activeWorktreePath.lastPathComponentValue)
                         .font(.system(size: 10 * uiScale, weight: .medium, design: .monospaced))
                         .foregroundStyle(LineyTheme.mutedText)
                         .lineLimit(1)
+                        .truncationMode(.middle)
                 }
             }
 
-            Spacer()
+            Spacer(minLength: 4)
 
             if appSettings.sidebarShowsWorkspaceBadges {
                 HStack(spacing: 6 * uiScale) {
@@ -1403,7 +1408,7 @@ private struct WorkspaceRowContent: View {
         }
         .padding(.vertical, 4 * uiScale)
         .padding(.leading, 2 * uiScale)
-        .padding(.trailing, 4 * uiScale)
+        .padding(.trailing, 8 * uiScale)
         .background(
             LineyTheme.subtleFill.opacity(isHovering ? 1 : 0),
             in: RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -1486,7 +1491,7 @@ private struct WorktreeRowContent: View {
         }
         .padding(.vertical, 1 * uiScale)
         .padding(.leading, leadingInset)
-        .padding(.trailing, 4 * uiScale)
+        .padding(.trailing, 8 * uiScale)
         .frame(maxWidth: .infinity, minHeight: 24 * uiScale, alignment: .leading)
         .background(
             LineyTheme.subtleFill.opacity(isHovering ? 1 : 0),
