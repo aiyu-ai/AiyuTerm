@@ -139,6 +139,7 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
     private var isRestoringExpansion = false
     private var isUserDrivenSelection = false
     private var suppressSelectionSync = false
+    private var pinnedSelectionNodeID: String?
     private var lastDataFingerprint: String = ""
 
     init(store: WorkspaceStore) {
@@ -329,6 +330,10 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             if suppressSelectionSync { return }
 
             let candidateIDs: [String] = {
+                if let pinned = pinnedSelectionNodeID, nodeLookup[pinned] != nil {
+                    return [pinned]
+                }
+
                 guard let selectedWorkspaceID,
                       let selectedWorkspace = store?.workspaces.first(where: { $0.id == selectedWorkspaceID }) else {
                     return rootNodes.first.map { [$0.id] } ?? []
@@ -1113,16 +1118,19 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
 
             switch node.kind {
             case .group:
+                pinnedSelectionNodeID = node.id
                 suppressSelectionSync = true
                 isUserDrivenSelection = true
             case .workspace(let workspace):
+                pinnedSelectionNodeID = node.id
                 suppressSelectionSync = false
                 store?.selectWorkspace(workspace)
             case .branch(let workspace, _, _):
+                pinnedSelectionNodeID = nil
                 suppressSelectionSync = false
                 store?.selectWorkspace(workspace)
             case .worktree(let workspace, let worktree):
-                suppressSelectionSync = false
+                pinnedSelectionNodeID = node.id
                 isUserDrivenSelection = true
                 store?.selectWorkspace(workspace)
                 if workspace.supportsRepositoryFeatures {
