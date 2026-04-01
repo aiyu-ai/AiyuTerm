@@ -1439,15 +1439,6 @@ private struct WorkspaceRowContent: View {
 
     var body: some View {
         HStack(spacing: 8 * uiScale) {
-            SidebarItemIconView(
-                icon: icon,
-                size: 22 * uiScale,
-                activityIndicator: iconActivityIndicator,
-                activityPalette: appSettings.sidebarActivityIndicatorPalette,
-                isEmphasized: isSelected,
-                agentStatus: workspaceAgentStatus
-            )
-
             VStack(alignment: .leading, spacing: 2) {
                 Text(workspace.name)
                     .font(.system(size: 12 * uiScale, weight: .semibold))
@@ -1555,16 +1546,6 @@ private struct WorktreeRowContent: View {
 
     var body: some View {
         HStack(spacing: 8 * uiScale) {
-            SidebarItemIconView(
-                icon: icon,
-                size: iconSize,
-                usesCircularShape: true,
-                activityIndicator: iconActivityIndicator,
-                activityPalette: appSettings.sidebarActivityIndicatorPalette,
-                isEmphasized: isSelected,
-                agentStatus: worktreeAgentStatus
-            )
-            .frame(width: iconColumnWidth, alignment: .leading)
             Text(worktree.displayName)
                 .font(.system(size: 10 * uiScale, weight: .medium))
                 .lineLimit(1)
