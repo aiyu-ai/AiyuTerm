@@ -1201,7 +1201,7 @@ private final class SidebarOutlineView: NSOutlineView {
 
     override func frameOfOutlineCell(atRow row: Int) -> NSRect {
         var frame = super.frameOfOutlineCell(atRow: row)
-        frame.origin.x = 2
+        frame.origin.x = 6
         frame.size.width = 12
         return frame
     }
@@ -1211,15 +1211,10 @@ private final class SidebarOutlineView: NSOutlineView {
         let item = self.item(atRow: row) as? SidebarNodeItem
         let isExpandable = item?.isExpandable ?? false
         let isTopLevel = item?.isWorkspaceNode ?? false
-        let disclosureEnd: CGFloat = 16
+        let disclosureEnd: CGFloat = 20
         if !isExpandable {
-            if isTopLevel {
-                frame.origin.x = disclosureEnd
-                frame.size.width = bounds.width - disclosureEnd - 6
-            } else {
-                frame.origin.x = disclosureEnd
-                frame.size.width = bounds.width - disclosureEnd - 6
-            }
+            frame.origin.x = disclosureEnd
+            frame.size.width = bounds.width - disclosureEnd - 8
         } else {
             let shift = frame.origin.x - disclosureEnd
             if shift > 0 {
@@ -1257,7 +1252,7 @@ private final class SidebarOutlineRowView: NSTableRowView {
     override func drawBackground(in dirtyRect: NSRect) {}
 
     override func drawSelection(in dirtyRect: NSRect) {
-        let rect = bounds.insetBy(dx: 5, dy: 1)
+        let rect = bounds.insetBy(dx: 6, dy: 1)
         let path = NSBezierPath(roundedRect: rect, xRadius: 12, yRadius: 12)
         LineyTheme.sidebarSelectionFill.setFill()
         path.fill()

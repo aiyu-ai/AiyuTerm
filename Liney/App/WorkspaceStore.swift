@@ -817,7 +817,6 @@ final class WorkspaceStore: ObservableObject {
             sidebarShowsSecondaryLabels: settings.sidebarShowsSecondaryLabels,
             sidebarShowsWorkspaceBadges: settings.sidebarShowsWorkspaceBadges,
             sidebarShowsWorktreeBadges: settings.sidebarShowsWorktreeBadges,
-            expandedSidebarWorkspaceGroups: settings.expandedSidebarWorkspaceGroups,
             defaultRepositoryIcon: settings.defaultRepositoryIcon,
             defaultLocalTerminalIcon: settings.defaultLocalTerminalIcon,
             defaultWorktreeIcon: settings.defaultWorktreeIcon,
@@ -2554,7 +2553,6 @@ final class WorkspaceStore: ObservableObject {
     ) -> WorkspaceSettings {
         var normalized = settings
         let validSSHPresetIDs = Set(appSettings.sshPresets.map(\.id))
-        normalized.groupName = normalized.groupName?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
 
         if normalized.agentPresets.isEmpty {
             normalized.agentPresets = AgentPreset.builtInPresets
