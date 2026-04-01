@@ -29,6 +29,8 @@ final class WorkspaceStore: ObservableObject {
     @Published var selectedCommandPaletteItemID: String?
     @Published var settingsRequest: WorkspaceSettingsRequest?
     @Published var quickCommandEditorRequest: QuickCommandEditorRequest?
+
+    @Published var workspaceFileBrowserRequest: WorkspaceFileBrowserRequest?
     @Published var sidebarIconCustomizationRequest: SidebarIconCustomizationRequest?
     @Published var presentedError: PresentedError?
     @Published var renameWorkspaceRequest: RenameWorkspaceRequest?
@@ -763,6 +765,14 @@ final class WorkspaceStore: ObservableObject {
         persist()
     }
 
+    func presentWorkspaceFileBrowser(for workspace: WorkspaceModel) {
+        workspaceFileBrowserRequest = WorkspaceFileBrowserRequest(
+            workspaceID: workspace.id,
+            workspaceName: workspace.name,
+            rootPath: workspace.activeWorktreePath
+        )
+    }
+
     func presentSettings(for workspace: WorkspaceModel? = nil) {
         settingsRequest = WorkspaceSettingsRequest(workspaceID: workspace?.id)
     }
@@ -1157,6 +1167,40 @@ final class WorkspaceStore: ObservableObject {
 
     func openInFinder(path: String) {
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+    }
+
+    func openWorkspaceFileInExternalEditor(_ path: String) {
+        guard let editor = effectiveExternalEditor else {
+            openInFinder(path: path)
+            return
+        }
+        ExternalEditorCatalog.open(URL(fileURLWithPath: path), in: editor) { [weak self] result in
+            guard let self else { return }
+            if case .failure(let error) = result {
+                self.presentError(
+                    title: self.localized("sheet.fileBrowser.openExternalErrorTitle"),
+                    message: self.localizedFormat("sheet.fileBrowser.openExternalErrorMessageFormat", URL(fileURLWithPath: path).lastPathComponent, error.localizedDescription)
+                )
+            }
+        }
+    }
+
+    func saveWorkspaceFileBrowserText(contents: String, to path: String) {
+        do {
+            try WorkspaceFileBrowserSupport.saveTextFile(contents: contents, to: path)
+            receive(
+                .statusMessage(
+                    localizedFormat("sheet.fileBrowser.savedFormat", URL(fileURLWithPath: path).lastPathComponent),
+                    .success,
+                    deliverSystemNotification: false
+                )
+            )
+        } catch {
+            presentError(
+                title: localized("sheet.fileBrowser.saveErrorTitle"),
+                message: localizedFormat("sheet.fileBrowser.saveErrorMessageFormat", URL(fileURLWithPath: path).lastPathComponent, error.localizedDescription)
+            )
+        }
     }
 
     func copyPath(_ path: String) {

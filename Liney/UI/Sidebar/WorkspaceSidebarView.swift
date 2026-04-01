@@ -1201,7 +1201,7 @@ private final class SidebarOutlineView: NSOutlineView {
 
     override func frameOfOutlineCell(atRow row: Int) -> NSRect {
         var frame = super.frameOfOutlineCell(atRow: row)
-        frame.origin.x = 2
+        frame.origin.x = 6
         frame.size.width = 12
         return frame
     }
@@ -1211,15 +1211,10 @@ private final class SidebarOutlineView: NSOutlineView {
         let item = self.item(atRow: row) as? SidebarNodeItem
         let isExpandable = item?.isExpandable ?? false
         let isTopLevel = item?.isWorkspaceNode ?? false
-        let disclosureEnd: CGFloat = 16
+        let disclosureEnd: CGFloat = 20
         if !isExpandable {
-            if isTopLevel {
-                frame.origin.x = disclosureEnd
-                frame.size.width = bounds.width - disclosureEnd - 6
-            } else {
-                frame.origin.x = disclosureEnd
-                frame.size.width = bounds.width - disclosureEnd - 6
-            }
+            frame.origin.x = disclosureEnd
+            frame.size.width = bounds.width - disclosureEnd - 8
         } else {
             let shift = frame.origin.x - disclosureEnd
             if shift > 0 {
@@ -1257,7 +1252,7 @@ private final class SidebarOutlineRowView: NSTableRowView {
     override func drawBackground(in dirtyRect: NSRect) {}
 
     override func drawSelection(in dirtyRect: NSRect) {
-        let rect = bounds.insetBy(dx: 5, dy: 1)
+        let rect = bounds.insetBy(dx: 6, dy: 1)
         let path = NSBezierPath(roundedRect: rect, xRadius: 12, yRadius: 12)
         LineyTheme.sidebarSelectionFill.setFill()
         path.fill()
@@ -1276,7 +1271,10 @@ private final class SidebarOutlineCellView: NSTableCellView {
     private var hostingView: NSHostingView<AnyView>?
 
     func apply(node: SidebarNodeItem, store: WorkspaceStore?, isSelected: Bool) {
-        let rootView = AnyView(SidebarNodeRow(node: node, store: store, isSelected: isSelected))
+        let rootView = AnyView(
+            SidebarNodeRow(node: node, store: store, isSelected: isSelected)
+                .transaction { $0.animation = nil }
+        )
         if let hostingView {
             hostingView.rootView = rootView
         } else {
@@ -1359,15 +1357,17 @@ private struct WorkspaceRowContent: View {
                 Text(workspace.name)
                     .font(.system(size: 12 * uiScale, weight: .semibold))
                     .lineLimit(1)
+                    .truncationMode(.tail)
                 if appSettings.sidebarShowsSecondaryLabels {
                     Text(workspace.supportsRepositoryFeatures ? workspace.currentBranch : workspace.activeWorktreePath.lastPathComponentValue)
                         .font(.system(size: 10 * uiScale, weight: .medium, design: .monospaced))
                         .foregroundStyle(LineyTheme.mutedText)
                         .lineLimit(1)
+                        .truncationMode(.middle)
                 }
             }
 
-            Spacer()
+            Spacer(minLength: 4)
 
             if appSettings.sidebarShowsWorkspaceBadges {
                 HStack(spacing: 6 * uiScale) {
@@ -1408,7 +1408,7 @@ private struct WorkspaceRowContent: View {
         }
         .padding(.vertical, 4 * uiScale)
         .padding(.leading, 2 * uiScale)
-        .padding(.trailing, 4 * uiScale)
+        .padding(.trailing, 8 * uiScale)
         .background(
             LineyTheme.subtleFill.opacity(isHovering ? 1 : 0),
             in: RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -1491,7 +1491,7 @@ private struct WorktreeRowContent: View {
         }
         .padding(.vertical, 1 * uiScale)
         .padding(.leading, leadingInset)
-        .padding(.trailing, 4 * uiScale)
+        .padding(.trailing, 8 * uiScale)
         .frame(maxWidth: .infinity, minHeight: 24 * uiScale, alignment: .leading)
         .background(
             LineyTheme.subtleFill.opacity(isHovering ? 1 : 0),
