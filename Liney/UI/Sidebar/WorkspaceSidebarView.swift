@@ -1565,9 +1565,8 @@ private struct GroupRowContent: View {
                     .font(.system(size: 10 * uiScale, weight: .bold))
                     .foregroundStyle(iconPalette.foreground.opacity(0.85))
 
-                Text(group.name.uppercased())
-                    .font(.system(size: 10 * uiScale, weight: .heavy, design: .rounded))
-                    .tracking(0.8)
+                Text(group.name)
+                    .font(.system(size: 11 * uiScale, weight: .bold, design: .rounded))
                     .foregroundStyle(isSelected ? LineyTheme.tertiaryText : LineyTheme.mutedText)
                     .lineLimit(1)
                     .truncationMode(.tail)
