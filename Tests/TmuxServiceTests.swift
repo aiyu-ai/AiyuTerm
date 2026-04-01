@@ -44,7 +44,7 @@ final class TmuxServiceTests: XCTestCase {
 
     func testAttachArgumentsUsesSessionID() {
         let args = TmuxService.attachArguments(sessionID: "$0")
-        XCTAssertEqual(args, ["-lc", "tmux attach -t '$0'"])
+        XCTAssertEqual(args, ["-lc", "tmux set-option -g allow-passthrough on \\; set-option -g mouse on \\; attach -t '$0'"])
     }
 
     func testAttachArgumentsRejectsInvalidSessionID() {
