@@ -555,16 +555,7 @@ struct MainWindowView: View {
             QuickCommandEditorSheet()
                 .environmentObject(store)
         }
-        .sheet(item: $store.workspaceGroupEditorRequest) { request in
-            WorkspaceGroupEditorSheet(request: request) { name in
-                switch request.mode {
-                case .create:
-                    store.createWorkspaceGroup(named: name, workspaceIDs: request.workspaceIDs)
-                case .rename(let existingName):
-                    store.renameWorkspaceGroup(from: existingName, to: name)
-                }
-            }
-        }
+
         .sheet(item: $store.workspaceFileBrowserRequest) { request in
             WorkspaceFileBrowserSheet(request: request)
                 .environmentObject(store)

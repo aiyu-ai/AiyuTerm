@@ -38,18 +38,6 @@ struct QuickCommandEditorRequest: Identifiable {
     let id = UUID()
 }
 
-struct WorkspaceGroupEditorRequest: Identifiable {
-    enum Mode {
-        case create
-        case rename(existingName: String)
-    }
-
-    let id = UUID()
-    let mode: Mode
-    let workspaceIDs: [UUID]
-    let initialName: String
-}
-
 struct WorkspaceFileBrowserRequest: Identifiable {
     let id = UUID()
     let workspaceID: UUID

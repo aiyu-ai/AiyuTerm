@@ -184,34 +184,6 @@ final class WorkspaceStoreTests: XCTestCase {
         XCTAssertEqual(selection.presets.map(\.id), SSHPreset.builtInPresets.map(\.id))
     }
 
-    func testAssignWorkspacesToGroupAppendsAfterExistingGroupMembers() {
-        let store = WorkspaceStore(persistsWorkspaceState: false)
-        let rootA = makeRepositoryWorkspace(name: "root-a", groupName: nil)
-        let groupedA = makeRepositoryWorkspace(name: "grouped-a", groupName: "Apps")
-        let groupedB = makeRepositoryWorkspace(name: "grouped-b", groupName: "Apps")
-        let rootB = makeRepositoryWorkspace(name: "root-b", groupName: nil)
-        store.workspaces = [rootA, groupedA, groupedB, rootB]
-
-        store.assignWorkspaces(ids: [rootB.id], toGroupNamed: "Apps")
-
-        XCTAssertEqual(store.workspaces.map(\.name), ["root-a", "grouped-a", "grouped-b", "root-b"])
-        XCTAssertEqual(store.workspaces.map(\.groupName), [nil, "Apps", "Apps", "Apps"])
-    }
-
-    func testAssignWorkspacesToNilGroupPlacesWorkspaceAfterExistingRootItems() {
-        let store = WorkspaceStore(persistsWorkspaceState: false)
-        let rootA = makeRepositoryWorkspace(name: "root-a", groupName: nil)
-        let groupedA = makeRepositoryWorkspace(name: "grouped-a", groupName: "Apps")
-        let groupedB = makeRepositoryWorkspace(name: "grouped-b", groupName: "Apps")
-        let rootB = makeRepositoryWorkspace(name: "root-b", groupName: nil)
-        store.workspaces = [rootA, groupedA, groupedB, rootB]
-
-        store.assignWorkspaces(ids: [groupedA.id], toGroupNamed: nil)
-
-        XCTAssertEqual(store.workspaces.map(\.name), ["root-a", "root-b", "grouped-a", "grouped-b"])
-        XCTAssertEqual(store.workspaces.map(\.groupName), [nil, nil, nil, "Apps"])
-    }
-
     private func makeTemporaryDirectory() throws -> URL {
         let root = FileManager.default.temporaryDirectory
         let directoryURL = root.appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -219,24 +191,6 @@ final class WorkspaceStoreTests: XCTestCase {
         return directoryURL
     }
 
-    private func makeRepositoryWorkspace(name: String, groupName: String?) -> WorkspaceModel {
-        let rootPath = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-            .path
-
-        return WorkspaceModel(
-            record: WorkspaceRecord(
-                id: UUID(),
-                kind: .repository,
-                name: name,
-                repositoryRoot: rootPath,
-                activeWorktreePath: rootPath,
-                worktreeStates: [WorktreeSessionStateRecord.makeDefault(for: rootPath)],
-                isSidebarExpanded: false,
-                settings: WorkspaceSettings(groupName: groupName)
-            )
-        )
-    }
 
     private func runProcess(
         executable: String,

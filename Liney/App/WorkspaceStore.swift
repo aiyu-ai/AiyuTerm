@@ -29,7 +29,7 @@ final class WorkspaceStore: ObservableObject {
     @Published var selectedCommandPaletteItemID: String?
     @Published var settingsRequest: WorkspaceSettingsRequest?
     @Published var quickCommandEditorRequest: QuickCommandEditorRequest?
-    @Published var workspaceGroupEditorRequest: WorkspaceGroupEditorRequest?
+
     @Published var workspaceFileBrowserRequest: WorkspaceFileBrowserRequest?
     @Published var sidebarIconCustomizationRequest: SidebarIconCustomizationRequest?
     @Published var presentedError: PresentedError?
@@ -117,15 +117,6 @@ final class WorkspaceStore: ObservableObject {
             }
             return lhs.offset < rhs.offset
         }.map(\.element)
-    }
-
-    var workspaceGroupNames: [String] {
-        var seen = Set<String>()
-        return sidebarWorkspaces.compactMap { workspace in
-            guard let groupName = workspace.groupName else { return nil }
-            guard seen.insert(groupName).inserted else { return nil }
-            return groupName
-        }
     }
 
     var availableExternalEditors: [ExternalEditorDescriptor] {
@@ -766,86 +757,12 @@ final class WorkspaceStore: ObservableObject {
         renameWorkspaceRequest = RenameWorkspaceRequest(workspaceID: workspace.id, currentName: workspace.name)
     }
 
-    func requestCreateWorkspaceGroup(for workspaceIDs: [UUID]) {
-        workspaceGroupEditorRequest = WorkspaceGroupEditorRequest(
-            mode: .create,
-            workspaceIDs: workspaceIDs,
-            initialName: ""
-        )
-    }
-
-    func requestRenameWorkspaceGroup(_ name: String) {
-        guard let normalizedName = normalizedWorkspaceGroupName(name) else { return }
-        workspaceGroupEditorRequest = WorkspaceGroupEditorRequest(
-            mode: .rename(existingName: normalizedName),
-            workspaceIDs: [],
-            initialName: normalizedName
-        )
-    }
-
     func renameWorkspace(id: UUID, to newName: String) {
         guard let workspace = workspaces.first(where: { $0.id == id }) else { return }
         let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         workspace.name = trimmed
         persist()
-    }
-
-    func createWorkspaceGroup(named name: String, workspaceIDs: [UUID]) {
-        guard let normalizedName = normalizedWorkspaceGroupName(name) else { return }
-        if workspaceGroupNames.contains(normalizedName) {
-            assignWorkspaces(ids: workspaceIDs, toGroupNamed: normalizedName)
-            setWorkspaceGroupExpanded(normalizedName, isExpanded: true, persistAfterChange: true)
-            return
-        }
-
-        assignWorkspaces(ids: workspaceIDs, toGroupNamed: normalizedName)
-        setWorkspaceGroupExpanded(normalizedName, isExpanded: true, persistAfterChange: true)
-    }
-
-    func renameWorkspaceGroup(from oldName: String, to newName: String) {
-        guard let normalizedOldName = normalizedWorkspaceGroupName(oldName),
-              let normalizedNewName = normalizedWorkspaceGroupName(newName) else { return }
-        guard normalizedOldName != normalizedNewName else { return }
-
-        for workspace in workspaces where workspace.groupName == normalizedOldName {
-            workspace.groupName = normalizedNewName
-        }
-
-        var expandedGroups = appSettings.expandedSidebarWorkspaceGroups.filter { $0 != normalizedOldName }
-        if !expandedGroups.contains(normalizedNewName) {
-            expandedGroups.append(normalizedNewName)
-        }
-        appSettings.expandedSidebarWorkspaceGroups = expandedGroups
-        persist()
-    }
-
-    func removeWorkspaceGroup(named name: String) {
-        guard let normalizedName = normalizedWorkspaceGroupName(name) else { return }
-        for workspace in workspaces where workspace.groupName == normalizedName {
-            workspace.groupName = nil
-        }
-        appSettings.expandedSidebarWorkspaceGroups.removeAll { $0 == normalizedName }
-        persist()
-    }
-
-    func isWorkspaceGroupExpanded(_ name: String) -> Bool {
-        guard let normalizedName = normalizedWorkspaceGroupName(name) else { return true }
-        return appSettings.expandedSidebarWorkspaceGroups.contains(normalizedName)
-    }
-
-    func setWorkspaceGroupExpanded(_ name: String, isExpanded: Bool, persistAfterChange: Bool = true) {
-        guard let normalizedName = normalizedWorkspaceGroupName(name) else { return }
-        if isExpanded {
-            if !appSettings.expandedSidebarWorkspaceGroups.contains(normalizedName) {
-                appSettings.expandedSidebarWorkspaceGroups.append(normalizedName)
-            }
-        } else {
-            appSettings.expandedSidebarWorkspaceGroups.removeAll { $0 == normalizedName }
-        }
-        if persistAfterChange {
-            persist()
-        }
     }
 
     func presentWorkspaceFileBrowser(for workspace: WorkspaceModel) {
@@ -1312,34 +1229,6 @@ final class WorkspaceStore: ObservableObject {
         var reordered = remaining
         reordered.insert(contentsOf: moving, at: clampedDestination)
         workspaces = reordered
-        persist()
-    }
-
-    func assignWorkspaces(ids: [UUID], toGroupNamed groupName: String?) {
-        let selectedIDs = Set(ids)
-        let moving = workspaces.filter { selectedIDs.contains($0.id) }
-        guard !moving.isEmpty else { return }
-
-        let normalizedGroupName = normalizedWorkspaceGroupName(groupName)
-        var remaining = workspaces.filter { !selectedIDs.contains($0.id) }
-
-        for workspace in moving {
-            workspace.groupName = normalizedGroupName
-        }
-
-        let insertionIndex: Int
-        if let normalizedGroupName,
-           let lastGroupIndex = remaining.lastIndex(where: { $0.groupName == normalizedGroupName }) {
-            insertionIndex = lastGroupIndex + 1
-        } else if normalizedGroupName == nil,
-                  let lastRootIndex = remaining.lastIndex(where: { $0.groupName == nil }) {
-            insertionIndex = lastRootIndex + 1
-        } else {
-            insertionIndex = remaining.count
-        }
-
-        remaining.insert(contentsOf: moving, at: insertionIndex)
-        workspaces = remaining
         persist()
     }
 
@@ -2665,7 +2554,7 @@ final class WorkspaceStore: ObservableObject {
     ) -> WorkspaceSettings {
         var normalized = settings
         let validSSHPresetIDs = Set(appSettings.sshPresets.map(\.id))
-        normalized.groupName = normalizedWorkspaceGroupName(normalized.groupName)
+        normalized.groupName = normalized.groupName?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
 
         if normalized.agentPresets.isEmpty {
             normalized.agentPresets = AgentPreset.builtInPresets
@@ -2715,10 +2604,6 @@ final class WorkspaceStore: ObservableObject {
         let validWorktreePaths = Set(workspace.worktrees.map(\.path))
         normalized.worktreeIconOverrides = normalized.worktreeIconOverrides.filter { validWorktreePaths.contains($0.key) }
         return normalized
-    }
-
-    private func normalizedWorkspaceGroupName(_ name: String?) -> String? {
-        name?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
     }
 
     private func refreshAllRepositories(persistAfterEachWorkspace: Bool = true) async {
