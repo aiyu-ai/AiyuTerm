@@ -1305,8 +1305,11 @@ final class WorkspaceStore: ObservableObject {
 
     func moveWorkspaceGroup(_ groupID: UUID, toIndex destinationIndex: Int) {
         guard let sourceIndex = appSettings.workspaceGroups.firstIndex(where: { $0.id == groupID }) else { return }
+        let groupCount = appSettings.workspaceGroups.count
+        let effectiveIndex = min(max(destinationIndex, 0), groupCount)
         let group = appSettings.workspaceGroups.remove(at: sourceIndex)
-        let clamped = min(max(destinationIndex, 0), appSettings.workspaceGroups.count)
+        let adjustedIndex = effectiveIndex > sourceIndex ? effectiveIndex - 1 : effectiveIndex
+        let clamped = min(max(adjustedIndex, 0), appSettings.workspaceGroups.count)
         appSettings.workspaceGroups.insert(group, at: clamped)
         persistAppSettings()
     }

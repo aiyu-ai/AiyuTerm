@@ -127,6 +127,7 @@ private struct SidebarOpenRepositoryRow: View {
 @MainActor
 private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSource, NSOutlineViewDelegate {
     private static let workspaceDragType = NSPasteboard.PasteboardType("com.liney.workspace.ids")
+    private static let groupDragType = NSPasteboard.PasteboardType("com.liney.group.id")
 
     weak var container: SidebarOutlineContainerView?
     weak var store: WorkspaceStore?
@@ -162,7 +163,7 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
         }
         container.outlineView.target = self
         container.outlineView.doubleAction = #selector(handleDoubleClick(_:))
-        container.outlineView.registerForDraggedTypes([Self.workspaceDragType])
+        container.outlineView.registerForDraggedTypes([Self.workspaceDragType, Self.groupDragType])
     }
 
     func apply(
@@ -1159,10 +1160,15 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
         }
 
         func outlineView(_ outlineView: NSOutlineView, pasteboardWriterForItem item: Any) -> NSPasteboardWriting? {
-            guard let node = item as? SidebarNodeItem,
-                  node.isWorkspaceNode,
-                  let workspace = node.workspace
-            else {
+            guard let node = item as? SidebarNodeItem else { return nil }
+
+            if let group = node.groupModel {
+                let pasteboardItem = NSPasteboardItem()
+                pasteboardItem.setString(group.id.uuidString, forType: Self.groupDragType)
+                return pasteboardItem
+            }
+
+            guard node.isWorkspaceNode, let workspace = node.workspace else {
                 return nil
             }
 
@@ -1191,6 +1197,13 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             proposedItem item: Any?,
             proposedChildIndex index: Int
         ) -> NSDragOperation {
+            let isGroupDrag = info.draggingPasteboard.string(forType: Self.groupDragType) != nil
+
+            if isGroupDrag {
+                guard item == nil else { return [] }
+                return .move
+            }
+
             if let node = item as? SidebarNodeItem, node.isGroupNode {
                 return .move
             }
@@ -1204,6 +1217,14 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             item: Any?,
             childIndex index: Int
         ) -> Bool {
+            if let groupIDString = info.draggingPasteboard.string(forType: Self.groupDragType),
+               let groupID = UUID(uuidString: groupIDString) {
+                guard item == nil else { return false }
+                let targetIndex = index == -1 ? (store?.appSettings.workspaceGroups.count ?? 0) : index
+                store?.moveWorkspaceGroup(groupID, toIndex: targetIndex)
+                return true
+            }
+
             guard let payload = info.draggingPasteboard.string(forType: Self.workspaceDragType) else {
                 return false
             }
