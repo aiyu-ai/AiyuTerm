@@ -1111,7 +1111,7 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
 
             switch node.kind {
             case .group:
-                break
+                isUserDrivenSelection = true
             case .workspace(let workspace):
                 store?.selectWorkspace(workspace)
             case .branch(let workspace, _, _):
