@@ -164,22 +164,6 @@ private struct TmuxSessionRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            // Purple "T" icon (agent badge will be wired in a separate task)
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [Color(red: 0.55, green: 0.36, blue: 0.96), Color(red: 0.43, green: 0.16, blue: 0.85)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: 22, height: 22)
-                .overlay(
-                    Text("T")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white)
-                )
-
             // Labels
             VStack(alignment: .leading, spacing: 2) {
                 if isRenaming {
