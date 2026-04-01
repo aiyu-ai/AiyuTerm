@@ -1271,8 +1271,9 @@ final class WorkspaceStore: ObservableObject {
         ]
         workspaces.append(workspace)
         coordinator.register(sessionID: sessionID, storeID: id, shellSessionID: pane.id)
+        selectWorkspace(workspace)
 
-        // Wire agent status changes to also refresh tmux panel sidebar
+        // Wire AFTER selectWorkspace (which calls wireWorkspaceActions and overwrites callbacks)
         for session in workspace.sessionController.sessions.values {
             let existingCallback = session.onAgentStatusChange
             session.onAgentStatusChange = { [weak self] status in
@@ -1280,8 +1281,6 @@ final class WorkspaceStore: ObservableObject {
                 self?.tmuxPanelStore.objectWillChange.send()
             }
         }
-
-        selectWorkspace(workspace)
     }
 
     func createSession(in workspace: WorkspaceModel, for worktree: WorktreeModel) {
