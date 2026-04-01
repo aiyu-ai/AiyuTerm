@@ -11,6 +11,7 @@ struct TmuxPanelView: View {
     @ObservedObject var store: TmuxPanelStore
     let coordinator: TmuxAttachCoordinator
     let onAttachSession: (String) -> Void
+    let agentStatusForSession: (String) -> AgentSessionStatus
     @Binding var isCollapsed: Bool
     let onCollapseChange: () -> Void
 
@@ -41,7 +42,8 @@ struct TmuxPanelView: View {
                                     session: session,
                                     store: store,
                                     coordinator: coordinator,
-                                    onAttach: { onAttachSession(session.sessionID) }
+                                    onAttach: { onAttachSession(session.sessionID) },
+                                    agentStatus: agentStatusForSession(session.sessionID)
                                 )
                             }
                         }
@@ -180,6 +182,7 @@ private struct TmuxSessionRow: View {
     let store: TmuxPanelStore
     let coordinator: TmuxAttachCoordinator
     let onAttach: () -> Void
+    let agentStatus: AgentSessionStatus
     @State private var isHovering = false
     @State private var isRenaming = false
     @State private var renameText = ""
@@ -187,6 +190,10 @@ private struct TmuxSessionRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
+            if agentStatus.isActionable {
+                AgentStatusOverlayBadge(status: agentStatus, size: 16)
+            }
+
             // Labels
             VStack(alignment: .leading, spacing: 2) {
                 if isRenaming {

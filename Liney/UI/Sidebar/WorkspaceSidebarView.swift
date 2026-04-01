@@ -88,6 +88,12 @@ private struct WorkspaceOutlineSidebar: NSViewRepresentable {
                 onAttachSession: { [weak store] sessionID in
                     store?.attachTmuxSession(sessionID: sessionID)
                 },
+                agentStatusForSession: { [weak store] sessionID in
+                    guard let store else { return .none }
+                    return store.workspaces
+                        .first(where: { $0.settings.tmuxSessionID == sessionID })?
+                        .aggregatedAgentStatus ?? .none
+                },
                 isCollapsed: Binding(
                     get: { [weak store] in store?.appSettings.tmuxPanelCollapsed ?? true },
                     set: { [weak store] in store?.appSettings.tmuxPanelCollapsed = $0 }
@@ -1795,7 +1801,7 @@ struct SidebarIconActivityBadge: View {
     }
 }
 
-private struct AgentStatusOverlayBadge: View {
+struct AgentStatusOverlayBadge: View {
     let status: AgentSessionStatus
     let size: CGFloat
     @State private var isAnimating = false
