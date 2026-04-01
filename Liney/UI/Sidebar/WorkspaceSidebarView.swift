@@ -1439,6 +1439,10 @@ private struct WorkspaceRowContent: View {
 
     var body: some View {
         HStack(spacing: 8 * uiScale) {
+            if workspaceAgentStatus.isActionable {
+                AgentStatusOverlayBadge(status: workspaceAgentStatus, size: 16 * uiScale)
+            }
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(workspace.name)
                     .font(.system(size: 12 * uiScale, weight: .semibold))
@@ -1546,6 +1550,9 @@ private struct WorktreeRowContent: View {
 
     var body: some View {
         HStack(spacing: 8 * uiScale) {
+            if worktreeAgentStatus.isActionable {
+                AgentStatusOverlayBadge(status: worktreeAgentStatus, size: 12 * uiScale)
+            }
             Text(worktree.displayName)
                 .font(.system(size: 10 * uiScale, weight: .medium))
                 .lineLimit(1)

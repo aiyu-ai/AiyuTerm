@@ -809,6 +809,8 @@ final class WorkspaceStore: ObservableObject {
             sidebarShowsSecondaryLabels: settings.sidebarShowsSecondaryLabels,
             sidebarShowsWorkspaceBadges: settings.sidebarShowsWorkspaceBadges,
             sidebarShowsWorktreeBadges: settings.sidebarShowsWorktreeBadges,
+            tmuxPanelCollapsed: settings.tmuxPanelCollapsed,
+            tmuxSidebarSplitRatio: settings.tmuxSidebarSplitRatio,
             defaultRepositoryIcon: settings.defaultRepositoryIcon,
             defaultLocalTerminalIcon: settings.defaultLocalTerminalIcon,
             defaultWorktreeIcon: settings.defaultWorktreeIcon,
@@ -1213,6 +1215,17 @@ final class WorkspaceStore: ObservableObject {
     }
 
     func attachTmuxSession(sessionID: String) {
+        let coordinator = TmuxAttachCoordinator.shared
+
+        // Check coordinator for cross-window dedup
+        if coordinator.isAttached(sessionID) {
+            if let ownerStoreID = coordinator.storeID(for: sessionID), ownerStoreID != id {
+                tmuxPanelStore.errorMessage = "Already attached in another window"
+                return
+            }
+        }
+
+        // Check local workspaces
         if let existing = workspaces.first(where: { $0.settings.tmuxSessionID == sessionID }) {
             selectWorkspace(existing)
             return
@@ -1257,6 +1270,7 @@ final class WorkspaceStore: ObservableObject {
             WorktreeModel(path: cwd, branch: "tmux", head: sessionName, isMainWorktree: true, isLocked: false, lockReason: nil)
         ]
         workspaces.append(workspace)
+        coordinator.register(sessionID: sessionID, storeID: id, shellSessionID: pane.id)
         selectWorkspace(workspace)
     }
 

@@ -21,9 +21,12 @@ final class TmuxPanelStore: ObservableObject {
         self.coordinator = coordinator
     }
 
-    func checkAvailability() {
+    func checkAvailabilityAndRefresh() {
         Task {
             isAvailable = await TmuxService.isTmuxAvailable()
+            if isAvailable && sessions.isEmpty {
+                refresh()
+            }
         }
     }
 
