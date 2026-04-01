@@ -1171,7 +1171,19 @@ private final class SidebarOutlineContainerView: NSView, NSSplitViewDelegate {
             tmuxPanelHostingView.bottomAnchor.constraint(equalTo: bottomPane.bottomAnchor),
         ])
 
-        // Start collapsed: don't add bottomPane to splitView yet
+        // Start collapsed: add bottomPane as footer (not in splitView)
+        addSubview(bottomPane)
+        NSLayoutConstraint.activate([
+            bottomPane.leadingAnchor.constraint(equalTo: leadingAnchor),
+            bottomPane.trailingAnchor.constraint(equalTo: trailingAnchor),
+            bottomPane.bottomAnchor.constraint(equalTo: bottomAnchor),
+            bottomPane.heightAnchor.constraint(equalToConstant: 34),
+        ])
+        // SplitView sits above the footer
+        for constraint in constraints where constraint.firstItem === splitView && constraint.firstAttribute == .bottom {
+            constraint.isActive = false
+        }
+        splitView.bottomAnchor.constraint(equalTo: bottomPane.topAnchor).isActive = true
     }
 
     required init?(coder: NSCoder) {
