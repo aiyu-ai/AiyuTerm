@@ -344,8 +344,6 @@ func lineyGhosttySSHWordNavigationEscapeSequence(
     modifierFlags: NSEvent.ModifierFlags,
     backendConfiguration: SessionBackendConfiguration
 ) -> String? {
-    guard backendConfiguration.kind == .ssh else { return nil }
-
     let relevantModifiers = lineyGhosttyRelevantModifierFlags(modifierFlags)
     guard relevantModifiers.contains(.option),
           !relevantModifiers.contains(.command),
