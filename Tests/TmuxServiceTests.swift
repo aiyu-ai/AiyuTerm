@@ -47,6 +47,20 @@ final class TmuxServiceTests: XCTestCase {
         XCTAssertEqual(args, ["-lc", "tmux attach -t $0"])
     }
 
+    func testAttachArgumentsRejectsInvalidSessionID() {
+        XCTAssertNil(TmuxService.attachArguments(sessionID: "not-an-id"))
+        XCTAssertNil(TmuxService.attachArguments(sessionID: "$0; rm -rf /"))
+        XCTAssertNil(TmuxService.attachArguments(sessionID: ""))
+    }
+
+    func testValidSessionIDs() {
+        XCTAssertTrue(TmuxService.isValidSessionID("$0"))
+        XCTAssertTrue(TmuxService.isValidSessionID("$123"))
+        XCTAssertFalse(TmuxService.isValidSessionID("0"))
+        XCTAssertFalse(TmuxService.isValidSessionID("$abc"))
+        XCTAssertFalse(TmuxService.isValidSessionID(""))
+    }
+
     // MARK: - Session name validation
 
     func testValidSessionNames() {

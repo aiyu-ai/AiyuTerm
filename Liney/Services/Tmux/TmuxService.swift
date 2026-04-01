@@ -59,8 +59,13 @@ enum TmuxService {
 
     // MARK: - Attach
 
-    static func attachArguments(sessionID: String) -> [String] {
-        ["-lc", "tmux attach -t \(sessionID)"]
+    static func attachArguments(sessionID: String) -> [String]? {
+        guard isValidSessionID(sessionID) else { return nil }
+        return ["-lc", "tmux attach -t \(sessionID)"]
+    }
+
+    static func isValidSessionID(_ id: String) -> Bool {
+        id.range(of: #"^\$\d+$"#, options: .regularExpression) != nil
     }
 
     // MARK: - Parsing
