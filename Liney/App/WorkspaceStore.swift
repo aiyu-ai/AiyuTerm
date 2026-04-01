@@ -905,6 +905,8 @@ final class WorkspaceStore: ObservableObject {
                 return URL(fileURLWithPath: worktreePath).lastPathComponent
             }
             return "\(workspace.name) / \(worktree.displayName)"
+        case .workspaceGroup(let groupID):
+            return appSettings.workspaceGroups.first(where: { $0.id == groupID })?.name ?? "Group"
         case .appDefaultRepository:
             return localized("main.sidebarIcon.defaultRepository")
         case .appDefaultLocalTerminal:
@@ -928,6 +930,8 @@ final class WorkspaceStore: ObservableObject {
                 return appSettings.defaultWorktreeIcon
             }
             return sidebarIcon(for: worktree, in: workspace)
+        case .workspaceGroup(let groupID):
+            return appSettings.workspaceGroups.first(where: { $0.id == groupID })?.icon ?? .groupDefault
         case .appDefaultRepository:
             return appSettings.defaultRepositoryIcon
         case .appDefaultLocalTerminal:
@@ -949,6 +953,8 @@ final class WorkspaceStore: ObservableObject {
             var settings = workspace.settings
             settings.worktreeIconOverrides[worktreePath] = icon
             updateWorkspaceSettings(workspaceID: workspaceID, settings: settings)
+        case .workspaceGroup(let groupID):
+            setWorkspaceGroupIcon(groupID, icon: icon)
         case .appDefaultRepository:
             var settings = appSettings
             settings.defaultRepositoryIcon = icon
@@ -979,6 +985,8 @@ final class WorkspaceStore: ObservableObject {
             var settings = workspace.settings
             settings.worktreeIconOverrides[worktreePath] = nil
             updateWorkspaceSettings(workspaceID: workspaceID, settings: settings)
+        case .workspaceGroup(let groupID):
+            setWorkspaceGroupIcon(groupID, icon: .groupDefault)
         case .appDefaultRepository:
             var settings = appSettings
             settings.defaultRepositoryIcon = .repositoryDefault
@@ -1229,6 +1237,112 @@ final class WorkspaceStore: ObservableObject {
         reordered.insert(contentsOf: moving, at: clampedDestination)
         workspaces = reordered
         persist()
+    }
+
+    // MARK: - Workspace Groups
+
+    func createWorkspaceGroup(named name: String, workspaceIDs: [UUID] = []) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let group = WorkspaceGroup(name: trimmed, workspaceIDs: workspaceIDs)
+        appSettings.workspaceGroups.append(group)
+        persistAppSettings()
+    }
+
+    func renameWorkspaceGroup(_ groupID: UUID, to newName: String) {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              let index = appSettings.workspaceGroups.firstIndex(where: { $0.id == groupID }) else { return }
+        appSettings.workspaceGroups[index].name = trimmed
+        persistAppSettings()
+    }
+
+    func removeWorkspaceGroup(_ groupID: UUID) {
+        appSettings.workspaceGroups.removeAll { $0.id == groupID }
+        persistAppSettings()
+    }
+
+    func setWorkspaceGroupIcon(_ groupID: UUID, icon: SidebarItemIcon) {
+        guard let index = appSettings.workspaceGroups.firstIndex(where: { $0.id == groupID }) else { return }
+        appSettings.workspaceGroups[index].icon = icon
+        persistAppSettings()
+    }
+
+    func assignWorkspaces(ids: [UUID], toGroup groupID: UUID) {
+        let idsToAssign = Set(ids)
+        for i in appSettings.workspaceGroups.indices {
+            appSettings.workspaceGroups[i].workspaceIDs.removeAll { idsToAssign.contains($0) }
+        }
+        guard let index = appSettings.workspaceGroups.firstIndex(where: { $0.id == groupID }) else { return }
+        appSettings.workspaceGroups[index].workspaceIDs.append(contentsOf: ids)
+        persistAppSettings()
+    }
+
+    func removeWorkspacesFromGroup(ids: [UUID], groupID: UUID) {
+        let idsToRemove = Set(ids)
+        guard let index = appSettings.workspaceGroups.firstIndex(where: { $0.id == groupID }) else { return }
+        appSettings.workspaceGroups[index].workspaceIDs.removeAll { idsToRemove.contains($0) }
+        persistAppSettings()
+    }
+
+    func removeWorkspacesFromAllGroups(ids: [UUID]) {
+        let idsToRemove = Set(ids)
+        for i in appSettings.workspaceGroups.indices {
+            appSettings.workspaceGroups[i].workspaceIDs.removeAll { idsToRemove.contains($0) }
+        }
+        persistAppSettings()
+    }
+
+    func isWorkspaceGroupExpanded(_ groupID: UUID) -> Bool {
+        appSettings.workspaceGroups.first(where: { $0.id == groupID })?.isExpanded ?? true
+    }
+
+    func setWorkspaceGroupExpanded(_ groupID: UUID, isExpanded: Bool) {
+        guard let index = appSettings.workspaceGroups.firstIndex(where: { $0.id == groupID }) else { return }
+        appSettings.workspaceGroups[index].isExpanded = isExpanded
+        persistAppSettings()
+    }
+
+    func moveWorkspaceGroup(_ groupID: UUID, toIndex destinationIndex: Int) {
+        guard let sourceIndex = appSettings.workspaceGroups.firstIndex(where: { $0.id == groupID }) else { return }
+        let group = appSettings.workspaceGroups.remove(at: sourceIndex)
+        let clamped = min(max(destinationIndex, 0), appSettings.workspaceGroups.count)
+        appSettings.workspaceGroups.insert(group, at: clamped)
+        persistAppSettings()
+    }
+
+    func refreshWorkspacesInGroup(_ groupID: UUID) {
+        guard let group = appSettings.workspaceGroups.first(where: { $0.id == groupID }) else { return }
+        refreshWorkspaces(ids: group.workspaceIDs)
+    }
+
+    func fetchWorkspacesInGroup(_ groupID: UUID) {
+        guard let group = appSettings.workspaceGroups.first(where: { $0.id == groupID }) else { return }
+        fetchWorkspaces(ids: group.workspaceIDs)
+    }
+
+    func workspaceGroupForWorkspace(_ workspaceID: UUID) -> WorkspaceGroup? {
+        appSettings.workspaceGroups.first { $0.workspaceIDs.contains(workspaceID) }
+    }
+
+    func requestCreateWorkspaceGroup(for workspaceIDs: [UUID] = []) {
+        renameWorkspaceRequest = RenameWorkspaceRequest(
+            workspaceID: UUID(),
+            currentName: "",
+            isGroupCreation: true,
+            groupWorkspaceIDs: workspaceIDs
+        )
+    }
+
+    func moveWorkspacesIntoGroup(ids: [UUID], groupID: UUID, atIndex: Int) {
+        let idsToMove = Set(ids)
+        for i in appSettings.workspaceGroups.indices {
+            appSettings.workspaceGroups[i].workspaceIDs.removeAll { idsToMove.contains($0) }
+        }
+        guard let index = appSettings.workspaceGroups.firstIndex(where: { $0.id == groupID }) else { return }
+        let clamped = min(max(atIndex, 0), appSettings.workspaceGroups[index].workspaceIDs.count)
+        appSettings.workspaceGroups[index].workspaceIDs.insert(contentsOf: ids, at: clamped)
+        persistAppSettings()
     }
 
     func createSession(in workspace: WorkspaceModel) {

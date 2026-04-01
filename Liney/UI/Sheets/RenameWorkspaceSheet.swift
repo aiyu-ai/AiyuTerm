@@ -18,12 +18,28 @@ struct RenameWorkspaceSheet: View {
         LocalizationManager.shared.string(key)
     }
 
+    private var sheetTitle: String {
+        if request.isGroupCreation {
+            return localized("sheet.createGroup.title")
+        } else if request.isGroupRename {
+            return localized("sheet.renameGroup.title")
+        }
+        return localized("sheet.renameWorkspace.title")
+    }
+
+    private var sheetPlaceholder: String {
+        if request.isGroupCreation || request.isGroupRename {
+            return localized("sheet.groupName.placeholder")
+        }
+        return localized("sheet.renameWorkspace.placeholder")
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text(localized("sheet.renameWorkspace.title"))
+            Text(sheetTitle)
                 .font(.title2.weight(.semibold))
 
-            TextField(localized("sheet.renameWorkspace.placeholder"), text: $name)
+            TextField(sheetPlaceholder, text: $name)
                 .textFieldStyle(.roundedBorder)
 
             HStack {
