@@ -86,7 +86,7 @@ struct RenameWorkspaceSheet: View {
                             HStack(spacing: 4) {
                                 Image(systemName: showSuggestions ? "chevron.up" : "chevron.down")
                                     .font(.system(size: 9, weight: .bold))
-                                Text(localized("sheet.groupName.suggestions"))
+                                Text(localized("sheet.groupName.presets"))
                                     .font(.system(size: 11, weight: .medium))
                             }
                             .padding(.horizontal, 8)
