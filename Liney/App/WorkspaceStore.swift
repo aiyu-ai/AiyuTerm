@@ -1271,6 +1271,16 @@ final class WorkspaceStore: ObservableObject {
         ]
         workspaces.append(workspace)
         coordinator.register(sessionID: sessionID, storeID: id, shellSessionID: pane.id)
+
+        // Wire agent status changes to also refresh tmux panel sidebar
+        for session in workspace.sessionController.sessions.values {
+            let existingCallback = session.onAgentStatusChange
+            session.onAgentStatusChange = { [weak self] status in
+                existingCallback?(status)
+                self?.tmuxPanelStore.objectWillChange.send()
+            }
+        }
+
         selectWorkspace(workspace)
     }
 
