@@ -102,8 +102,8 @@ final class TmuxPanelStore: ObservableObject {
     // MARK: - Attach
 
     func attachConfiguration(sessionID: String) -> SessionBackendConfiguration? {
-        guard let session = sessions.first(where: { $0.sessionID == sessionID }) else { return nil }
-        let shellArgs = TmuxService.attachArguments(sessionName: session.name)
+        guard sessions.contains(where: { $0.sessionID == sessionID }) else { return nil }
+        let shellArgs = TmuxService.attachArguments(sessionID: sessionID)
         let defaultShell = LocalShellSessionConfiguration.default
         return .local(shellPath: defaultShell.shellPath, shellArguments: shellArgs)
     }
