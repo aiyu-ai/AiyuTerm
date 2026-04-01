@@ -72,27 +72,28 @@ private struct WorkspaceOutlineSidebar: NSViewRepresentable {
     func makeNSView(context: Context) -> SidebarOutlineContainerView {
         let container = SidebarOutlineContainerView()
         context.coordinator.attach(container)
+        container.onSplitRatioChange = { [weak store] ratio in
+            store?.appSettings.tmuxSidebarSplitRatio = ratio
+            store?.persist()
+        }
+        container.applySplitRatio(CGFloat(store.appSettings.tmuxSidebarSplitRatio))
+        container.setTmuxPanelContent(AnyView(
+            TmuxPanelView(
+                store: store.tmuxPanelStore,
+                coordinator: TmuxAttachCoordinator.shared,
+                onAttachSession: { [weak store] sessionID in
+                    guard let store,
+                          let workspace = store.workspaces.first(where: { $0.id == store.selectedWorkspaceID }) else { return }
+                    store.attachTmuxSession(sessionID: sessionID, in: workspace)
+                }
+            )
+        ))
         return container
     }
 
     func updateNSView(_ nsView: SidebarOutlineContainerView, context: Context) {
         context.coordinator.store = store
         nsView.setOpenRepositoryAction(onOpenRepository)
-        nsView.onSplitRatioChange = { [weak store] ratio in
-            store?.appSettings.tmuxSidebarSplitRatio = ratio
-            store?.persist()
-        }
-        nsView.applySplitRatio(CGFloat(store.appSettings.tmuxSidebarSplitRatio))
-        nsView.setTmuxPanelContent(AnyView(
-            TmuxPanelView(
-                store: store.tmuxPanelStore,
-                coordinator: TmuxAttachCoordinator.shared,
-                onAttachSession: { sessionID in
-                    guard let workspace = store.workspaces.first(where: { $0.id == store.selectedWorkspaceID }) else { return }
-                    store.attachTmuxSession(sessionID: sessionID, in: workspace)
-                }
-            )
-        ))
         context.coordinator.apply(
             workspaces: store.sidebarWorkspaces,
             selectedWorkspaceID: store.selectedWorkspaceID,
@@ -1134,7 +1135,7 @@ private final class SidebarOutlineContainerView: NSView, NSSplitViewDelegate {
             footerHostingView.heightAnchor.constraint(equalToConstant: 34),
         ])
 
-        splitView.addSubview(topPane)
+        splitView.addArrangedSubview(topPane)
 
         // Bottom pane: tmux panel
         bottomPane.translatesAutoresizingMaskIntoConstraints = false
@@ -1148,7 +1149,7 @@ private final class SidebarOutlineContainerView: NSView, NSSplitViewDelegate {
             tmuxPanelHostingView.bottomAnchor.constraint(equalTo: bottomPane.bottomAnchor),
         ])
 
-        splitView.addSubview(bottomPane)
+        splitView.addArrangedSubview(bottomPane)
         splitView.adjustSubviews()
     }
 
