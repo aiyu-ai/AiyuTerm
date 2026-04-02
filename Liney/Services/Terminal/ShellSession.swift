@@ -185,11 +185,11 @@ final class ShellSession: ObservableObject, Identifiable {
                 }
             }
             ghosttyController.onKeyboardActivity = { [weak self] in
-                guard let self, self.agentStatus == .permissionNeeded else { return }
+                guard let self, self.agentStatus.isActionable else { return }
                 self.agentStatusClearTask?.cancel()
                 self.agentStatusClearTask = Task { @MainActor [weak self] in
                     try? await Task.sleep(nanoseconds: 2_000_000_000)
-                    guard let self, self.agentStatus == .permissionNeeded else { return }
+                    guard let self, self.agentStatus.isActionable else { return }
                     self.agentStatus = .none
                 }
             }
