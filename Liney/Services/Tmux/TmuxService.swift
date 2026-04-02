@@ -85,6 +85,15 @@ enum TmuxService {
         }
     }
 
+    // MARK: - Pane Inspection
+
+    /// Captures the visible pane content (no scrollback history).
+    static func capturePaneContent(sessionID: String) async throws -> String {
+        guard isValidSessionID(sessionID) else { throw TmuxError.commandFailed("Invalid session ID") }
+        let result = try await runTmux(arguments: ["capture-pane", "-p", "-t", sessionID])
+        return result.stdout
+    }
+
     // MARK: - Internal
 
     @discardableResult
