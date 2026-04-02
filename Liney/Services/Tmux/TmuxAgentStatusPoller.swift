@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// Polls tmux pane content to detect Claude Code permission prompts.
+/// Polls tmux pane content and hook-set pane options to detect Claude Code status.
 /// OSC 9 desktop notifications do not pass through tmux to Ghostty,
 /// so this poller provides an alternative detection mechanism.
 @MainActor
@@ -17,6 +17,8 @@ final class TmuxAgentStatusPoller {
         weak var workspace: WorkspaceModel?
         let sessionID: String
     }
+
+    private static let paneOptionKey = "liney_agent_status"
 
     private static let permissionKeywords = [
         "Do you want to proceed?",
@@ -53,15 +55,11 @@ final class TmuxAgentStatusPoller {
         for (_, registration) in registrations {
             guard let workspace = registration.workspace else { continue }
             do {
-                let content = try await TmuxService.capturePaneContent(sessionID: registration.sessionID)
-                let hasPermissionPrompt = Self.hasActivePermissionPrompt(in: content)
+                let status = try await detectStatus(for: registration.sessionID)
                 var changed = false
                 for session in workspace.sessionController.sessions.values {
-                    if hasPermissionPrompt && session.agentStatus != .permissionNeeded {
-                        session.agentStatus = .permissionNeeded
-                        changed = true
-                    } else if !hasPermissionPrompt && session.agentStatus == .permissionNeeded {
-                        session.agentStatus = .none
+                    if status != session.agentStatus {
+                        session.agentStatus = status
                         changed = true
                     }
                 }
@@ -74,9 +72,47 @@ final class TmuxAgentStatusPoller {
         }
     }
 
+    /// Detect agent status from hook pane option first, then fall back to content scanning.
+    private func detectStatus(for sessionID: String) async throws -> AgentSessionStatus {
+        // Priority 1: Hook-set pane option (most reliable, set by Claude Code hooks)
+        if let hookValue = try await TmuxService.paneOption(sessionID: sessionID, option: Self.paneOptionKey) {
+            let status = Self.parseHookValue(hookValue)
+            if status != .none {
+                // Clear the option after reading so it doesn't persist stale state
+                try? await TmuxService.clearPaneOption(sessionID: sessionID, option: Self.paneOptionKey)
+                return status
+            }
+        }
+
+        // Priority 2: Pane content scanning (fallback for sessions without hooks configured)
+        let content = try await TmuxService.capturePaneContent(sessionID: sessionID)
+        if Self.hasActivePermissionPrompt(in: content) {
+            return .permissionNeeded
+        }
+
+        return .none
+    }
+
+    /// Parse the hook value format: "status:timestamp"
+    private static func parseHookValue(_ value: String) -> AgentSessionStatus {
+        let parts = value.split(separator: ":", maxSplits: 1)
+        let statusString = parts.first.map(String.init) ?? value
+
+        // Check staleness: ignore values older than 30 seconds
+        if parts.count == 2, let timestamp = TimeInterval(parts[1]) {
+            let age = Date().timeIntervalSince1970 - timestamp
+            if age > 30 { return .none }
+        }
+
+        switch statusString {
+        case "permission": return .permissionNeeded
+        case "completed": return .taskCompleted
+        case "error": return .error
+        default: return .none
+        }
+    }
+
     /// Only check the bottom of the visible pane.
-    /// Permission prompts are active when they appear near the cursor (bottom).
-    /// Old prompts that scrolled up are historical and should be ignored.
     private static func hasActivePermissionPrompt(in content: String) -> Bool {
         let lines = content.split(separator: "\n", omittingEmptySubsequences: false)
         let bottomLines = lines.suffix(15)

@@ -54,6 +54,7 @@ final class WorkspaceStore: ObservableObject {
     private let remoteSessionCoordinator = RemoteSessionCoordinator()
     let tmuxPanelStore = TmuxPanelStore()
     private let tmuxAgentPoller = TmuxAgentStatusPoller()
+    let agentStatusFilePoller = AgentStatusFilePoller()
     private let metadataWatchService = WorkspaceMetadataWatchService.shared
     private let sleepPreventionController = SleepPreventionController()
     private var persistsWorkspaceState: Bool
@@ -743,7 +744,16 @@ final class WorkspaceStore: ObservableObject {
     func selectWorkspace(_ workspace: WorkspaceModel) {
         selectedWorkspaceID = workspace.id
         workspace.bootstrapIfNeeded()
+        registerAgentFilePoller(for: workspace)
         persist()
+    }
+
+    /// Register non-tmux workspace sessions with the file-based agent status poller.
+    private func registerAgentFilePoller(for workspace: WorkspaceModel) {
+        guard !workspace.settings.isTmuxManaged else { return }
+        for session in workspace.sessionController.sessions.values {
+            agentStatusFilePoller.register(session: session)
+        }
     }
 
     func selectGlobalCanvasCard(_ cardID: GlobalCanvasCardID) {
