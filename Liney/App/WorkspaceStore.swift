@@ -656,6 +656,7 @@ final class WorkspaceStore: ObservableObject {
 
         configureUpdater(checkInBackground: true)
         syncAutomationServices()
+        ensureAgentFilePoller()
         persist()
     }
 
@@ -744,16 +745,17 @@ final class WorkspaceStore: ObservableObject {
     func selectWorkspace(_ workspace: WorkspaceModel) {
         selectedWorkspaceID = workspace.id
         workspace.bootstrapIfNeeded()
-        registerAgentFilePoller(for: workspace)
+        ensureAgentFilePoller()
         persist()
     }
 
-    /// Register non-tmux workspace sessions with the file-based agent status poller.
-    private func registerAgentFilePoller(for workspace: WorkspaceModel) {
-        guard !workspace.settings.isTmuxManaged else { return }
-        for session in workspace.sessionController.sessions.values {
-            agentStatusFilePoller.register(session: session)
+    /// Start the file-based agent status poller with a dynamic workspace reference.
+    private func ensureAgentFilePoller() {
+        guard agentStatusFilePoller.workspacesProvider == nil else { return }
+        agentStatusFilePoller.workspacesProvider = { [weak self] in
+            self?.workspaces ?? []
         }
+        agentStatusFilePoller.startIfNeeded()
     }
 
     func selectGlobalCanvasCard(_ cardID: GlobalCanvasCardID) {

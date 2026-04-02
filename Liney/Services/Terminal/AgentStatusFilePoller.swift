@@ -5,39 +5,21 @@
 //  Author: wuwenrui
 //
 
+import CommonCrypto
 import Foundation
 
-/// Polls /tmp/liney-agent-status/<tty> files written by Claude Code hooks.
-/// Used for regular (non-tmux) workspaces where OSC 9 is the primary detection,
-/// but hooks provide more reliable task completion notifications.
+/// Polls /tmp/liney-agent-status/<dir-hash> files written by Claude Code hooks.
+/// Matches status files to workspaces by hashing the working directory path.
 @MainActor
 final class AgentStatusFilePoller {
 
     private static let statusDir = "/tmp/liney-agent-status"
 
-    private struct Registration {
-        weak var session: ShellSession?
-        let pid: Int32
-    }
-
-    private var registrations: [UUID: Registration] = [:]
+    /// Provide workspaces dynamically so we always scan current state.
+    var workspacesProvider: (() -> [WorkspaceModel])?
     private var timer: Timer?
 
-    func register(session: ShellSession) {
-        guard let pid = session.pid else { return }
-        registrations[session.id] = Registration(session: session, pid: pid)
-        ensureTimerRunning()
-    }
-
-    func unregister(sessionID: UUID) {
-        registrations.removeValue(forKey: sessionID)
-        if registrations.isEmpty {
-            timer?.invalidate()
-            timer = nil
-        }
-    }
-
-    private func ensureTimerRunning() {
+    func startIfNeeded() {
         guard timer == nil else { return }
         timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
@@ -46,19 +28,26 @@ final class AgentStatusFilePoller {
         }
     }
 
+    func stop() {
+        timer?.invalidate()
+        timer = nil
+    }
+
     private func poll() {
-        for (_, registration) in registrations {
-            guard let session = registration.session else { continue }
-            guard let ttyName = Self.ttyName(forPID: registration.pid) else { continue }
-            let path = "\(Self.statusDir)/\(ttyName)"
+        guard let workspaces = workspacesProvider?() else { return }
+        for workspace in workspaces where !workspace.settings.isTmuxManaged {
+            let dirHash = Self.md5Prefix(workspace.activeWorktreePath, length: 16)
+            let path = "\(Self.statusDir)/\(dirHash)"
             guard let content = try? String(contentsOfFile: path, encoding: .utf8)
                 .trimmingCharacters(in: .whitespacesAndNewlines) else { continue }
 
             let status = Self.parseStatusValue(content)
-            if status != .none && status != session.agentStatus {
+            // Remove file after reading to avoid stale re-reads
+            try? FileManager.default.removeItem(atPath: path)
+
+            guard status != .none else { continue }
+            for session in workspace.sessionController.sessions.values where session.agentStatus != status {
                 session.agentStatus = status
-                // Remove file after reading to avoid stale state
-                try? FileManager.default.removeItem(atPath: path)
             }
         }
     }
@@ -81,23 +70,12 @@ final class AgentStatusFilePoller {
         }
     }
 
-    /// Get the TTY name for a PID (e.g., "ttys042").
-    private static func ttyName(forPID pid: Int32) -> String? {
-        let pipe = Pipe()
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/ps")
-        process.arguments = ["-p", "\(pid)", "-o", "tty="]
-        process.standardOutput = pipe
-        process.standardError = FileHandle.nullDevice
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
-            return nil
-        }
-        guard let data = try? pipe.fileHandleForReading.availableData,
-              let output = String(data: data, encoding: .utf8) else { return nil }
-        let tty = output.trimmingCharacters(in: .whitespacesAndNewlines)
-        return tty.isEmpty || tty == "??" ? nil : tty
+    /// First 16 chars of MD5 hex digest, matching the hook script's `md5 | head -c 16`.
+    private static func md5Prefix(_ string: String, length: Int) -> String {
+        let data = Data(string.utf8)
+        var digest = [UInt8](repeating: 0, count: Int(CC_MD5_DIGEST_LENGTH))
+        data.withUnsafeBytes { CC_MD5($0.baseAddress, CC_LONG(data.count), &digest) }
+        let hex = digest.map { String(format: "%02x", $0) }.joined()
+        return String(hex.prefix(length))
     }
 }
