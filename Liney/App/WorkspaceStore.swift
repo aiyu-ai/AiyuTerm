@@ -1423,18 +1423,22 @@ final class WorkspaceStore: ObservableObject {
         // (session IDs like $0/$1 can be reassigned to different sessions after restart)
         let sessionName = tmuxPanelStore.sessionName(for: sessionID) ?? sessionID
         print("[TmuxAttach] sessionName=\(sessionName), workspaceCount=\(workspaces.count)")
+        // The tmux session's attached status is the source of truth.
+        // If it says "detached", any existing workspace's terminal is NOT running tmux attach.
+        let isTmuxSessionAttached = tmuxPanelStore.sessions.first(where: { $0.sessionID == sessionID })?.isAttached ?? false
+
         if let existing = workspaces.first(where: { $0.settings.tmuxSessionID == sessionID }) {
-            if existing.name == sessionName {
-                print("[TmuxAttach] reusing existing workspace: \(existing.name)")
+            if existing.name == sessionName && isTmuxSessionAttached {
+                print("[TmuxAttach] reusing: \(existing.name) (tmux confirms attached)")
                 selectWorkspace(existing)
                 tmuxAgentPoller.register(sessionID: sessionID, workspace: existing)
                 return
             }
-            print("[TmuxAttach] stale workspace detected: expected=\(sessionName) found=\(existing.name), removing")
+            print("[TmuxAttach] removing stale workspace: \(existing.name) (name match=\(existing.name == sessionName), tmux attached=\(isTmuxSessionAttached))")
             removeWorkspace(existing)
         }
 
-        // Also remove any workspace that was previously for this session name but has a stale ID
+        // Also remove any workspace with matching name but different (stale) session ID
         if let stale = workspaces.first(where: { $0.name == sessionName && $0.settings.isTmuxManaged }) {
             print("[TmuxAttach] removing stale workspace by name: \(stale.name)")
             removeWorkspace(stale)

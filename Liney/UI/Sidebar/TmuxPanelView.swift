@@ -64,35 +64,41 @@ struct TmuxPanelView: View {
 
 private struct TmuxHeaderView: View {
     @ObservedObject var store: TmuxPanelStore
+    @ObservedObject private var localization = LocalizationManager.shared
     @Binding var isCollapsed: Bool
     let onCollapseChange: () -> Void
     @State private var showNewSessionPrompt = false
     @State private var newSessionName = ""
 
+    @State private var refreshHover = false
+    @State private var plusHover = false
+
     var body: some View {
         HStack(spacing: 6) {
-            Button(action: {
-                withAnimation(.easeInOut(duration: 0.2)) { isCollapsed.toggle() }
-                onCollapseChange()
-            }) {
+            // Left side: tappable to toggle collapse
+            HStack(spacing: 6) {
                 Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
                     .font(.system(size: 8, weight: .bold))
                     .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
                     .frame(width: 12)
-            }
-            .buttonStyle(.plain)
 
-            Text("TMUX")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
-
-            if !store.sessions.isEmpty {
-                Text("\(store.sessions.count)")
-                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                Text("TMUX")
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .background(Color(red: 0.55, green: 0.36, blue: 0.96).opacity(0.15), in: Capsule())
+
+                if !store.sessions.isEmpty {
+                    Text("\(store.sessions.count)")
+                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(Color(red: 0.55, green: 0.36, blue: 0.96).opacity(0.15), in: Capsule())
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                withAnimation(.easeInOut(duration: 0.2)) { isCollapsed.toggle() }
+                onCollapseChange()
             }
 
             Spacer()
@@ -106,42 +112,37 @@ private struct TmuxHeaderView: View {
                     Button(action: { store.refresh() }) {
                         Image(systemName: "arrow.clockwise")
                             .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
+                            .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96).opacity(refreshHover ? 1 : 0.6))
                     }
                     .buttonStyle(.plain)
+                    .onHover { refreshHover = $0 }
                 }
-            }
 
-            if !isCollapsed {
                 Button(action: { showNewSessionPrompt = true }) {
                     Image(systemName: "plus")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
+                        .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96).opacity(plusHover ? 1 : 0.6))
                 }
                 .buttonStyle(.plain)
+                .onHover { plusHover = $0 }
                 .popover(isPresented: $showNewSessionPrompt) {
                     VStack(spacing: 8) {
-                        Text("New Session")
+                        Text(localized("tmux.newSession.title"))
                             .font(.system(size: 11, weight: .semibold))
-                        TextField("session-name", text: $newSessionName)
+                        TextField(localized("tmux.newSession.placeholder"), text: $newSessionName)
                             .textFieldStyle(.roundedBorder)
                             .font(.system(size: 11))
                             .frame(width: 160)
+                            .onSubmit { submitNewSession() }
                         HStack {
-                            Button("Cancel") { showNewSessionPrompt = false }
+                            Button(localized("common.cancel")) { showNewSessionPrompt = false }
                                 .buttonStyle(.plain)
                                 .font(.system(size: 10))
                             Spacer()
-                            Button("Create") {
-                                if !newSessionName.isEmpty {
-                                    store.createSession(name: newSessionName)
-                                    newSessionName = ""
-                                    showNewSessionPrompt = false
-                                }
-                            }
-                            .buttonStyle(.plain)
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
+                            Button(localized("common.create")) { submitNewSession() }
+                                .buttonStyle(.plain)
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
                         }
                     }
                     .padding(12)
@@ -150,11 +151,18 @@ private struct TmuxHeaderView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            withAnimation(.easeInOut(duration: 0.2)) { isCollapsed.toggle() }
-            onCollapseChange()
-        }
+    }
+
+    private func localized(_ key: String) -> String {
+        localization.string(key)
+    }
+
+    private func submitNewSession() {
+        let name = newSessionName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+        store.createSession(name: name)
+        newSessionName = ""
+        showNewSessionPrompt = false
     }
 }
 
