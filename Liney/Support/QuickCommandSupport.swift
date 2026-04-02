@@ -1,6 +1,6 @@
 //
 //  QuickCommandSupport.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //
@@ -590,7 +590,7 @@ enum QuickCommandCatalog {
     }
 }
 
-func lineyQuickCommandMatch(for event: NSEvent, in settings: AppSettings) -> QuickCommandPreset? {
+func aiyuTermQuickCommandMatch(for event: NSEvent, in settings: AppSettings) -> QuickCommandPreset? {
     guard let recordedShortcut = StoredShortcut.from(event: event) else { return nil }
     return settings.quickCommandPresets.first(where: { $0.shortcut == recordedShortcut })
 }
@@ -600,7 +600,7 @@ enum QuickCommandDispatch: Equatable {
     case run(String)
 }
 
-func lineyQuickCommandDispatch(for preset: QuickCommandPreset) -> QuickCommandDispatch {
+func aiyuTermQuickCommandDispatch(for preset: QuickCommandPreset) -> QuickCommandDispatch {
     preset.submitsReturn ? .run(preset.command) : .insert(preset.command)
 }
 

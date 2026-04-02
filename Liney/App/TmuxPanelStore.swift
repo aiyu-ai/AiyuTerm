@@ -1,6 +1,6 @@
 //
 //  TmuxPanelStore.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //

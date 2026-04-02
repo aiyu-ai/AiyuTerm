@@ -1,6 +1,6 @@
 //
 //  WorkspaceCommands.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //
@@ -13,8 +13,8 @@ struct WorkspaceGitHubTarget: Hashable {
 }
 
 enum WorkspaceCommand: Hashable {
-    case openLineyWebsite
-    case submitLineyFeedback
+    case openAiyuTermWebsite
+    case submitAiyuTermFeedback
     case toggleCommandPalette
     case toggleOverview
     case presentSettings

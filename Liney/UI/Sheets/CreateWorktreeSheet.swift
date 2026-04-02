@@ -1,6 +1,6 @@
 //
 //  CreateWorktreeSheet.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //

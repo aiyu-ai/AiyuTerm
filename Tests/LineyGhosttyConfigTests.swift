@@ -1,6 +1,6 @@
 //
-//  LineyGhosttyConfigTests.swift
-//  LineyTests
+//  AiyuTermGhosttyConfigTests.swift
+//  AiyuTermTests
 //
 //  Author: everettjf
 //
@@ -8,9 +8,9 @@
 import XCTest
 @testable import Liney
 
-final class LineyGhosttyConfigTests: XCTestCase {
+final class AiyuTermGhosttyConfigTests: XCTestCase {
     func testManagedConfigContentsIncludeFontOverrides() {
-        let contents = LineyGhosttyConfigManager.managedConfigContents(
+        let contents = AiyuTermGhosttyConfigManager.managedConfigContents(
             settings: AppSettings(
                 terminalFontFamily: "JetBrains Mono",
                 terminalFontSize: 14.2
@@ -22,11 +22,11 @@ final class LineyGhosttyConfigTests: XCTestCase {
     }
 
     func testManagedConfigContentsOnlyContainHeaderWithoutOverrides() {
-        let contents = LineyGhosttyConfigManager.managedConfigContents(settings: AppSettings())
+        let contents = AiyuTermGhosttyConfigManager.managedConfigContents(settings: AppSettings())
 
         XCTAssertEqual(
             contents,
-            "# Managed by Liney. Manual edits will be overwritten.\n"
+            "# Managed by AiyuTerm. Manual edits will be overwritten.\n"
         )
     }
 }

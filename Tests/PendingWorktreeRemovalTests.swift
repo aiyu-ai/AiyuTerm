@@ -1,6 +1,6 @@
 //
 //  PendingWorktreeRemovalTests.swift
-//  LineyTests
+//  AiyuTermTests
 //
 //  Author: everettjf
 //

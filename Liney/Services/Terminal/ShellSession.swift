@@ -1,6 +1,6 @@
 //
 //  ShellSession.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //
@@ -10,7 +10,7 @@ import Combine
 import Darwin
 import Foundation
 
-func lineyAugmentedExecutablePath(
+func aiyuTermAugmentedExecutablePath(
     _ existingPath: String?,
     homeDirectory: String = NSHomeDirectory()
 ) -> String {
@@ -121,14 +121,14 @@ final class ShellSession: ObservableObject, Identifiable {
         self.launchConfiguration = launchConfiguration
         self.title = launchConfiguration.command.displayName
         self.surfaceController = surface
-        self.processReaper = LineyTerminalManagedProcessReaper.reap
+        self.processReaper = AiyuTermTerminalManagedProcessReaper.reap
         configureSurfaceCallbacks()
     }
 
     init(
         snapshot: PaneSnapshot,
         surfaceController: ManagedTerminalSessionSurfaceController,
-        processReaper: @escaping @Sendable (TerminalLaunchConfiguration) -> Void = LineyTerminalManagedProcessReaper.reap
+        processReaper: @escaping @Sendable (TerminalLaunchConfiguration) -> Void = AiyuTermTerminalManagedProcessReaper.reap
     ) {
         self.id = snapshot.id
         self.requestedEngine = snapshot.preferredEngine
@@ -171,7 +171,7 @@ final class ShellSession: ObservableObject, Identifiable {
             guard let self else { return }
             self.applyProcessExit(exitCode)
         }
-        if let ghosttyController = surfaceController as? LineyGhosttyController {
+        if let ghosttyController = surfaceController as? AiyuTermGhosttyController {
             ghosttyController.onWorkspaceAction = { [weak self] action in
                 self?.onWorkspaceAction?(action)
             }
@@ -346,10 +346,10 @@ final class ShellSession: ObservableObject, Identifiable {
 
     private static func defaultEnvironment() -> [String: String] {
         var environment = ProcessInfo.processInfo.environment
-        environment["PATH"] = lineyAugmentedExecutablePath(environment["PATH"])
+        environment["PATH"] = aiyuTermAugmentedExecutablePath(environment["PATH"])
         environment["TERM"] = "xterm-256color"
         environment["COLORTERM"] = "truecolor"
-        environment["TERM_PROGRAM"] = "Liney"
+        environment["TERM_PROGRAM"] = "AiyuTerm"
         environment["TERM_PROGRAM_VERSION"] = currentVersion()
         environment["LANG"] = environment["LANG"] ?? "en_US.UTF-8"
         return environment
@@ -364,7 +364,7 @@ final class ShellSession: ObservableObject, Identifiable {
         backendConfiguration: SessionBackendConfiguration,
         preferredWorkingDirectory: String
     ) -> TerminalLaunchConfiguration {
-        let baseEnvironment = LineyTerminalManagedProcessReaper.prepareEnvironment(defaultEnvironment())
+        let baseEnvironment = AiyuTermTerminalManagedProcessReaper.prepareEnvironment(defaultEnvironment())
         return backendConfiguration.makeLaunchConfiguration(
             preferredWorkingDirectory: preferredWorkingDirectory,
             baseEnvironment: baseEnvironment
@@ -435,7 +435,7 @@ enum TerminalWorkspaceAction {
     case closePane
 }
 
-nonisolated struct LineyTerminalManagedProcessMetadata: Equatable {
+nonisolated struct AiyuTermTerminalManagedProcessMetadata: Equatable {
     var shellPID: Int32?
     var loginPID: Int32?
     var tty: String?
@@ -471,17 +471,17 @@ nonisolated struct LineyTerminalManagedProcessMetadata: Equatable {
     }
 }
 
-nonisolated struct LineyTerminalManagedProcessControl {
+nonisolated struct AiyuTermTerminalManagedProcessControl {
     var processGroupID: @Sendable (Int32) -> Int32
     var sendSignal: @Sendable (Int32, Int32) -> Int32
 
-    static let live = LineyTerminalManagedProcessControl(
+    static let live = AiyuTermTerminalManagedProcessControl(
         processGroupID: { Darwin.getpgid($0) },
         sendSignal: { Darwin.kill($0, $1) }
     )
 }
 
-nonisolated enum LineyTerminalManagedProcessReaper {
+nonisolated enum AiyuTermTerminalManagedProcessReaper {
     static let sessionIDEnvironmentKey = "LINEY_SESSION_ID"
     static let metadataPathEnvironmentKey = "LINEY_SESSION_METADATA_PATH"
 
@@ -492,7 +492,7 @@ nonisolated enum LineyTerminalManagedProcessReaper {
         var environment = environment
         let sessionID = UUID().uuidString.lowercased()
         let metadataDirectory = fileManager.temporaryDirectory
-            .appendingPathComponent("liney-terminal-sessions", isDirectory: true)
+            .appendingPathComponent("aiyuterm-terminal-sessions", isDirectory: true)
         try? fileManager.createDirectory(at: metadataDirectory, withIntermediateDirectories: true)
 
         let metadataPath = metadataDirectory
@@ -514,7 +514,7 @@ nonisolated enum LineyTerminalManagedProcessReaper {
     static func reap(
         _ launchConfiguration: TerminalLaunchConfiguration,
         fileManager: FileManager,
-        processControl: LineyTerminalManagedProcessControl
+        processControl: AiyuTermTerminalManagedProcessControl
     ) {
         guard let metadataPath = launchConfiguration.environment[metadataPathEnvironmentKey],
               !metadataPath.isEmpty else { return }
@@ -531,13 +531,13 @@ nonisolated enum LineyTerminalManagedProcessReaper {
     private static func readMetadata(
         atPath path: String,
         fileManager: FileManager
-    ) -> LineyTerminalManagedProcessMetadata? {
+    ) -> AiyuTermTerminalManagedProcessMetadata? {
         guard fileManager.fileExists(atPath: path),
               let contents = try? String(contentsOfFile: path, encoding: .utf8) else {
             return nil
         }
 
-        let metadata = LineyTerminalManagedProcessMetadata(contents: contents)
+        let metadata = AiyuTermTerminalManagedProcessMetadata(contents: contents)
         if metadata.shellPID == nil && metadata.loginPID == nil {
             return nil
         }
@@ -545,8 +545,8 @@ nonisolated enum LineyTerminalManagedProcessReaper {
     }
 
     private static func terminateProcesses(
-        for metadata: LineyTerminalManagedProcessMetadata,
-        processControl: LineyTerminalManagedProcessControl
+        for metadata: AiyuTermTerminalManagedProcessMetadata,
+        processControl: AiyuTermTerminalManagedProcessControl
     ) {
         if let shellPID = metadata.shellPID, shellPID > 1 {
             let processGroupID = processControl.processGroupID(shellPID)

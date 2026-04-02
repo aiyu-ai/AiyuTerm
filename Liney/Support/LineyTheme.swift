@@ -1,6 +1,6 @@
 //
-//  LineyTheme.swift
-//  Liney
+//  AiyuTermTheme.swift
+//  AiyuTerm
 //
 //  Author: everettjf
 //
@@ -8,7 +8,7 @@
 import AppKit
 import SwiftUI
 
-enum LineyTheme {
+enum AiyuTermTheme {
     static let appBackground = Color(nsColor: NSColor(calibratedRed: 0.045, green: 0.05, blue: 0.062, alpha: 1))
     static let canvasBackground = Color(nsColor: NSColor(calibratedRed: 0.05, green: 0.055, blue: 0.069, alpha: 1))
     static let panelBackground = Color(nsColor: NSColor(calibratedRed: 0.067, green: 0.073, blue: 0.089, alpha: 1))

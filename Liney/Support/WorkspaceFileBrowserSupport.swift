@@ -1,6 +1,6 @@
 //
 //  WorkspaceFileBrowserSupport.swift
-//  Liney
+//  AiyuTerm
 //
 
 import Foundation

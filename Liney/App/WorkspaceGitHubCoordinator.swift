@@ -1,6 +1,6 @@
 //
 //  WorkspaceGitHubCoordinator.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //

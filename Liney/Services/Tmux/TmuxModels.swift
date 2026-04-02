@@ -1,6 +1,6 @@
 //
 //  TmuxModels.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //

@@ -1,13 +1,13 @@
 //
 //  UIState.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //
 
 import Foundation
 
-enum LineyFeatureFlags {
+enum AiyuTermFeatureFlags {
     static let showsRemoteSessionCreationUI = true
 }
 

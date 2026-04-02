@@ -1,6 +1,6 @@
 //
 //  TmuxServiceTests.swift
-//  LineyTests
+//  AiyuTermTests
 //
 //  Author: everettjf
 //

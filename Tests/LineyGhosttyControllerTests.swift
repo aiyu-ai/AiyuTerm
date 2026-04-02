@@ -1,6 +1,6 @@
 //
-//  LineyGhosttyControllerTests.swift
-//  LineyTests
+//  AiyuTermGhosttyControllerTests.swift
+//  AiyuTermTests
 //
 //  Author: Codex
 //
@@ -9,10 +9,10 @@ import XCTest
 import GhosttyKit
 @testable import Liney
 
-final class LineyGhosttyControllerTests: XCTestCase {
+final class AiyuTermGhosttyControllerTests: XCTestCase {
     func testCommandFinishedDoesNotReportProcessExit() {
         XCTAssertFalse(
-            lineyGhosttyShouldReportProcessExitForCommandFinished(
+            aiyuTermGhosttyShouldReportProcessExitForCommandFinished(
                 ghostty_action_command_finished_s(
                     exit_code: 0,
                     duration: 42
@@ -22,28 +22,28 @@ final class LineyGhosttyControllerTests: XCTestCase {
     }
 
     func testSurfaceCloseWhileProcessIsAliveDoesNotReportProcessExit() {
-        XCTAssertFalse(lineyGhosttyShouldReportProcessExitForSurfaceClose(processAlive: true))
+        XCTAssertFalse(aiyuTermGhosttyShouldReportProcessExitForSurfaceClose(processAlive: true))
     }
 
     func testSurfaceCloseAfterProcessExitReportsExit() {
-        XCTAssertTrue(lineyGhosttyShouldReportProcessExitForSurfaceClose(processAlive: false))
+        XCTAssertTrue(aiyuTermGhosttyShouldReportProcessExitForSurfaceClose(processAlive: false))
     }
 
     func testSurfaceRefreshRunsWhenDisplayMetricsChange() {
-        let previous = LineyGhosttySurfaceMetricsSignature(
+        let previous = AiyuTermGhosttySurfaceMetricsSignature(
             width: 800,
             height: 600,
             scale: 2,
             displayID: 1
         )
-        let next = LineyGhosttySurfaceMetricsSignature(
+        let next = AiyuTermGhosttySurfaceMetricsSignature(
             width: 800,
             height: 600,
             scale: 1,
             displayID: 2
         )
 
-        XCTAssertTrue(lineyGhosttyShouldRefreshSurface(after: previous, next: next))
-        XCTAssertFalse(lineyGhosttyShouldRefreshSurface(after: next, next: next))
+        XCTAssertTrue(aiyuTermGhosttyShouldRefreshSurface(after: previous, next: next))
+        XCTAssertFalse(aiyuTermGhosttyShouldRefreshSurface(after: next, next: next))
     }
 }

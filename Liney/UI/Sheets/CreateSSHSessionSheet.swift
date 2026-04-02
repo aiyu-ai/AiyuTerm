@@ -1,6 +1,6 @@
 //
 //  CreateSSHSessionSheet.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //

@@ -1,6 +1,6 @@
 //
 //  DiffWindowManager.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //
@@ -38,16 +38,16 @@ final class DiffWindowManager: NSObject, NSWindowDelegate {
 
         let newWindow = NSWindow(contentViewController: hostingController)
         newWindow.title = windowTitle(branchName: branchName)
-        newWindow.identifier = NSUserInterfaceItemIdentifier("liney.diff")
+        newWindow.identifier = NSUserInterfaceItemIdentifier("aiyuterm.diff")
         newWindow.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         newWindow.tabbingMode = .preferred
-        newWindow.tabbingIdentifier = LineyDesktopApplication.sharedWindowTabbingIdentifier
+        newWindow.tabbingIdentifier = AiyuTermDesktopApplication.sharedWindowTabbingIdentifier
         newWindow.toolbarStyle = .unified
         newWindow.isReleasedWhenClosed = false
         newWindow.minSize = NSSize(width: 760, height: 520)
-        newWindow.setFrameAutosaveName("LineyDiffWindow")
+        newWindow.setFrameAutosaveName("AiyuTermDiffWindow")
 
-        let hasSavedFrame = UserDefaults.standard.string(forKey: "NSWindow Frame LineyDiffWindow") != nil
+        let hasSavedFrame = UserDefaults.standard.string(forKey: "NSWindow Frame AiyuTermDiffWindow") != nil
         if !hasSavedFrame {
             newWindow.setContentSize(NSSize(width: 1180, height: 760))
             newWindow.center()

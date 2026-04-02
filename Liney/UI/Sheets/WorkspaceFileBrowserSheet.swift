@@ -1,6 +1,6 @@
 //
 //  WorkspaceFileBrowserSheet.swift
-//  Liney
+//  AiyuTerm
 //
 
 import SwiftUI
@@ -79,7 +79,7 @@ struct WorkspaceFileBrowserSheet: View {
                                 .font(.system(size: 13, weight: .semibold))
                             Text(entry.relativePath)
                                 .font(.system(size: 11, weight: .medium, design: .monospaced))
-                                .foregroundStyle(LineyTheme.secondaryText)
+                                .foregroundStyle(AiyuTermTheme.secondaryText)
                                 .lineLimit(1)
                         }
                         .tag(entry.path)
@@ -99,7 +99,7 @@ struct WorkspaceFileBrowserSheet: View {
                             .font(.title3.weight(.semibold))
                         Text(request.rootPath)
                             .font(.caption.monospaced())
-                            .foregroundStyle(LineyTheme.secondaryText)
+                            .foregroundStyle(AiyuTermTheme.secondaryText)
                             .lineLimit(2)
                             .textSelection(.enabled)
                     }
@@ -119,14 +119,14 @@ struct WorkspaceFileBrowserSheet: View {
                                     .font(.caption.weight(.semibold))
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 3)
-                                    .background(LineyTheme.warning.opacity(0.16), in: Capsule())
-                                    .foregroundStyle(LineyTheme.warning)
+                                    .background(AiyuTermTheme.warning.opacity(0.16), in: Capsule())
+                                    .foregroundStyle(AiyuTermTheme.warning)
                             }
                             Spacer()
                         }
                         Text(entry.relativePath)
                             .font(.caption.monospaced())
-                            .foregroundStyle(LineyTheme.secondaryText)
+                            .foregroundStyle(AiyuTermTheme.secondaryText)
                             .textSelection(.enabled)
                     }
 
@@ -207,11 +207,11 @@ struct WorkspaceFileBrowserSheet: View {
                 .padding(10)
                 .background(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(LineyTheme.panelRaised)
+                        .fill(AiyuTermTheme.panelRaised)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(LineyTheme.border, lineWidth: 1)
+                        .stroke(AiyuTermTheme.border, lineWidth: 1)
                 )
         case .unsupported(let reason):
             unsupportedView(entry: entry, reason: reason)

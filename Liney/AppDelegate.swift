@@ -1,6 +1,6 @@
 //
 //  AppDelegate.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //
@@ -9,12 +9,12 @@ import Cocoa
 import GhosttyKit
 import Sentry
 
-private func lineyLocalizedAppString(_ key: String) -> String {
+private func aiyuTermLocalizedAppString(_ key: String) -> String {
     LocalizationManager.shared.string(key)
 }
 
-private func lineyLocalizedAppFormat(_ key: String, _ arguments: CVarArg...) -> String {
-    l10nFormat(lineyLocalizedAppString(key), locale: .current, arguments: arguments)
+private func aiyuTermLocalizedAppFormat(_ key: String, _ arguments: CVarArg...) -> String {
+    l10nFormat(aiyuTermLocalizedAppString(key), locale: .current, arguments: arguments)
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
@@ -22,7 +22,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private let repositoryURL = URL(string: "https://github.com/everettjf/liney")!
     private let quitConfirmationSuppressionInterval: TimeInterval = 0.5
 
-    @MainActor private var desktopApplication: LineyDesktopApplication?
+    @MainActor private var desktopApplication: AiyuTermDesktopApplication?
     @MainActor private let applicationMenuController = ApplicationMenuController()
     private var appSettingsObserver: NSObjectProtocol?
     private var localizationObserver: NSObjectProtocol?
@@ -30,7 +30,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var suppressQuitConfirmationUntil: Date?
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
-        if lineyIsRunningTests() {
+        if aiyuTermIsRunningTests() {
             return
         }
 
@@ -41,7 +41,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             options.dsn = "https://d2856035f52ef60d4ae74f88e0194793@o4510180697636864.ingest.us.sentry.io/4511085450297344"
             
             // version marker
-            options.releaseName = "liney-\(releaseVersion)"
+            options.releaseName = "aiyuterm-\(releaseVersion)"
             print("release name : \(options.releaseName ?? "<null>")")
             
             // no need to debug
@@ -61,10 +61,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         SentrySDK.metrics.count(key: "app.launch", value: 1)
         
         Task { @MainActor in
-            let desktopApplication = LineyDesktopApplication()
+            let desktopApplication = AiyuTermDesktopApplication()
             self.desktopApplication = desktopApplication
             appSettingsObserver = NotificationCenter.default.addObserver(
-                forName: .lineyAppSettingsDidChange,
+                forName: .aiyuTermAppSettingsDidChange,
                 object: nil,
                 queue: .main
             ) { [weak self] notification in
@@ -78,7 +78,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 }
             }
             localizationObserver = NotificationCenter.default.addObserver(
-                forName: .lineyLocalizationDidChange,
+                forName: .aiyuTermLocalizationDidChange,
                 object: nil,
                 queue: .main
             ) { [weak self] _ in
@@ -113,9 +113,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         guard Thread.isMainThread else { return true }
         return MainActor.assumeIsolated {
-            lineyShouldTerminateAfterLastWindowClosed(
+            aiyuTermShouldTerminateAfterLastWindowClosed(
                 hotKeyWindowEnabled: desktopApplication?.isHotKeyWindowEnabled ?? false,
-                isRunningTests: lineyIsRunningTests()
+                isRunningTests: aiyuTermIsRunningTests()
             )
         }
     }
@@ -131,7 +131,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             }
 
             let needsConfirmQuit = desktopApplication?.needsConfirmQuit ?? false
-            let shouldConfirm = lineyShouldConfirmTermination(
+            let shouldConfirm = aiyuTermShouldConfirmTermination(
                 confirmQuitWhenCommandsRunning: desktopApplication?.confirmQuitWhenCommandsRunning ?? true,
                 needsConfirmQuit: needsConfirmQuit
             )
@@ -141,13 +141,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 desktopApplication?.quitConfirmationSessionCount ?? 0,
                 needsConfirmQuit ? 1 : 0
             )
-            let copy = lineyQuitConfirmationCopy(quitConfirmationSessionCount: sessionCount)
+            let copy = aiyuTermQuitConfirmationCopy(quitConfirmationSessionCount: sessionCount)
             let alert = NSAlert()
             alert.alertStyle = .warning
             alert.messageText = copy.title
             alert.informativeText = copy.message
-            alert.addButton(withTitle: lineyLocalizedAppString("app.quit.confirm"))
-            alert.addButton(withTitle: lineyLocalizedAppString("app.quit.cancel"))
+            alert.addButton(withTitle: aiyuTermLocalizedAppString("app.quit.confirm"))
+            alert.addButton(withTitle: aiyuTermLocalizedAppString("app.quit.cancel"))
             NSApp.activate(ignoringOtherApps: true)
             isPresentingQuitConfirmation = true
             defer { isPresentingQuitConfirmation = false }
@@ -165,7 +165,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         guard Thread.isMainThread else { return false }
         return MainActor.assumeIsolated {
-            guard lineyShouldReopenMainWindow(hasVisibleWindows: flag) else { return false }
+            guard aiyuTermShouldReopenMainWindow(hasVisibleWindows: flag) else { return false }
             desktopApplication?.reopenMainWindow()
             return true
         }
@@ -242,12 +242,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             return false
         }
 
-        if let match = lineyShortcutMatch(for: event, in: desktopApplication.currentAppSettings) {
+        if let match = aiyuTermShortcutMatch(for: event, in: desktopApplication.currentAppSettings) {
             performShortcutAction(match.action, tabNumber: match.tabNumber ?? 0)
             return true
         }
 
-        if let preset = lineyQuickCommandMatch(for: event, in: desktopApplication.currentAppSettings) {
+        if let preset = aiyuTermQuickCommandMatch(for: event, in: desktopApplication.currentAppSettings) {
             desktopApplication.insertQuickCommand(preset)
             return true
         }
@@ -272,7 +272,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     @MainActor
     func shouldDispatchGhosttySplitAction(_ direction: ghostty_action_split_direction_e) -> Bool {
         guard let desktopApplication else { return true }
-        return lineyGhosttyShouldDispatchWorkspaceSplitAction(
+        return aiyuTermGhosttyShouldDispatchWorkspaceSplitAction(
             direction,
             settings: desktopApplication.currentAppSettings
         )
@@ -351,13 +351,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
     }
 
-    private func shortcutAction(for menuItem: NSMenuItem) -> LineyShortcutAction? {
+    private func shortcutAction(for menuItem: NSMenuItem) -> AiyuTermShortcutAction? {
         guard let rawValue = menuItem.representedObject as? String else { return nil }
-        return LineyShortcutAction(rawValue: rawValue)
+        return AiyuTermShortcutAction(rawValue: rawValue)
     }
 
     @MainActor
-    private func performShortcutAction(_ shortcutAction: LineyShortcutAction, tabNumber: Int) {
+    private func performShortcutAction(_ shortcutAction: AiyuTermShortcutAction, tabNumber: Int) {
         switch shortcutAction {
         case .hideApp:
             NSApp.hide(nil)
@@ -488,7 +488,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
            !bundleName.isEmpty {
             return bundleName
         }
-        return "Liney"
+        return "AiyuTerm"
     }
 
     @MainActor
@@ -509,13 +509,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
         switch (shortVersion?.isEmpty == false ? shortVersion : nil, buildVersion?.isEmpty == false ? buildVersion : nil) {
         case let (shortVersion?, buildVersion?) where shortVersion != buildVersion:
-            return lineyLocalizedAppFormat("app.about.version.versionBuildFormat", shortVersion, buildVersion)
+            return aiyuTermLocalizedAppFormat("app.about.version.versionBuildFormat", shortVersion, buildVersion)
         case let (shortVersion?, _):
-            return lineyLocalizedAppFormat("app.about.version.versionOnlyFormat", shortVersion)
+            return aiyuTermLocalizedAppFormat("app.about.version.versionOnlyFormat", shortVersion)
         case let (_, buildVersion?):
-            return lineyLocalizedAppFormat("app.about.version.buildOnlyFormat", buildVersion)
+            return aiyuTermLocalizedAppFormat("app.about.version.buildOnlyFormat", buildVersion)
         default:
-            return lineyLocalizedAppString("app.about.version.default")
+            return aiyuTermLocalizedAppString("app.about.version.default")
         }
     }
 
@@ -552,18 +552,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         ]
 
         let credits = NSMutableAttributedString(
-            string: "\(lineyLocalizedAppString("app.about.description"))\n\n",
+            string: "\(aiyuTermLocalizedAppString("app.about.description"))\n\n",
             attributes: baseAttributes
         )
         credits.append(
             NSAttributedString(
-                string: "\(lineyLocalizedAppFormat("app.about.websiteFormat", websiteURL.absoluteString))\n",
+                string: "\(aiyuTermLocalizedAppFormat("app.about.websiteFormat", websiteURL.absoluteString))\n",
                 attributes: linkAttributes.merging([.link: websiteURL]) { _, newValue in newValue }
             )
         )
         credits.append(
             NSAttributedString(
-                string: lineyLocalizedAppFormat("app.about.githubFormat", repositoryURL.absoluteString),
+                string: aiyuTermLocalizedAppFormat("app.about.githubFormat", repositoryURL.absoluteString),
                 attributes: linkAttributes.merging([.link: repositoryURL]) { _, newValue in newValue }
             )
         )
@@ -571,29 +571,29 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 }
 
-func lineyIsRunningTests(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
+func aiyuTermIsRunningTests(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
     environment["XCTestConfigurationFilePath"] != nil
 }
 
-func lineyShouldTerminateAfterLastWindowClosed(
+func aiyuTermShouldTerminateAfterLastWindowClosed(
     hotKeyWindowEnabled: Bool,
     isRunningTests: Bool = false
 ) -> Bool {
     !hotKeyWindowEnabled && !isRunningTests
 }
 
-func lineyShouldReopenMainWindow(hasVisibleWindows: Bool) -> Bool {
+func aiyuTermShouldReopenMainWindow(hasVisibleWindows: Bool) -> Bool {
     !hasVisibleWindows
 }
 
-func lineyShouldConfirmTermination(
+func aiyuTermShouldConfirmTermination(
     confirmQuitWhenCommandsRunning: Bool,
     needsConfirmQuit: Bool
 ) -> Bool {
     confirmQuitWhenCommandsRunning && needsConfirmQuit
 }
 
-func lineyQuitConfirmationCopy(quitConfirmationSessionCount: Int) -> (title: String, message: String) {
+func aiyuTermQuitConfirmationCopy(quitConfirmationSessionCount: Int) -> (title: String, message: String) {
     let count = max(quitConfirmationSessionCount, 0)
     let subject = count == 1
         ? String(

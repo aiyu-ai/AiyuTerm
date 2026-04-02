@@ -1,6 +1,6 @@
 //
-//  LineyGhosttyBootstrap.swift
-//  Liney
+//  AiyuTermGhosttyBootstrap.swift
+//  AiyuTerm
 //
 //  Author: everettjf
 //
@@ -8,9 +8,9 @@
 import Foundation
 import GhosttyKit
 
-enum LineyGhosttyBootstrap {
+enum AiyuTermGhosttyBootstrap {
     private static let initialized: Void = {
-        LineyGhosttyLogFilter.installIfNeeded()
+        AiyuTermGhosttyLogFilter.installIfNeeded()
         applyProcessEnvironment()
         let result = ghostty_init(UInt(CommandLine.argc), CommandLine.unsafeArgv)
         guard result == GHOSTTY_SUCCESS else {
@@ -28,7 +28,7 @@ enum LineyGhosttyBootstrap {
     }
 
     static func processEnvironment(
-        resourcePaths: LineyGhosttyResourcePaths = .bundleMain()
+        resourcePaths: AiyuTermGhosttyResourcePaths = .bundleMain()
     ) -> [String: String] {
         guard let ghosttyResourcesDirectory = resourcePaths.ghosttyResourcesDirectory else {
             return [:]
@@ -37,7 +37,7 @@ enum LineyGhosttyBootstrap {
     }
 
     private static func applyProcessEnvironment(
-        resourcePaths: LineyGhosttyResourcePaths = .bundleMain()
+        resourcePaths: AiyuTermGhosttyResourcePaths = .bundleMain()
     ) {
         for (key, value) in processEnvironment(resourcePaths: resourcePaths) {
             setenv(key, value, 1)
@@ -45,7 +45,7 @@ enum LineyGhosttyBootstrap {
     }
 }
 
-enum LineyGhosttyLogFilter {
+enum AiyuTermGhosttyLogFilter {
     private static let suppressedFragments = [
         "io_thread: mailbox message=start_synchronized_output",
         "debug(io_thread): mailbox message=start_synchronized_output",
@@ -115,7 +115,7 @@ enum LineyGhosttyLogFilter {
 
         private func forward(_ data: Data) {
             let line = String(data: data, encoding: .utf8) ?? ""
-            guard !LineyGhosttyLogFilter.shouldSuppress(line) else { return }
+            guard !AiyuTermGhosttyLogFilter.shouldSuppress(line) else { return }
             try? passthroughHandle.write(contentsOf: data)
         }
     }

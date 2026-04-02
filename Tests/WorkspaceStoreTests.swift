@@ -1,6 +1,6 @@
 //
 //  WorkspaceStoreTests.swift
-//  LineyTests
+//  AiyuTermTests
 //
 //  Author: everettjf
 //
@@ -105,7 +105,7 @@ final class WorkspaceStoreTests: XCTestCase {
 
         XCTAssertTrue(items.contains(where: { $0.id == "overview" && $0.title == "打开工作区概览" }))
         XCTAssertTrue(items.contains(where: { $0.id == "settings" && $0.title == "打开设置" }))
-        XCTAssertTrue(items.contains(where: { $0.id == "check-updates" && $0.title == "检查 Liney 更新" }))
+        XCTAssertTrue(items.contains(where: { $0.id == "check-updates" && $0.title == "检查 AiyuTerm 更新" }))
     }
 
     func testSleepPreventionStringsLocalizeForSimplifiedChinese() {
@@ -125,14 +125,14 @@ final class WorkspaceStoreTests: XCTestCase {
         XCTAssertEqual(SessionBackendKind.localShell.displayName, "本地 Shell")
         XCTAssertEqual(WorkspaceActivityKind.workflow.displayName, "工作流")
         XCTAssertEqual(GlobalCanvasColorGroup.slate.title, "石板灰")
-        XCTAssertEqual(WorkspaceTabStateRecord.makeDefault(for: "/tmp/liney").title, "标签页 1")
+        XCTAssertEqual(WorkspaceTabStateRecord.makeDefault(for: "/tmp/aiyuterm").title, "标签页 1")
     }
 
     func testWorktreeAndRemoteStringsLocalizeForSimplifiedChinese() throws {
         LocalizationManager.shared.updateSelectedLanguage(.simplifiedChinese)
 
         let worktree = WorktreeModel(
-            path: "/tmp/liney-main",
+            path: "/tmp/aiyuterm-main",
             branch: "main",
             head: "abc123",
             isMainWorktree: true,
@@ -155,7 +155,7 @@ final class WorkspaceStoreTests: XCTestCase {
             arguments: ["custom-agent", "review"]
         )
 
-        let selection = lineyRememberedAgentPresetSelection(
+        let selection = aiyuTermRememberedAgentPresetSelection(
             currentPresets: [customPreset],
             selectedPresetID: AgentPreset.claudeCode.id
         )
@@ -165,7 +165,7 @@ final class WorkspaceStoreTests: XCTestCase {
     }
 
     func testRememberedSSHPresetSelectionKeepsSelectedPresetPreferred() {
-        let selection = lineyRememberedSSHPresetSelection(
+        let selection = aiyuTermRememberedSSHPresetSelection(
             currentPresets: SSHPreset.builtInPresets,
             selectedPresetID: SSHPreset.yazi.id
         )
@@ -175,7 +175,7 @@ final class WorkspaceStoreTests: XCTestCase {
     }
 
     func testRememberedSSHPresetSelectionDoesNotFallbackToFirstPreset() {
-        let selection = lineyRememberedSSHPresetSelection(
+        let selection = aiyuTermRememberedSSHPresetSelection(
             currentPresets: SSHPreset.builtInPresets,
             selectedPresetID: UUID()
         )

@@ -1,6 +1,6 @@
 //
 //  SettingsSheet.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //
@@ -128,7 +128,7 @@ private enum SettingsSheetSection: String, CaseIterable, Identifiable {
     }
 }
 
-private enum LineyTerminalFontCatalog {
+private enum AiyuTermTerminalFontCatalog {
     static let defaultVisibleCount = 50
 
     private static let prioritizedFamilies = [
@@ -250,12 +250,12 @@ struct SettingsSheet: View {
     }
 
     private var allTerminalFontFamilies: [String] {
-        LineyTerminalFontCatalog.availableFamilies(limit: nil)
+        AiyuTermTerminalFontCatalog.availableFamilies(limit: nil)
     }
 
     private var terminalFontFamilies: [String] {
-        let availableFamilies = LineyTerminalFontCatalog.availableFamilies(
-            limit: LineyTerminalFontCatalog.defaultVisibleCount
+        let availableFamilies = AiyuTermTerminalFontCatalog.availableFamilies(
+            limit: AiyuTermTerminalFontCatalog.defaultVisibleCount
         )
         guard let selectedFamily = appSettings.terminalFontFamily,
               !selectedFamily.isEmpty,
@@ -281,7 +281,7 @@ struct SettingsSheet: View {
 
     private var terminalFontSummaryCount: Int {
         let query = terminalFontSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        return query.isEmpty ? min(allTerminalFontFamilies.count, LineyTerminalFontCatalog.defaultVisibleCount) : filteredTerminalFontFamilies.count
+        return query.isEmpty ? min(allTerminalFontFamilies.count, AiyuTermTerminalFontCatalog.defaultVisibleCount) : filteredTerminalFontFamilies.count
     }
 
     var body: some View {
@@ -351,7 +351,7 @@ struct SettingsSheet: View {
         .onChange(of: appSettings.appLanguage) { _, newLanguage in
             LocalizationManager.shared.updateSelectedLanguage(newLanguage)
         }
-        .onReceive(NotificationCenter.default.publisher(for: .lineyLocalizationDidChange)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .aiyuTermLocalizationDidChange)) { _ in
             localizationVersion += 1
         }
     }
@@ -706,7 +706,7 @@ struct SettingsSheet: View {
                     HStack {
                         Spacer()
                         Button(localized("settings.shortcuts.resetAll")) {
-                            LineyKeyboardShortcuts.resetAll(in: &appSettings)
+                            AiyuTermKeyboardShortcuts.resetAll(in: &appSettings)
                         }
                         .disabled(appSettings.keyboardShortcutOverrides.isEmpty)
                     }
@@ -714,20 +714,20 @@ struct SettingsSheet: View {
                 .padding(.top, 8)
             }
 
-            ForEach(LineyShortcutCategory.allCases) { category in
+            ForEach(AiyuTermShortcutCategory.allCases) { category in
                 GroupBox(category.title) {
                     VStack(alignment: .leading, spacing: 12) {
-                        ForEach(LineyShortcutAction.allCases.filter { $0.category == category }) { action in
+                        ForEach(AiyuTermShortcutAction.allCases.filter { $0.category == category }) { action in
                             ShortcutSettingsRow(
                                 action: action,
                                 shortcut: shortcutBinding(for: action),
-                                state: LineyKeyboardShortcuts.state(for: action, in: appSettings),
-                                onReset: { LineyKeyboardShortcuts.resetShortcut(for: action, in: &appSettings) },
+                                state: AiyuTermKeyboardShortcuts.state(for: action, in: appSettings),
+                                onReset: { AiyuTermKeyboardShortcuts.resetShortcut(for: action, in: &appSettings) },
                                 onDisable: {
                                     if action.defaultShortcut == nil {
-                                        LineyKeyboardShortcuts.resetShortcut(for: action, in: &appSettings)
+                                        AiyuTermKeyboardShortcuts.resetShortcut(for: action, in: &appSettings)
                                     } else {
-                                        LineyKeyboardShortcuts.disableShortcut(for: action, in: &appSettings)
+                                        AiyuTermKeyboardShortcuts.disableShortcut(for: action, in: &appSettings)
                                     }
                                 }
                             )
@@ -887,7 +887,7 @@ struct SettingsSheet: View {
                                     }
                                 }
                                 .padding(12)
-                                .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                             }
                         }
 
@@ -956,7 +956,7 @@ struct SettingsSheet: View {
                                     }
                                 }
                                 .padding(12)
-                                .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                             }
 
                             if !workspaceSettings.workflows.isEmpty {
@@ -1098,7 +1098,7 @@ struct SettingsSheet: View {
 
     private func save() {
         appSettings.autoRefreshIntervalSeconds = max(10, appSettings.autoRefreshIntervalSeconds)
-        appSettings.keyboardShortcutOverrides = LineyKeyboardShortcuts.normalizedOverrides(appSettings.keyboardShortcutOverrides)
+        appSettings.keyboardShortcutOverrides = AiyuTermKeyboardShortcuts.normalizedOverrides(appSettings.keyboardShortcutOverrides)
         store.updateAppSettings(appSettings)
 
         if let selectedWorkspaceID {
@@ -1180,7 +1180,7 @@ struct SettingsSheet: View {
             .lineLimit(2...5)
         }
         .padding(12)
-        .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     @ViewBuilder
@@ -1247,7 +1247,7 @@ struct SettingsSheet: View {
             .lineLimit(2...5)
         }
         .padding(12)
-        .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private func moveAgentPreset(from sourceIndex: Int, to destinationIndex: Int) {
@@ -1292,19 +1292,19 @@ struct SettingsSheet: View {
         }
     }
 
-    private func shortcutBinding(for action: LineyShortcutAction) -> Binding<StoredShortcut?> {
+    private func shortcutBinding(for action: AiyuTermShortcutAction) -> Binding<StoredShortcut?> {
         Binding(
-            get: { LineyKeyboardShortcuts.effectiveShortcut(for: action, in: appSettings) },
+            get: { AiyuTermKeyboardShortcuts.effectiveShortcut(for: action, in: appSettings) },
             set: { newShortcut in
                 guard let newShortcut else {
                     if action.defaultShortcut == nil {
-                        LineyKeyboardShortcuts.resetShortcut(for: action, in: &appSettings)
+                        AiyuTermKeyboardShortcuts.resetShortcut(for: action, in: &appSettings)
                     } else {
-                        LineyKeyboardShortcuts.disableShortcut(for: action, in: &appSettings)
+                        AiyuTermKeyboardShortcuts.disableShortcut(for: action, in: &appSettings)
                     }
                     return
                 }
-                LineyKeyboardShortcuts.setShortcut(newShortcut, for: action, in: &appSettings)
+                AiyuTermKeyboardShortcuts.setShortcut(newShortcut, for: action, in: &appSettings)
             }
         )
     }
@@ -1381,7 +1381,7 @@ private struct TerminalFontOptionRow: View {
     let onSelect: () -> Void
 
     private var previewFont: Font {
-        Font(LineyTerminalFontCatalog.previewFont(family: family, size: 12))
+        Font(AiyuTermTerminalFontCatalog.previewFont(family: family, size: 12))
     }
 
     var body: some View {
@@ -1392,7 +1392,7 @@ private struct TerminalFontOptionRow: View {
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.primary)
 
-                    Text("liney % git status --short")
+                    Text("aiyuterm % git status --short")
                         .font(previewFont)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -1407,7 +1407,7 @@ private struct TerminalFontOptionRow: View {
             .padding(.vertical, 10)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(isSelected ? Color.accentColor.opacity(0.12) : LineyTheme.subtleFill)
+                    .fill(isSelected ? Color.accentColor.opacity(0.12) : AiyuTermTheme.subtleFill)
             )
         }
         .buttonStyle(.plain)
@@ -1426,7 +1426,7 @@ private struct TerminalFontPreviewCard: View {
     let defaultSizeFormat: String
 
     private var previewFont: Font {
-        Font(LineyTerminalFontCatalog.previewFont(family: family, size: CGFloat(size)))
+        Font(AiyuTermTerminalFontCatalog.previewFont(family: family, size: CGFloat(size)))
     }
 
     private var activeFamilyLabel: String {
@@ -1461,10 +1461,10 @@ private struct TerminalFontPreviewCard: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Last login: Sat Mar 27 12:03 on ttys004")
                         .foregroundStyle(.secondary)
-                    Text("liney % ssh dev@example.com")
+                    Text("aiyuterm % ssh dev@example.com")
                         .foregroundStyle(.green)
                     Text("dev@example.com % git status --short")
-                    Text(" M Liney/UI/Sheets/SettingsSheet.swift")
+                    Text(" M AiyuTerm/UI/Sheets/SettingsSheet.swift")
                         .foregroundStyle(.orange)
                     Text("dev@example.com % echo \"0123456789 -> []{}()\"")
                     Text("0123456789 -> []{}()")
@@ -1599,7 +1599,7 @@ private struct WorkspaceSidebarAppearanceSection: View {
             }
         }
         .padding(12)
-        .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }
 
@@ -1683,9 +1683,9 @@ private struct SidebarIconEditorCard: View {
 }
 
 private struct ShortcutSettingsRow: View {
-    let action: LineyShortcutAction
+    let action: AiyuTermShortcutAction
     @Binding var shortcut: StoredShortcut?
-    let state: LineyKeyboardShortcutState
+    let state: AiyuTermKeyboardShortcutState
     let onReset: () -> Void
     let onDisable: () -> Void
 

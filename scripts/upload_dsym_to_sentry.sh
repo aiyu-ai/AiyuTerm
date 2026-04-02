@@ -2,12 +2,12 @@
 set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
-APP_NAME="${APP_NAME:-Liney}"
+APP_NAME="${APP_NAME:-AiyuTerm}"
 OUTPUT_DIR="${OUTPUT_DIR:-$ROOT_DIR/dist}"
 DSYM_PATH="${DSYM_PATH:-$OUTPUT_DIR/DerivedData/Build/Products/Release/$APP_NAME.app.dSYM}"
 SENTRY_CLI="${SENTRY_CLI:-sentry-cli}"
 SENTRY_ORG="${SENTRY_ORG:-xnu}"
-SENTRY_PROJECT="${SENTRY_PROJECT:-liney}"
+SENTRY_PROJECT="${SENTRY_PROJECT:-aiyuterm}"
 SENTRY_INCLUDE_SOURCES="${SENTRY_INCLUDE_SOURCES:-0}"
 
 usage() {
@@ -21,7 +21,7 @@ Required environment:
 Optional environment:
   SENTRY_AUTH_TOKEN      Auth token for sentry-cli.
   SENTRY_ORG             Sentry organization slug. Default: xnu.
-  SENTRY_PROJECT         Sentry project slug. Default: liney.
+  SENTRY_PROJECT         Sentry project slug. Default: aiyuterm.
   SENTRY_URL             Self-hosted Sentry base URL.
   SENTRY_CLI             sentry-cli binary path. Default: sentry-cli.
   SENTRY_INCLUDE_SOURCES Upload source bundles together with the dSYM when set to 1.

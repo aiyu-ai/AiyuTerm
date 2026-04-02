@@ -1,6 +1,6 @@
 //
 //  WorkspaceNotificationCenter.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //
@@ -29,7 +29,7 @@ final class WorkspaceNotificationCenter {
         content.sound = .default
 
         let request = UNNotificationRequest(
-            identifier: "com.liney.app.\(UUID().uuidString)",
+            identifier: "com.aiyuterm.app.\(UUID().uuidString)",
             content: content,
             trigger: nil
         )

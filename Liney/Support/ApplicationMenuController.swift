@@ -1,6 +1,6 @@
 //
 //  ApplicationMenuController.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //
@@ -13,7 +13,7 @@ final class ApplicationMenuController: NSObject {
     private let feedbackURL = URL(string: "https://github.com/everettjf/liney/issues/new")!
     private let repositoryURL = URL(string: "https://github.com/everettjf/liney")!
 
-    private var shortcutItemsByAction: [LineyShortcutAction: [NSMenuItem]] = [:]
+    private var shortcutItemsByAction: [AiyuTermShortcutAction: [NSMenuItem]] = [:]
 
     private func localized(_ key: String) -> String {
         LocalizationManager.shared.string(key)
@@ -180,11 +180,11 @@ final class ApplicationMenuController: NSObject {
     }
 
     func applySettings(_ settings: AppSettings) {
-        for action in LineyShortcutAction.allCases {
+        for action in AiyuTermShortcutAction.allCases {
             guard let items = shortcutItemsByAction[action] else { continue }
 
             if action == .selectTabByNumber {
-                let shortcut = LineyKeyboardShortcuts.effectiveShortcut(for: action, in: settings)
+                let shortcut = AiyuTermKeyboardShortcuts.effectiveShortcut(for: action, in: settings)
                 for item in items {
                     guard let shortcut else {
                         clearShortcut(on: item)
@@ -195,7 +195,7 @@ final class ApplicationMenuController: NSObject {
                 continue
             }
 
-            let shortcut = LineyKeyboardShortcuts.effectiveShortcut(for: action, in: settings)
+            let shortcut = AiyuTermKeyboardShortcuts.effectiveShortcut(for: action, in: settings)
             for item in items {
                 guard let shortcut else {
                     clearShortcut(on: item)
@@ -231,7 +231,7 @@ final class ApplicationMenuController: NSObject {
     @discardableResult
     private func addShortcutItem(
         title: String,
-        shortcutAction: LineyShortcutAction,
+        shortcutAction: AiyuTermShortcutAction,
         to menu: NSMenu,
         target: AnyObject
     ) -> NSMenuItem {

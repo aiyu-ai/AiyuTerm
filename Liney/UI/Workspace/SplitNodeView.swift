@@ -1,6 +1,6 @@
 //
 //  SplitNodeView.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //
@@ -100,7 +100,7 @@ private struct SplitDivider: View {
                 .fill(Color.white.opacity(0.08))
                 .frame(width: axis == .vertical ? 4 : 44, height: axis == .horizontal ? 4 : 44)
             Capsule(style: .continuous)
-                .fill(LineyTheme.strongBorder)
+                .fill(AiyuTermTheme.strongBorder)
                 .frame(width: axis == .vertical ? 2 : 16, height: axis == .horizontal ? 2 : 16)
         }
         .contentShape(Rectangle())

@@ -1,6 +1,6 @@
 //
 //  CommandPaletteTests.swift
-//  LineyTests
+//  AiyuTermTests
 //
 //  Author: everettjf
 //

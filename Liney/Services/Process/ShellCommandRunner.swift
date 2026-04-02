@@ -1,6 +1,6 @@
 //
 //  ShellCommandRunner.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //

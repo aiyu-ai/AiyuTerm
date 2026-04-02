@@ -1,6 +1,6 @@
 //
 //  PaneLayout.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //

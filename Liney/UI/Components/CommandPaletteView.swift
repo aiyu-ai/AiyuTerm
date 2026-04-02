@@ -1,6 +1,6 @@
 //
 //  CommandPaletteView.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //
@@ -31,7 +31,7 @@ struct CommandPaletteView: View {
             VStack(spacing: 0) {
                 HStack(spacing: 10) {
                     Image(systemName: "command")
-                        .foregroundStyle(LineyTheme.mutedText)
+                        .foregroundStyle(AiyuTermTheme.mutedText)
                     TextField(
                         localized("main.commandPalette.searchPlaceholder"),
                         text: Binding(
@@ -50,14 +50,14 @@ struct CommandPaletteView: View {
                 .padding(.vertical, 14)
 
                 Divider()
-                    .overlay(LineyTheme.border)
+                    .overlay(AiyuTermTheme.border)
 
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         if store.commandPaletteSections.allSatisfy({ $0.items.isEmpty }) {
                             Text(localized("main.commandPalette.noMatches"))
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(LineyTheme.mutedText)
+                                .foregroundStyle(AiyuTermTheme.mutedText)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(16)
                         } else {
@@ -65,7 +65,7 @@ struct CommandPaletteView: View {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(section.group.title.uppercased())
                                         .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(LineyTheme.mutedText)
+                                        .foregroundStyle(AiyuTermTheme.mutedText)
                                         .padding(.horizontal, 8)
 
                                     ForEach(section.items) { item in
@@ -88,10 +88,10 @@ struct CommandPaletteView: View {
                 .frame(maxHeight: 380)
             }
             .frame(width: 640)
-            .background(LineyTheme.canvasBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(AiyuTermTheme.canvasBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(LineyTheme.border, lineWidth: 1)
+                    .stroke(AiyuTermTheme.border, lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.28), radius: 30, y: 14)
             .scaleEffect(uiScale)
@@ -125,12 +125,12 @@ private struct CommandPaletteRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.title)
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(LineyTheme.tertiaryText)
+                    .foregroundStyle(AiyuTermTheme.tertiaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if let subtitle = item.subtitle, !subtitle.isEmpty {
                     Text(subtitle)
                         .font(.system(size: 10, weight: .medium, design: .monospaced))
-                        .foregroundStyle(LineyTheme.mutedText)
+                        .foregroundStyle(AiyuTermTheme.mutedText)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
@@ -139,7 +139,7 @@ private struct CommandPaletteRow: View {
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(LineyTheme.subtleFill.opacity(isSelected || isHovering ? 1 : 0))
+                .fill(AiyuTermTheme.subtleFill.opacity(isSelected || isHovering ? 1 : 0))
         )
         .onHover { isHovering = $0 }
     }
@@ -166,19 +166,19 @@ private struct CommandPaletteRow: View {
     private var iconColor: Color {
         switch item.group {
         case .recent:
-            return LineyTheme.mutedText
+            return AiyuTermTheme.mutedText
         case .navigation:
-            return LineyTheme.localAccent
+            return AiyuTermTheme.localAccent
         case .sessions:
-            return LineyTheme.accent
+            return AiyuTermTheme.accent
         case .automation:
-            return LineyTheme.warning
+            return AiyuTermTheme.warning
         case .releases:
-            return LineyTheme.danger
+            return AiyuTermTheme.danger
         case .workflows:
-            return LineyTheme.success
+            return AiyuTermTheme.success
         case .github:
-            return LineyTheme.accent
+            return AiyuTermTheme.accent
         }
     }
 }

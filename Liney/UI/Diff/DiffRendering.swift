@@ -1,6 +1,6 @@
 //
 //  DiffRendering.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //

@@ -1,6 +1,6 @@
 //
 //  WorkspaceDetailView.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //
@@ -35,7 +35,7 @@ struct WorkspaceDetailView: View {
             }
             .padding(6)
         }
-        .background(LineyTheme.appBackground)
+        .background(AiyuTermTheme.appBackground)
     }
 }
 
@@ -61,7 +61,7 @@ private struct WorkspaceSessionDetailView: View {
                     VStack(spacing: 14) {
                         Image(systemName: "terminal")
                             .font(.system(size: 22, weight: .semibold))
-                            .foregroundStyle(LineyTheme.mutedText)
+                            .foregroundStyle(AiyuTermTheme.mutedText)
                         Text(localized("main.workspace.noTerminalOpen"))
                             .font(.system(size: 14, weight: .semibold))
                         Button(localized("main.workspace.newSession")) {
@@ -331,10 +331,10 @@ private struct WorkspaceTabButton: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text("\(paneCount)")
                     .font(.system(size: 9, weight: .bold, design: .monospaced))
-                    .foregroundStyle(isSelected ? LineyTheme.accent : LineyTheme.mutedText)
+                    .foregroundStyle(isSelected ? AiyuTermTheme.accent : AiyuTermTheme.mutedText)
                     .padding(.horizontal, 5)
                     .padding(.vertical, 2)
-                    .background(LineyTheme.subtleFill, in: Capsule())
+                    .background(AiyuTermTheme.subtleFill, in: Capsule())
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.leading, 12)
@@ -371,7 +371,7 @@ private struct WorkspaceTabButton: View {
         .overlay(alignment: .topLeading) {
             if isSelected {
                 Capsule()
-                    .fill(LineyTheme.accent)
+                    .fill(AiyuTermTheme.accent)
                     .frame(width: 26, height: 2.5)
                     .padding(.top, 1)
                     .padding(.leading, 12)
@@ -430,11 +430,11 @@ private struct WorkspaceTabRenameField: View {
             .frame(width: WorkspaceTabSizing.width(for: title.isEmpty ? localization.string("main.tab.namePlaceholder") : title, paneCount: 1, canClose: false))
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(LineyTheme.panelRaised)
+                    .fill(AiyuTermTheme.panelRaised)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(LineyTheme.accent.opacity(0.45), lineWidth: 1)
+                    .stroke(AiyuTermTheme.accent.opacity(0.45), lineWidth: 1)
             )
             .focused(isFocused)
             .onSubmit(onCommit)
@@ -447,22 +447,22 @@ private struct WorkspaceTabRenameField: View {
 private extension WorkspaceTabButton {
     var backgroundFill: Color {
         if isSelected {
-            return LineyTheme.panelRaised
+            return AiyuTermTheme.panelRaised
         }
         if isHovered {
-            return LineyTheme.paneHeaderBackground.opacity(0.98)
+            return AiyuTermTheme.paneHeaderBackground.opacity(0.98)
         }
-        return LineyTheme.paneHeaderBackground.opacity(0.78)
+        return AiyuTermTheme.paneHeaderBackground.opacity(0.78)
     }
 
     var borderColor: Color {
         if isSelected {
-            return LineyTheme.accent.opacity(0.42)
+            return AiyuTermTheme.accent.opacity(0.42)
         }
         if isHovered {
-            return LineyTheme.strongBorder
+            return AiyuTermTheme.strongBorder
         }
-        return LineyTheme.border
+        return AiyuTermTheme.border
     }
 
     var labelColor: Color {
@@ -470,14 +470,14 @@ private extension WorkspaceTabButton {
             return .white
         }
         if isHovered {
-            return LineyTheme.tertiaryText
+            return AiyuTermTheme.tertiaryText
         }
-        return LineyTheme.secondaryText
+        return AiyuTermTheme.secondaryText
     }
 
     var shadowColor: Color {
         if isSelected {
-            return LineyTheme.accent.opacity(0.16)
+            return AiyuTermTheme.accent.opacity(0.16)
         }
         if isHovered {
             return Color.black.opacity(0.18)
@@ -494,10 +494,10 @@ private struct WorkspaceTabInsertionMarker: View {
             Color.clear
 
             Capsule()
-                .fill(LineyTheme.accent)
+                .fill(AiyuTermTheme.accent)
                 .frame(width: isActive ? 4 : 2, height: isActive ? 24 : 14)
                 .opacity(isActive ? 1 : 0)
-                .shadow(color: LineyTheme.accent.opacity(0.28), radius: 8, y: 1)
+                .shadow(color: AiyuTermTheme.accent.opacity(0.28), radius: 8, y: 1)
         }
         .frame(width: 18, height: 38)
         .animation(.easeInOut(duration: 0.12), value: isActive)
@@ -525,12 +525,12 @@ private struct WorkspaceTabCloseButtonStyle: ButtonStyle {
         if configurationStateIsHot {
             return .white
         }
-        return isSelected ? LineyTheme.secondaryText : LineyTheme.mutedText
+        return isSelected ? AiyuTermTheme.secondaryText : AiyuTermTheme.mutedText
     }
 
     private var backgroundColor: Color {
         if configurationStateIsHot {
-            return LineyTheme.danger.opacity(0.78)
+            return AiyuTermTheme.danger.opacity(0.78)
         }
         if isSelected || isTabHovered {
             return Color.white.opacity(0.06)
@@ -585,19 +585,19 @@ private struct WorkspaceBackdrop: View {
         GeometryReader { proxy in
             ZStack {
                 LinearGradient(
-                    colors: [LineyTheme.appBackground, LineyTheme.canvasBackground],
+                    colors: [AiyuTermTheme.appBackground, AiyuTermTheme.canvasBackground],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
 
                 Circle()
-                    .fill(LineyTheme.backdropBlue)
+                    .fill(AiyuTermTheme.backdropBlue)
                     .frame(width: proxy.size.width * 0.34)
                     .blur(radius: 76)
                     .offset(x: proxy.size.width * 0.24, y: -proxy.size.height * 0.18)
 
                 Circle()
-                    .fill(LineyTheme.backdropTeal)
+                    .fill(AiyuTermTheme.backdropTeal)
                     .frame(width: proxy.size.width * 0.24)
                     .blur(radius: 64)
                     .offset(x: -proxy.size.width * 0.2, y: proxy.size.height * 0.25)

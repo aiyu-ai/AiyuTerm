@@ -1,6 +1,6 @@
 //
 //  ShellSessionTests.swift
-//  LineyTests
+//  AiyuTermTests
 //
 //  Author: everettjf
 //
@@ -21,14 +21,14 @@ final class ShellSessionTests: XCTestCase {
         try? FileManager.default.createDirectory(at: terminfo, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: resourcesRoot) }
 
-        let prepared = LineyGhosttyShellIntegration.prepare(
+        let prepared = AiyuTermGhosttyShellIntegration.prepare(
             command: TerminalCommandDefinition(
                 executablePath: "/bin/zsh",
                 arguments: ["-l"],
                 displayName: "zsh"
             ),
             environment: ["ZDOTDIR": "/tmp/original-zdotdir"],
-            resourcePaths: LineyGhosttyResourcePaths(resourceRootURL: resourcesRoot)
+            resourcePaths: AiyuTermGhosttyResourcePaths(resourceRootURL: resourcesRoot)
         )
 
         XCTAssertEqual(prepared.command.executablePath, "/bin/zsh")
@@ -52,14 +52,14 @@ final class ShellSessionTests: XCTestCase {
         try? FileManager.default.createDirectory(at: terminfo, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: resourcesRoot) }
 
-        let prepared = LineyGhosttyShellIntegration.prepare(
+        let prepared = AiyuTermGhosttyShellIntegration.prepare(
             command: TerminalCommandDefinition(
                 executablePath: "/opt/homebrew/bin/fish",
                 arguments: ["-l"],
                 displayName: "fish"
             ),
             environment: ["XDG_DATA_DIRS": "/usr/local/share:/usr/share"],
-            resourcePaths: LineyGhosttyResourcePaths(resourceRootURL: resourcesRoot)
+            resourcePaths: AiyuTermGhosttyResourcePaths(resourceRootURL: resourcesRoot)
         )
 
         XCTAssertEqual(prepared.environment["TERM"], "xterm-ghostty")
@@ -81,7 +81,7 @@ final class ShellSessionTests: XCTestCase {
     }
 
     func testGhosttyShellIntegrationPreservesExistingShellFeaturesWhileAppendingSSHEnv() {
-        let prepared = LineyGhosttyShellIntegration.prepare(
+        let prepared = AiyuTermGhosttyShellIntegration.prepare(
             command: TerminalCommandDefinition(
                 executablePath: "/bin/zsh",
                 arguments: ["-l"],
@@ -90,7 +90,7 @@ final class ShellSessionTests: XCTestCase {
             environment: [
                 "GHOSTTY_SHELL_FEATURES": "cursor,title",
             ],
-            resourcePaths: LineyGhosttyResourcePaths(
+            resourcePaths: AiyuTermGhosttyResourcePaths(
                 ghosttyResourcesDirectory: "/tmp/ghostty",
                 terminfoDirectory: "/tmp/terminfo"
             )
@@ -100,14 +100,14 @@ final class ShellSessionTests: XCTestCase {
     }
 
     func testGhosttyBootstrapPublishesBundledResourcesDirectory() {
-        let environment = LineyGhosttyBootstrap.processEnvironment(
-            resourcePaths: LineyGhosttyResourcePaths(
-                ghosttyResourcesDirectory: "/tmp/liney-ghostty",
-                terminfoDirectory: "/tmp/liney-terminfo"
+        let environment = AiyuTermGhosttyBootstrap.processEnvironment(
+            resourcePaths: AiyuTermGhosttyResourcePaths(
+                ghosttyResourcesDirectory: "/tmp/aiyuterm-ghostty",
+                terminfoDirectory: "/tmp/aiyuterm-terminfo"
             )
         )
 
-        XCTAssertEqual(environment["GHOSTTY_RESOURCES_DIR"], "/tmp/liney-ghostty")
+        XCTAssertEqual(environment["GHOSTTY_RESOURCES_DIR"], "/tmp/aiyuterm-ghostty")
     }
 
     func testLocalShellDefaultUsesResolvedLoginShellPath() {
@@ -125,7 +125,7 @@ final class ShellSessionTests: XCTestCase {
 
     func testAugmentedExecutablePathPrependsCommonUserAndHomebrewDirectories() {
         XCTAssertEqual(
-            lineyAugmentedExecutablePath("/usr/bin:/bin", homeDirectory: "/Users/tester"),
+            aiyuTermAugmentedExecutablePath("/usr/bin:/bin", homeDirectory: "/Users/tester"),
             [
                 "/Users/tester/.local/bin",
                 "/Users/tester/.cargo/bin",
@@ -182,7 +182,7 @@ final class ShellSessionTests: XCTestCase {
         )
 
         let launchConfiguration = configuration.makeLaunchConfiguration(
-            preferredWorkingDirectory: "/tmp/liney-ssh",
+            preferredWorkingDirectory: "/tmp/aiyuterm-ssh",
             baseEnvironment: [:]
         )
 
@@ -222,7 +222,7 @@ final class ShellSessionTests: XCTestCase {
         )
 
         let launchConfiguration = configuration.makeLaunchConfiguration(
-            preferredWorkingDirectory: "/tmp/liney-ssh",
+            preferredWorkingDirectory: "/tmp/aiyuterm-ssh",
             baseEnvironment: [:]
         )
 
@@ -243,7 +243,7 @@ final class ShellSessionTests: XCTestCase {
         await MainActor.run {
             let surface = FakeManagedTerminalSurfaceController()
             let session = ShellSession(
-                snapshot: PaneSnapshot.makeDefault(cwd: "/tmp/liney-shell-session"),
+                snapshot: PaneSnapshot.makeDefault(cwd: "/tmp/aiyuterm-shell-session"),
                 surfaceController: surface
             )
 
@@ -281,7 +281,7 @@ final class ShellSessionTests: XCTestCase {
         await MainActor.run {
             let surface = FakeManagedTerminalSurfaceController()
             let session = ShellSession(
-                snapshot: PaneSnapshot.makeDefault(cwd: "/tmp/liney-shell-session-restart"),
+                snapshot: PaneSnapshot.makeDefault(cwd: "/tmp/aiyuterm-shell-session-restart"),
                 surfaceController: surface
             )
 
@@ -302,7 +302,7 @@ final class ShellSessionTests: XCTestCase {
         await MainActor.run {
             let surface = FakeManagedTerminalSurfaceController()
             let session = ShellSession(
-                snapshot: PaneSnapshot.makeDefault(cwd: "/tmp/liney-shell-session-command-state"),
+                snapshot: PaneSnapshot.makeDefault(cwd: "/tmp/aiyuterm-shell-session-command-state"),
                 surfaceController: surface
             )
 
@@ -325,7 +325,7 @@ final class ShellSessionTests: XCTestCase {
             let surface = FakeManagedTerminalSurfaceController()
             var reapedConfigurations: [TerminalLaunchConfiguration] = []
             let session = ShellSession(
-                snapshot: PaneSnapshot.makeDefault(cwd: "/tmp/liney-shell-session-reap-restart"),
+                snapshot: PaneSnapshot.makeDefault(cwd: "/tmp/aiyuterm-shell-session-reap-restart"),
                 surfaceController: surface,
                 processReaper: { reapedConfigurations.append($0) }
             )
@@ -348,7 +348,7 @@ final class ShellSessionTests: XCTestCase {
             let surface = FakeManagedTerminalSurfaceController()
             var reapedConfigurations: [TerminalLaunchConfiguration] = []
             let session = ShellSession(
-                snapshot: PaneSnapshot.makeDefault(cwd: "/tmp/liney-shell-session-reap-terminate"),
+                snapshot: PaneSnapshot.makeDefault(cwd: "/tmp/aiyuterm-shell-session-reap-terminate"),
                 surfaceController: surface,
                 processReaper: { reapedConfigurations.append($0) }
             )
@@ -370,7 +370,7 @@ final class ShellSessionTests: XCTestCase {
         await MainActor.run {
             let surface = FakeManagedTerminalSurfaceController()
             let session = ShellSession(
-                snapshot: PaneSnapshot.makeDefault(cwd: "/tmp/liney-shell-session-send-command"),
+                snapshot: PaneSnapshot.makeDefault(cwd: "/tmp/aiyuterm-shell-session-send-command"),
                 surfaceController: surface
             )
 
@@ -385,7 +385,7 @@ final class ShellSessionTests: XCTestCase {
         await MainActor.run {
             let surface = FakeManagedTerminalSurfaceController()
             let session = ShellSession(
-                snapshot: PaneSnapshot.makeDefault(cwd: "/tmp/liney-shell-session-insert-text"),
+                snapshot: PaneSnapshot.makeDefault(cwd: "/tmp/aiyuterm-shell-session-insert-text"),
                 surfaceController: surface
             )
 
@@ -399,7 +399,7 @@ final class ShellSessionTests: XCTestCase {
         await MainActor.run {
             let surface = FakeManagedTerminalSurfaceController()
             let session = ShellSession(
-                snapshot: PaneSnapshot.makeDefault(cwd: "/tmp/liney-shell-session-tmux"),
+                snapshot: PaneSnapshot.makeDefault(cwd: "/tmp/aiyuterm-shell-session-tmux"),
                 surfaceController: surface
             )
 
@@ -456,7 +456,7 @@ final class ShellSessionTests: XCTestCase {
 
         let launchConfiguration = TerminalLaunchConfiguration(
             workingDirectory: "/tmp",
-            environment: [LineyTerminalManagedProcessReaper.metadataPathEnvironmentKey: metadataPath],
+            environment: [AiyuTermTerminalManagedProcessReaper.metadataPathEnvironmentKey: metadataPath],
             command: TerminalCommandDefinition(
                 executablePath: "/bin/zsh",
                 arguments: ["-l"],
@@ -466,7 +466,7 @@ final class ShellSessionTests: XCTestCase {
         )
 
         var signals: [(pid: Int32, signal: Int32)] = []
-        let processControl = LineyTerminalManagedProcessControl(
+        let processControl = AiyuTermTerminalManagedProcessControl(
             processGroupID: { pid in
                 XCTAssertEqual(pid, 321)
                 return 777
@@ -477,7 +477,7 @@ final class ShellSessionTests: XCTestCase {
             }
         )
 
-        LineyTerminalManagedProcessReaper.reap(
+        AiyuTermTerminalManagedProcessReaper.reap(
             launchConfiguration,
             fileManager: .default,
             processControl: processControl

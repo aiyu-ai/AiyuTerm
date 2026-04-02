@@ -1,6 +1,6 @@
 //
 //  WorkspaceTabsTests.swift
-//  LineyTests
+//  AiyuTermTests
 //
 //  Author: everettjf
 //
@@ -10,11 +10,11 @@ import XCTest
 
 final class WorkspaceTabsTests: XCTestCase {
     func testUpsertingAndSelectingTabsKeepsLegacyFieldsInSync() throws {
-        var state = WorktreeSessionStateRecord.makeDefault(for: "/tmp/liney-tabs")
+        var state = WorktreeSessionStateRecord.makeDefault(for: "/tmp/aiyuterm-tabs")
         let firstTab = try XCTUnwrap(state.selectedTab)
 
         let secondTab = WorkspaceTabStateRecord.makeDefault(
-            for: "/tmp/liney-tabs",
+            for: "/tmp/aiyuterm-tabs",
             title: "Tab 2"
         )
         state.upsertTab(secondTab, selecting: true)
@@ -31,10 +31,10 @@ final class WorkspaceTabsTests: XCTestCase {
     }
 
     func testRemovingSelectedTabFallsBackToRemainingTab() throws {
-        let firstTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/liney-tabs-close", title: "Tab 1")
-        let secondTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/liney-tabs-close", title: "Tab 2")
+        let firstTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/aiyuterm-tabs-close", title: "Tab 1")
+        let secondTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/aiyuterm-tabs-close", title: "Tab 2")
         var state = WorktreeSessionStateRecord(
-            worktreePath: "/tmp/liney-tabs-close",
+            worktreePath: "/tmp/aiyuterm-tabs-close",
             layout: firstTab.layout,
             panes: firstTab.panes,
             focusedPaneID: firstTab.focusedPaneID,
@@ -50,9 +50,9 @@ final class WorkspaceTabsTests: XCTestCase {
     }
 
     func testRenamingTabMarksItAsManualAndPreservesSelection() throws {
-        var state = WorktreeSessionStateRecord.makeDefault(for: "/tmp/liney-tabs-rename")
+        var state = WorktreeSessionStateRecord.makeDefault(for: "/tmp/aiyuterm-tabs-rename")
         let secondTab = WorkspaceTabStateRecord.makeDefault(
-            for: "/tmp/liney-tabs-rename",
+            for: "/tmp/aiyuterm-tabs-rename",
             title: "Tab 2"
         )
         state.upsertTab(secondTab, selecting: false)
@@ -66,11 +66,11 @@ final class WorkspaceTabsTests: XCTestCase {
     }
 
     func testMovingTabReordersWithoutChangingSelection() throws {
-        let firstTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/liney-tabs-move", title: "Tab 1")
-        let secondTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/liney-tabs-move", title: "Tab 2")
-        let thirdTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/liney-tabs-move", title: "Tab 3")
+        let firstTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/aiyuterm-tabs-move", title: "Tab 1")
+        let secondTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/aiyuterm-tabs-move", title: "Tab 2")
+        let thirdTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/aiyuterm-tabs-move", title: "Tab 3")
         var state = WorktreeSessionStateRecord(
-            worktreePath: "/tmp/liney-tabs-move",
+            worktreePath: "/tmp/aiyuterm-tabs-move",
             layout: firstTab.layout,
             panes: firstTab.panes,
             focusedPaneID: firstTab.focusedPaneID,
@@ -88,12 +88,12 @@ final class WorkspaceTabsTests: XCTestCase {
     }
 
     func testMovingTabToExplicitIndexSupportsDragReordering() throws {
-        let firstTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/liney-tabs-drop", title: "Tab 1")
-        let secondTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/liney-tabs-drop", title: "Tab 2")
-        let thirdTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/liney-tabs-drop", title: "Tab 3")
-        let fourthTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/liney-tabs-drop", title: "Tab 4")
+        let firstTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/aiyuterm-tabs-drop", title: "Tab 1")
+        let secondTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/aiyuterm-tabs-drop", title: "Tab 2")
+        let thirdTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/aiyuterm-tabs-drop", title: "Tab 3")
+        let fourthTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/aiyuterm-tabs-drop", title: "Tab 4")
         var state = WorktreeSessionStateRecord(
-            worktreePath: "/tmp/liney-tabs-drop",
+            worktreePath: "/tmp/aiyuterm-tabs-drop",
             layout: firstTab.layout,
             panes: firstTab.panes,
             focusedPaneID: firstTab.focusedPaneID,
@@ -111,11 +111,11 @@ final class WorkspaceTabsTests: XCTestCase {
     }
 
     func testTabIDLookupByIndexReturnsExpectedTabAndRejectsOutOfRangeValues() throws {
-        let firstTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/liney-tabs-select", title: "Tab 1")
-        let secondTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/liney-tabs-select", title: "Tab 2")
-        let thirdTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/liney-tabs-select", title: "Tab 3")
+        let firstTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/aiyuterm-tabs-select", title: "Tab 1")
+        let secondTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/aiyuterm-tabs-select", title: "Tab 2")
+        let thirdTab = WorkspaceTabStateRecord.makeDefault(for: "/tmp/aiyuterm-tabs-select", title: "Tab 3")
         let state = WorktreeSessionStateRecord(
-            worktreePath: "/tmp/liney-tabs-select",
+            worktreePath: "/tmp/aiyuterm-tabs-select",
             layout: firstTab.layout,
             panes: firstTab.panes,
             focusedPaneID: firstTab.focusedPaneID,

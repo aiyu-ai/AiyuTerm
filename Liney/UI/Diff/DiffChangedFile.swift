@@ -1,6 +1,6 @@
 //
 //  DiffChangedFile.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //

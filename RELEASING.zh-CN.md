@@ -1,4 +1,4 @@
-# 发布 Liney
+# 发布 AiyuTerm
 
 [English Version](./RELEASING.md)
 
@@ -7,7 +7,7 @@
 - Git 工作区干净，没有未提交改动
 - 已完成 `gh auth login`
 - 如果需要签名或公证，机器上已具备 Developer ID 签名身份
-- 已在本地导出 Sparkle 私钥，通常位于 `~/.liney_release/sparkle_private_key`
+- 已在本地导出 Sparkle 私钥，通常位于 `.aiyuterm_release/sparkle_private_key`
 - 已安装用于 Ghostty 发布构建的 Metal 工具链：
 
 ```bash
@@ -37,9 +37,9 @@ scripts/bump_version.sh set 1.2.0
 scripts/setup_sparkle_keys.sh
 ```
 
-该脚本会打印公钥，并将私钥导出到 `~/.liney_release/sparkle_private_key`。公钥必须与应用 target 中的 `SUPublicEDKey` 一致。
+该脚本会打印公钥，并将私钥导出到 `.aiyuterm_release/sparkle_private_key`。公钥必须与应用 target 中的 `SUPublicEDKey` 一致。
 
-由于 Liney 是开源项目，不要将这个私钥存放在主仓库中。推荐使用以下任一方式保存：
+由于 AiyuTerm 是开源项目，不要将这个私钥存放在主仓库中。推荐使用以下任一方式保存：
 
 - 私有的发布基础设施仓库
 - CI/CD 密钥管理服务
@@ -64,7 +64,7 @@ scripts/build_macos_app.sh
 建议每台发布机器执行一次：
 
 ```bash
-xcrun notarytool store-credentials liney-notarytool \
+xcrun notarytool store-credentials aiyuterm-notarytool \
   --apple-id "you@example.com" \
   --team-id "TEAMID" \
   --password "xxxx-xxxx-xxxx-xxxx" \
@@ -81,7 +81,7 @@ scripts/sign_macos.sh \
 
 可通过以下任一方式提供公证凭据：
 
-- `NOTARYTOOL_PROFILE=liney-notarytool`（推荐）
+- `NOTARYTOOL_PROFILE=aiyuterm-notarytool`（推荐）
 - `APPLE_ID`、`APPLE_TEAM_ID` 和 `APPLE_APP_SPECIFIC_PASSWORD`
 
 ## 发布
@@ -90,16 +90,16 @@ scripts/sign_macos.sh \
 ./deploy.sh
 ```
 
-如果当前钥匙串中存在 `liney-notarytool` 配置，`scripts/sign_macos.sh` 和 `./deploy.sh` 会自动使用它。只有在你想覆盖这个默认值时，才需要显式传入 `NOTARYTOOL_PROFILE`。
+如果当前钥匙串中存在 `aiyuterm-notarytool` 配置，`scripts/sign_macos.sh` 和 `./deploy.sh` 会自动使用它。只有在你想覆盖这个默认值时，才需要显式传入 `NOTARYTOOL_PROFILE`。
 
 默认行为如下：
 
 - 将 `MARKETING_VERSION` 做一次 patch 递增，并将 `CURRENT_PROJECT_VERSION` 加 1，除非设置 `SKIP_BUMP=1`
 - 构建并签名通用版发布 DMG
-- 将 `Liney.app.dSYM` 归档到 `dist/dSYMs/Liney-<version>.app.dSYM`
-- 打包 `dist/dSYMs/Liney-<version>.app.dSYM.zip`
-- 使用默认目标 `xnu/liney` 将 `Liney.app.dSYM` 上传到 Sentry
-- 为 Sparkle 打包 `Liney-<version>.app.zip`
+- 将 `AiyuTerm.app.dSYM` 归档到 `dist/dSYMs/AiyuTerm-<version>.app.dSYM`
+- 打包 `dist/dSYMs/AiyuTerm-<version>.app.dSYM.zip`
+- 使用默认目标 `xnu/aiyuterm` 将 `AiyuTerm.app.dSYM` 上传到 Sentry
+- 为 Sparkle 打包 `AiyuTerm-<version>.app.zip`
 - 除非设置 `SKIP_NOTARIZE=1`，否则执行公证
 - 更新仓库中的 `appcast.xml`
 - 创建或更新 GitHub Release，并附带 dSYM zip
@@ -120,7 +120,7 @@ scripts/sign_macos.sh \
 可选的 Sentry 环境变量：
 
 - `SENTRY_ORG`：覆盖默认组织 `xnu`
-- `SENTRY_PROJECT`：覆盖默认项目 `liney`
+- `SENTRY_PROJECT`：覆盖默认项目 `aiyuterm`
 - `SENTRY_URL`：用于自托管 Sentry
 - `SENTRY_INCLUDE_SOURCES=1`：在上传 dSYM 的同时上传源码 bundle
 

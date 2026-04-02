@@ -1,6 +1,6 @@
 //
 //  DeskView.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //
@@ -28,7 +28,7 @@ struct DeskView: View {
     }
 
     private var accentColor: Color {
-        workspace.supportsRepositoryFeatures ? LineyTheme.accent : LineyTheme.localAccent
+        workspace.supportsRepositoryFeatures ? AiyuTermTheme.accent : AiyuTermTheme.localAccent
     }
 
     var body: some View {
@@ -37,10 +37,10 @@ struct DeskView: View {
             deskSurface
             deskFooter
         }
-        .background(LineyTheme.panelBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(AiyuTermTheme.panelBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(isHovering ? accentColor.opacity(0.5) : LineyTheme.border, lineWidth: 1)
+                .strokeBorder(isHovering ? accentColor.opacity(0.5) : AiyuTermTheme.border, lineWidth: 1)
         )
         .onHover { isHovering = $0 }
         .onTapGesture(perform: onTap)
@@ -64,11 +64,11 @@ struct DeskView: View {
             if workspace.supportsRepositoryFeatures {
                 HStack(spacing: 3) {
                     Circle()
-                        .fill(workspace.hasUncommittedChanges ? LineyTheme.warning : LineyTheme.success)
+                        .fill(workspace.hasUncommittedChanges ? AiyuTermTheme.warning : AiyuTermTheme.success)
                         .frame(width: 6, height: 6)
                     Text(workspace.currentBranch)
                         .font(.system(size: 9, weight: .medium, design: .monospaced))
-                        .foregroundStyle(LineyTheme.mutedText)
+                        .foregroundStyle(AiyuTermTheme.mutedText)
                         .lineLimit(1)
                 }
             }
@@ -76,7 +76,7 @@ struct DeskView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .overlay(alignment: .bottom) {
-            Rectangle().fill(LineyTheme.border).frame(height: 1)
+            Rectangle().fill(AiyuTermTheme.border).frame(height: 1)
         }
     }
 
@@ -97,10 +97,10 @@ struct DeskView: View {
         VStack(spacing: 6) {
             Image(systemName: "desktopcomputer")
                 .font(.system(size: 20))
-                .foregroundStyle(LineyTheme.mutedText.opacity(0.4))
+                .foregroundStyle(AiyuTermTheme.mutedText.opacity(0.4))
             Text(localized("desk.empty.noActiveSessions"))
                 .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(LineyTheme.mutedText.opacity(0.5))
+                .foregroundStyle(AiyuTermTheme.mutedText.opacity(0.5))
         }
         .frame(maxWidth: .infinity, minHeight: 60)
     }
@@ -123,19 +123,19 @@ struct DeskView: View {
             if worktreeCount > 1 {
                 Label(localizedFormat("desk.footer.worktreesFormat", worktreeCount), systemImage: "arrow.triangle.branch")
                     .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(LineyTheme.mutedText)
+                    .foregroundStyle(AiyuTermTheme.mutedText)
             }
 
             Spacer()
 
             Text(localizedFormat("desk.footer.sessionsFormat", sessions.count, sessions.count == 1 ? "" : localized("desk.footer.sessionsPluralSuffix")))
                 .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(LineyTheme.mutedText)
+                .foregroundStyle(AiyuTermTheme.mutedText)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .overlay(alignment: .top) {
-            Rectangle().fill(LineyTheme.border).frame(height: 1)
+            Rectangle().fill(AiyuTermTheme.border).frame(height: 1)
         }
     }
 }
@@ -158,7 +158,7 @@ private struct MonitorView: View {
             // Monitor screen
             ZStack {
                 RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .fill(isActive ? LineyTheme.paneBackground : Color.black.opacity(0.3))
+                    .fill(isActive ? AiyuTermTheme.paneBackground : Color.black.opacity(0.3))
 
                 if isActive {
                     // Scanline effect
@@ -176,7 +176,7 @@ private struct MonitorView: View {
 
                 // Power LED
                 Circle()
-                    .fill(isActive ? LineyTheme.success : LineyTheme.danger.opacity(0.4))
+                    .fill(isActive ? AiyuTermTheme.success : AiyuTermTheme.danger.opacity(0.4))
                     .frame(width: 3, height: 3)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                     .padding(3)
@@ -195,11 +195,11 @@ private struct MonitorView: View {
             // Label
             Text(session.title.isEmpty ? localized("desk.monitor.defaultShell") : session.title)
                 .font(.system(size: 7, weight: .medium, design: .monospaced))
-                .foregroundStyle(LineyTheme.mutedText)
+                .foregroundStyle(AiyuTermTheme.mutedText)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity)
         }
         .padding(4)
-        .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 }

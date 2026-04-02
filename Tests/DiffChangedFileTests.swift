@@ -1,6 +1,6 @@
 //
 //  DiffChangedFileTests.swift
-//  LineyTests
+//  AiyuTermTests
 //
 //  Author: everettjf
 //

@@ -1,6 +1,6 @@
 //
 //  AppLanguage.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //

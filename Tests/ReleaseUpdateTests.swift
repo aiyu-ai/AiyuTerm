@@ -1,6 +1,6 @@
 //
 //  ReleaseUpdateTests.swift
-//  LineyTests
+//  AiyuTermTests
 //
 //  Author: everettjf
 //
@@ -10,19 +10,19 @@ import XCTest
 
 final class ReleaseUpdateTests: XCTestCase {
     func testNewWindowShortcutDefaultsToCommandN() {
-        XCTAssertEqual(LineyShortcutAction.newWindow.category, .window)
-        XCTAssertEqual(LineyShortcutAction.newWindow.title, "New Window")
+        XCTAssertEqual(AiyuTermShortcutAction.newWindow.category, .window)
+        XCTAssertEqual(AiyuTermShortcutAction.newWindow.title, "New Window")
         XCTAssertEqual(
-            LineyShortcutAction.newWindow.defaultShortcut,
+            AiyuTermShortcutAction.newWindow.defaultShortcut,
             StoredShortcut(key: "n", command: true, shift: false, option: false, control: false)
         )
     }
 
     func testWindowLifecycleHelpersRespectHotKeyAndVisibility() {
-        XCTAssertTrue(lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: false, isRunningTests: false))
-        XCTAssertFalse(lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: true, isRunningTests: false))
-        XCTAssertTrue(lineyShouldReopenMainWindow(hasVisibleWindows: false))
-        XCTAssertFalse(lineyShouldReopenMainWindow(hasVisibleWindows: true))
+        XCTAssertTrue(aiyuTermShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: false, isRunningTests: false))
+        XCTAssertFalse(aiyuTermShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: true, isRunningTests: false))
+        XCTAssertTrue(aiyuTermShouldReopenMainWindow(hasVisibleWindows: false))
+        XCTAssertFalse(aiyuTermShouldReopenMainWindow(hasVisibleWindows: true))
     }
 
     func testAppUpdaterDefaultsToStableAppcastFeed() {

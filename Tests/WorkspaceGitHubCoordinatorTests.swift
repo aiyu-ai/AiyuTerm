@@ -1,6 +1,6 @@
 //
 //  WorkspaceGitHubCoordinatorTests.swift
-//  LineyTests
+//  AiyuTermTests
 //
 //  Author: everettjf
 //

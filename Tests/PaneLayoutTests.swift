@@ -1,6 +1,6 @@
 //
 //  PaneLayoutTests.swift
-//  LineyTests
+//  AiyuTermTests
 //
 //  Author: everettjf
 //

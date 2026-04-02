@@ -1,6 +1,6 @@
 //
-//  LineyGhosttyController.swift
-//  Liney
+//  AiyuTermGhosttyController.swift
+//  AiyuTerm
 //
 //  Author: everettjf
 //
@@ -12,7 +12,7 @@ import GhosttyKit
 import UserNotifications
 
 @MainActor
-final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
+final class AiyuTermGhosttyController: ManagedTerminalSessionSurfaceController {
     var resolvedEngine: TerminalEngineKind { .libghosttyPreferred }
     var view: NSView { terminalView }
     var onResize: ((Int, Int) -> Void)?
@@ -37,14 +37,14 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
 
     var currentSurface: ghostty_surface_t? { terminalView.surface }
 
-    private let terminalView: LineyGhosttySurfaceView
+    private let terminalView: AiyuTermGhosttySurfaceView
     private var launchConfiguration: TerminalLaunchConfiguration
     private var latestTitle: String
 
     init(launchConfiguration: TerminalLaunchConfiguration) {
         self.launchConfiguration = launchConfiguration
         self.latestTitle = launchConfiguration.command.displayName
-        self.terminalView = LineyGhosttySurfaceView()
+        self.terminalView = AiyuTermGhosttySurfaceView()
         terminalView.translatesAutoresizingMaskIntoConstraints = false
         terminalView.controller = self
     }
@@ -59,7 +59,7 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
 
     func beginSearch(initialText: String?) {
         if let initialText, !initialText.isEmpty {
-            _ = terminalView.performBindingAction(lineyGhosttySearchBindingAction(for: initialText))
+            _ = terminalView.performBindingAction(aiyuTermGhosttySearchBindingAction(for: initialText))
             return
         }
 
@@ -67,15 +67,15 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
     }
 
     func updateSearch(_ text: String) {
-        _ = terminalView.performBindingAction(lineyGhosttySearchBindingAction(for: text))
+        _ = terminalView.performBindingAction(aiyuTermGhosttySearchBindingAction(for: text))
     }
 
     func searchNext() {
-        _ = terminalView.performBindingAction(lineyGhosttySearchNavigationBindingAction(.next))
+        _ = terminalView.performBindingAction(aiyuTermGhosttySearchNavigationBindingAction(.next))
     }
 
     func searchPrevious() {
-        _ = terminalView.performBindingAction(lineyGhosttySearchNavigationBindingAction(.previous))
+        _ = terminalView.performBindingAction(aiyuTermGhosttySearchNavigationBindingAction(.previous))
     }
 
     func endSearch() {
@@ -106,17 +106,17 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
     }
 
     func startManagedSessionIfNeeded() {
-        terminalView.ensureSurface(runtime: LineyGhosttyRuntime.shared, launchConfiguration: launchConfiguration)
+        terminalView.ensureSurface(runtime: AiyuTermGhosttyRuntime.shared, launchConfiguration: launchConfiguration)
         terminalView.syncSurfaceMetrics()
     }
 
     func restartManagedSession() {
-        terminalView.recreateSurface(runtime: LineyGhosttyRuntime.shared, launchConfiguration: launchConfiguration)
+        terminalView.recreateSurface(runtime: AiyuTermGhosttyRuntime.shared, launchConfiguration: launchConfiguration)
         terminalView.syncSurfaceMetrics()
     }
 
     func terminateManagedSession() {
-        LineyGhosttySecureInputManager.shared.release(controller: self)
+        AiyuTermGhosttySecureInputManager.shared.release(controller: self)
         terminalView.destroySurface()
     }
 
@@ -187,7 +187,7 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
         case GHOSTTY_ACTION_DESKTOP_NOTIFICATION:
             let title = action.action.desktop_notification.title.map(String.init(cString:)) ?? "Terminal"
             let body = action.action.desktop_notification.body.map(String.init(cString:))
-            LineyGhosttyNotificationCenter.shared.deliver(title: title, body: body)
+            AiyuTermGhosttyNotificationCenter.shared.deliver(title: title, body: body)
             onDesktopNotification?(title, body)
             return true
 
@@ -216,7 +216,7 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
             return true
 
         case GHOSTTY_ACTION_SCROLLBAR:
-            terminalView.scrollbarState = LineyGhosttyScrollbarState(action.action.scrollbar)
+            terminalView.scrollbarState = AiyuTermGhosttyScrollbarState(action.action.scrollbar)
             return true
 
         case GHOSTTY_ACTION_READONLY:
@@ -224,7 +224,7 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
             return true
 
         case GHOSTTY_ACTION_SECURE_INPUT:
-            LineyGhosttySecureInputManager.shared.apply(action.action.secure_input, controller: self)
+            AiyuTermGhosttySecureInputManager.shared.apply(action.action.secure_input, controller: self)
             return true
 
         case GHOSTTY_ACTION_COPY_TITLE_TO_CLIPBOARD:
@@ -273,7 +273,7 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
     }
 
     func handleSurfaceClose(processAlive: Bool) {
-        guard lineyGhosttyShouldReportProcessExitForSurfaceClose(processAlive: processAlive) else { return }
+        guard aiyuTermGhosttyShouldReportProcessExitForSurfaceClose(processAlive: processAlive) else { return }
         handleManagedProcessExit(exitCode: nil)
     }
 
@@ -281,7 +281,7 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
         // Ghostty reports shell command completion separately from shell process
         // exit. Treating this as a process exit causes normal commands such as
         // `clear` to close panes or tabs unexpectedly.
-        _ = lineyGhosttyShouldReportProcessExitForCommandFinished(action)
+        _ = aiyuTermGhosttyShouldReportProcessExitForCommandFinished(action)
     }
 
     func completeClipboardRequest(_ text: String, state: UnsafeMutableRawPointer?, confirmed: Bool) {
@@ -323,12 +323,12 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
 
     func confirmClipboardWrite(text: String, location: ghostty_clipboard_e) {
         confirmClipboardWrite(
-            items: [LineyGhosttyClipboardPayload(mimeType: "text/plain;charset=utf-8", text: text)],
+            items: [AiyuTermGhosttyClipboardPayload(mimeType: "text/plain;charset=utf-8", text: text)],
             location: location
         )
     }
 
-    func confirmClipboardWrite(items: [LineyGhosttyClipboardPayload], location: ghostty_clipboard_e) {
+    func confirmClipboardWrite(items: [AiyuTermGhosttyClipboardPayload], location: ghostty_clipboard_e) {
         let alert = NSAlert()
         alert.messageText = "Allow terminal to update the clipboard?"
         alert.informativeText = location == GHOSTTY_CLIPBOARD_SELECTION
@@ -341,11 +341,11 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
         alert.accessoryView = ClipboardPreviewView(text: previewText)
 
         guard alert.runModal() == .alertFirstButtonReturn,
-              let pasteboard = lineyGhosttyPasteboard(for: location) else {
+              let pasteboard = aiyuTermGhosttyPasteboard(for: location) else {
             return
         }
 
-        lineyGhosttyWriteClipboard(items, to: pasteboard)
+        aiyuTermGhosttyWriteClipboard(items, to: pasteboard)
     }
 
     fileprivate func handleSurfaceResize(cols: Int, rows: Int) {
@@ -416,24 +416,24 @@ final class LineyGhosttyController: ManagedTerminalSessionSurfaceController {
     }
 }
 
-func lineyGhosttyShouldReportProcessExitForSurfaceClose(processAlive: Bool) -> Bool {
+func aiyuTermGhosttyShouldReportProcessExitForSurfaceClose(processAlive: Bool) -> Bool {
     !processAlive
 }
 
-func lineyGhosttyShouldReportProcessExitForCommandFinished(
+func aiyuTermGhosttyShouldReportProcessExitForCommandFinished(
     _: ghostty_action_command_finished_s
 ) -> Bool {
     false
 }
 
-func lineyGhosttyShouldRefreshSurface(
-    after previous: LineyGhosttySurfaceMetricsSignature?,
-    next: LineyGhosttySurfaceMetricsSignature
+func aiyuTermGhosttyShouldRefreshSurface(
+    after previous: AiyuTermGhosttySurfaceMetricsSignature?,
+    next: AiyuTermGhosttySurfaceMetricsSignature
 ) -> Bool {
     previous != next
 }
 
-private struct LineyGhosttyScrollbarState {
+private struct AiyuTermGhosttyScrollbarState {
     let total: UInt64
     let offset: UInt64
     let length: UInt64
@@ -445,7 +445,7 @@ private struct LineyGhosttyScrollbarState {
     }
 }
 
-struct LineyGhosttySurfaceMetricsSignature: Equatable {
+struct AiyuTermGhosttySurfaceMetricsSignature: Equatable {
     let width: Int
     let height: Int
     let scale: Double
@@ -453,15 +453,15 @@ struct LineyGhosttySurfaceMetricsSignature: Equatable {
 }
 
 @MainActor
-private final class LineyGhosttySurfaceView: NSView {
-    weak var controller: LineyGhosttyController?
+private final class AiyuTermGhosttySurfaceView: NSView {
+    weak var controller: AiyuTermGhosttyController?
 
     var surface: ghostty_surface_t?
     var rendererHealthy = true {
         didSet { controller?.notifyStatusChange() }
     }
     var hoveredLink: String?
-    var scrollbarState: LineyGhosttyScrollbarState? {
+    var scrollbarState: AiyuTermGhosttyScrollbarState? {
         didSet { controller?.notifyStatusChange() }
     }
     var searchNeedle: String? {
@@ -496,8 +496,8 @@ private final class LineyGhosttySurfaceView: NSView {
     private var markedSelectionRange = NSRange(location: NSNotFound, length: 0)
     private var currentTextInputEventKeyCode: UInt16?
     private var currentTextInputHadMarkedText = false
-    private var lastMetricsSignature: LineyGhosttySurfaceMetricsSignature?
-    private let imeDebugLogger = LineyGhosttyIMEDebugLogger.shared
+    private var lastMetricsSignature: AiyuTermGhosttySurfaceMetricsSignature?
+    private let imeDebugLogger = AiyuTermGhosttyIMEDebugLogger.shared
 
     override var acceptsFirstResponder: Bool { true }
 
@@ -515,12 +515,12 @@ private final class LineyGhosttySurfaceView: NSView {
         insertText(insertString, replacementRange: NSRange(location: NSNotFound, length: 0))
     }
 
-    func ensureSurface(runtime: LineyGhosttyRuntime, launchConfiguration: TerminalLaunchConfiguration) {
+    func ensureSurface(runtime: AiyuTermGhosttyRuntime, launchConfiguration: TerminalLaunchConfiguration) {
         guard surface == nil else { return }
         createSurface(runtime: runtime, launchConfiguration: launchConfiguration)
     }
 
-    func recreateSurface(runtime: LineyGhosttyRuntime, launchConfiguration: TerminalLaunchConfiguration) {
+    func recreateSurface(runtime: AiyuTermGhosttyRuntime, launchConfiguration: TerminalLaunchConfiguration) {
         destroySurface()
         createSurface(runtime: runtime, launchConfiguration: launchConfiguration)
     }
@@ -535,7 +535,7 @@ private final class LineyGhosttySurfaceView: NSView {
         guard let surface else { return }
         self.surface = nil
         if let surfaceUserdataToken {
-            LineyGhosttyControllerRegistry.shared.unregister(surfaceUserdataToken)
+            AiyuTermGhosttyControllerRegistry.shared.unregister(surfaceUserdataToken)
             self.surfaceUserdataToken = nil
         }
         ghostty_surface_set_focus(surface, false)
@@ -681,13 +681,13 @@ private final class LineyGhosttySurfaceView: NSView {
             ghostty_surface_set_display_id(surface, displayID)
         }
 
-        let nextSignature = LineyGhosttySurfaceMetricsSignature(
+        let nextSignature = AiyuTermGhosttySurfaceMetricsSignature(
             width: width,
             height: height,
             scale: scale,
             displayID: displayID
         )
-        if lineyGhosttyShouldRefreshSurface(after: lastMetricsSignature, next: nextSignature) {
+        if aiyuTermGhosttyShouldRefreshSurface(after: lastMetricsSignature, next: nextSignature) {
             ghostty_surface_refresh(surface)
         }
         lastMetricsSignature = nextSignature
@@ -863,7 +863,7 @@ private final class LineyGhosttySurfaceView: NSView {
             return
         }
 
-        if let escapeSequence = lineyGhosttySSHWordNavigationEscapeSequence(
+        if let escapeSequence = aiyuTermGhosttySSHWordNavigationEscapeSequence(
             keyCode: event.keyCode,
             modifierFlags: event.modifierFlags,
             backendConfiguration: backendConfiguration
@@ -902,7 +902,7 @@ private final class LineyGhosttySurfaceView: NSView {
             keyTextAccumulator = nil
             let hasMarkedTextAfterInterpretation = hasMarkedText()
 
-            if LineyGhosttyTextInputRouting.shouldSyncPreeditAfterTextInterpretation(
+            if AiyuTermGhosttyTextInputRouting.shouldSyncPreeditAfterTextInterpretation(
                 hadMarkedTextBeforeInterpretation: hadMarkedTextBeforeInterpretation,
                 hasMarkedTextAfterInterpretation: hasMarkedTextAfterInterpretation
             ) {
@@ -926,7 +926,7 @@ private final class LineyGhosttySurfaceView: NSView {
                 return
             }
 
-            if !LineyGhosttyTextInputRouting.shouldDispatchRawKeyFallbackAfterTextInterpretation(
+            if !AiyuTermGhosttyTextInputRouting.shouldDispatchRawKeyFallbackAfterTextInterpretation(
                 accumulatedText: accumulated,
                 handledTextInputCommand: handledTextInputCommand,
                 hadMarkedTextBeforeInterpretation: hadMarkedTextBeforeInterpretation,
@@ -936,7 +936,7 @@ private final class LineyGhosttySurfaceView: NSView {
                 return
             }
 
-            let composing = LineyGhosttyTextInputRouting.shouldMarkRawKeyEventAsComposing(
+            let composing = AiyuTermGhosttyTextInputRouting.shouldMarkRawKeyEventAsComposing(
                 hadMarkedTextBeforeInterpretation: hadMarkedTextBeforeInterpretation,
                 hasMarkedTextAfterInterpretation: hasMarkedTextAfterInterpretation
             )
@@ -967,7 +967,7 @@ private final class LineyGhosttySurfaceView: NSView {
         }
         guard let surface else { return false }
 
-        if let escapeSequence = lineyGhosttySSHWordNavigationEscapeSequence(
+        if let escapeSequence = aiyuTermGhosttySSHWordNavigationEscapeSequence(
             keyCode: event.keyCode,
             modifierFlags: event.modifierFlags,
             backendConfiguration: backendConfiguration
@@ -987,7 +987,7 @@ private final class LineyGhosttySurfaceView: NSView {
         }
 
         let flags = bindingFlags(for: event, on: surface)
-        if lineyGhosttyShouldAttemptMenuKeyEquivalent(
+        if aiyuTermGhosttyShouldAttemptMenuKeyEquivalent(
             bindingFlags: flags,
             modifierFlags: event.modifierFlags,
             hasActiveKeySequence: !activeKeySequence.isEmpty,
@@ -1052,7 +1052,7 @@ private final class LineyGhosttySurfaceView: NSView {
             return
         }
 
-        guard let action = lineyGhosttyModifierAction(
+        guard let action = aiyuTermGhosttyModifierAction(
             keyCode: event.keyCode,
             modifierFlags: event.modifierFlags
         ) else {
@@ -1071,7 +1071,7 @@ private final class LineyGhosttySurfaceView: NSView {
             return
         }
 
-        switch LineyGhosttyTextInputCommandAction.resolve(selector: selector, hasMarkedText: hasMarkedText()) {
+        switch AiyuTermGhosttyTextInputCommandAction.resolve(selector: selector, hasMarkedText: hasMarkedText()) {
         case .scrollToTop:
             handledTextInputCommand = true
             _ = performBindingAction("scroll_to_top")
@@ -1114,11 +1114,11 @@ private final class LineyGhosttySurfaceView: NSView {
     }
 
     @IBAction func findNext(_ sender: Any?) {
-        _ = performBindingAction(lineyGhosttySearchNavigationBindingAction(.next))
+        _ = performBindingAction(aiyuTermGhosttySearchNavigationBindingAction(.next))
     }
 
     @IBAction func findPrevious(_ sender: Any?) {
-        _ = performBindingAction(lineyGhosttySearchNavigationBindingAction(.previous))
+        _ = performBindingAction(aiyuTermGhosttySearchNavigationBindingAction(.previous))
     }
 
     @IBAction func findHide(_ sender: Any?) {
@@ -1126,7 +1126,7 @@ private final class LineyGhosttySurfaceView: NSView {
     }
 
     @IBAction override func performTextFinderAction(_ sender: Any?) {
-        guard let action = lineyTextFinderAction(for: sender) else {
+        guard let action = aiyuTermTextFinderAction(for: sender) else {
             super.performTextFinderAction(sender)
             return
         }
@@ -1189,16 +1189,16 @@ private final class LineyGhosttySurfaceView: NSView {
     }
 
     func readSelection(from pboard: NSPasteboard) -> Bool {
-        guard let string = pboard.lineyGhosttyBestString else { return false }
+        guard let string = pboard.aiyuTermGhosttyBestString else { return false }
         sendText(string)
         return true
     }
 
-    private func createSurface(runtime: LineyGhosttyRuntime, launchConfiguration: TerminalLaunchConfiguration) {
+    private func createSurface(runtime: AiyuTermGhosttyRuntime, launchConfiguration: TerminalLaunchConfiguration) {
         guard let controller else { return }
         backendConfiguration = launchConfiguration.backendConfiguration
 
-        let surfaceUserdataToken = LineyGhosttyControllerRegistry.shared.register(controller)
+        let surfaceUserdataToken = AiyuTermGhosttyControllerRegistry.shared.register(controller)
         let surface = withSurfaceConfig(
             userdata: surfaceUserdataToken,
             launchConfiguration: launchConfiguration
@@ -1207,7 +1207,7 @@ private final class LineyGhosttySurfaceView: NSView {
         }
 
         guard let surface else {
-            LineyGhosttyControllerRegistry.shared.unregister(surfaceUserdataToken)
+            AiyuTermGhosttyControllerRegistry.shared.unregister(surfaceUserdataToken)
             return
         }
         self.surface = surface
@@ -1405,7 +1405,7 @@ private final class LineyGhosttySurfaceView: NSView {
     }
 
     private func shouldPreferRawKeyEvent(for event: NSEvent) -> Bool {
-        LineyGhosttyTextInputRouting.shouldPreferRawKeyEvent(
+        AiyuTermGhosttyTextInputRouting.shouldPreferRawKeyEvent(
             keyCode: event.keyCode,
             modifierFlags: event.modifierFlags
         )
@@ -1441,7 +1441,7 @@ private final class LineyGhosttySurfaceView: NSView {
 
     private func deleteBackwardInMarkedText() {
         guard markedText.length > 0 else { return }
-        var state = LineyGhosttyMarkedTextState(text: markedText.string, selectedRange: markedSelectionRange)
+        var state = AiyuTermGhosttyMarkedTextState(text: markedText.string, selectedRange: markedSelectionRange)
         state.deleteBackward()
         markedText.mutableString.setString(state.text)
         markedSelectionRange = state.selectedRange
@@ -1568,7 +1568,7 @@ private final class LineyGhosttySurfaceView: NSView {
             forClasses: [NSURL.self],
             options: [.urlReadingFileURLsOnly: true]
         ) as? [URL] ?? []
-        return lineyTerminalDropText(fileURLs: fileURLs, plainText: pasteboard.string(forType: .string))
+        return aiyuTermTerminalDropText(fileURLs: fileURLs, plainText: pasteboard.string(forType: .string))
     }
 
     private func invalidateCursorRectsForCurrentWindow() {
@@ -1610,31 +1610,31 @@ private final class LineyGhosttySurfaceView: NSView {
 }
 
 @MainActor
-final class LineyGhosttyControllerRegistry {
-    static let shared = LineyGhosttyControllerRegistry()
+final class AiyuTermGhosttyControllerRegistry {
+    static let shared = AiyuTermGhosttyControllerRegistry()
 
     private final class WeakBox {
-        weak var controller: LineyGhosttyController?
+        weak var controller: AiyuTermGhosttyController?
 
-        init(controller: LineyGhosttyController) {
+        init(controller: AiyuTermGhosttyController) {
             self.controller = controller
         }
     }
 
     private var controllers: [UInt: WeakBox] = [:]
 
-    func register(_ controller: LineyGhosttyController) -> UnsafeMutableRawPointer {
+    func register(_ controller: AiyuTermGhosttyController) -> UnsafeMutableRawPointer {
         let token = UnsafeMutableRawPointer.allocate(byteCount: 1, alignment: 1)
         controllers[UInt(bitPattern: token)] = WeakBox(controller: controller)
         return token
     }
 
-    func controller(for address: UInt?) -> LineyGhosttyController? {
+    func controller(for address: UInt?) -> AiyuTermGhosttyController? {
         guard let address else { return nil }
         return controllers[address]?.controller
     }
 
-    func liveControllers() -> [LineyGhosttyController] {
+    func liveControllers() -> [AiyuTermGhosttyController] {
         controllers = controllers.filter { $0.value.controller != nil }
         return controllers.values.compactMap(\.controller)
     }
@@ -1645,11 +1645,11 @@ final class LineyGhosttyControllerRegistry {
     }
 }
 
-extension LineyGhosttySurfaceView: @preconcurrency NSServicesMenuRequestor {}
+extension AiyuTermGhosttySurfaceView: @preconcurrency NSServicesMenuRequestor {}
 
-extension LineyGhosttySurfaceView: NSMenuItemValidation {}
+extension AiyuTermGhosttySurfaceView: NSMenuItemValidation {}
 
-extension LineyGhosttySurfaceView: @preconcurrency NSTextInputClient {
+extension AiyuTermGhosttySurfaceView: @preconcurrency NSTextInputClient {
     func hasMarkedText() -> Bool {
         markedText.length > 0
     }
@@ -1663,7 +1663,7 @@ extension LineyGhosttySurfaceView: @preconcurrency NSTextInputClient {
         guard markedText.length > 0 else {
             return NSRange(location: NSNotFound, length: 0)
         }
-        return LineyGhosttyMarkedTextState.clamp(markedSelectionRange, textLength: markedText.length)
+        return AiyuTermGhosttyMarkedTextState.clamp(markedSelectionRange, textLength: markedText.length)
     }
 
     func setMarkedText(_ string: Any, selectedRange: NSRange, replacementRange: NSRange) {
@@ -1677,7 +1677,7 @@ extension LineyGhosttySurfaceView: @preconcurrency NSTextInputClient {
             return
         }
 
-        var state = LineyGhosttyMarkedTextState(text: markedText.string, selectedRange: markedSelectionRange)
+        var state = AiyuTermGhosttyMarkedTextState(text: markedText.string, selectedRange: markedSelectionRange)
         state.setMarkedText(
             replacementText,
             selectedRange: selectedRange,
@@ -1756,7 +1756,7 @@ extension LineyGhosttySurfaceView: @preconcurrency NSTextInputClient {
             "insertText text=\(characters.debugDescription) replacementRange=\(NSStringFromRange(replacementRange)) keyCode=\(String(describing: currentTextInputEventKeyCode)) hadMarked=\(currentTextInputHadMarkedText) accumulator=\(keyTextAccumulator != nil)"
         )
 
-        if LineyGhosttyTextInputRouting.shouldTreatInsertedTextAsMarkedTextDuringDeletion(
+        if AiyuTermGhosttyTextInputRouting.shouldTreatInsertedTextAsMarkedTextDuringDeletion(
             insertedText: characters,
             keyCode: currentTextInputEventKeyCode,
             hadMarkedTextBeforeDeletion: currentTextInputHadMarkedText
@@ -1794,14 +1794,14 @@ extension LineyGhosttySurfaceView: @preconcurrency NSTextInputClient {
     }
 }
 
-private final class LineyGhosttyIMEDebugLogger {
-    static let shared = LineyGhosttyIMEDebugLogger(environment: ProcessInfo.processInfo.environment)
+private final class AiyuTermGhosttyIMEDebugLogger {
+    static let shared = AiyuTermGhosttyIMEDebugLogger(environment: ProcessInfo.processInfo.environment)
 
     private let enabled: Bool
     private let processID = ProcessInfo.processInfo.processIdentifier
 
     init(environment: [String: String]) {
-        self.enabled = lineyGhosttyShouldEnableIMEDebugLogging(environment: environment)
+        self.enabled = aiyuTermGhosttyShouldEnableIMEDebugLogging(environment: environment)
     }
 
     func log(_ message: String) {
@@ -1841,8 +1841,8 @@ private extension NSScreen {
 }
 
 @MainActor
-private final class LineyGhosttyNotificationCenter {
-    static let shared = LineyGhosttyNotificationCenter()
+private final class AiyuTermGhosttyNotificationCenter {
+    static let shared = AiyuTermGhosttyNotificationCenter()
 
     private var hasRequestedAuthorization = false
 
@@ -1861,7 +1861,7 @@ private final class LineyGhosttyNotificationCenter {
         content.sound = .default
 
         let request = UNNotificationRequest(
-            identifier: "com.liney.ghostty.\(UUID().uuidString)",
+            identifier: "com.aiyuterm.ghostty.\(UUID().uuidString)",
             content: content,
             trigger: nil
         )
@@ -1870,12 +1870,12 @@ private final class LineyGhosttyNotificationCenter {
 }
 
 @MainActor
-private final class LineyGhosttySecureInputManager {
-    static let shared = LineyGhosttySecureInputManager()
+private final class AiyuTermGhosttySecureInputManager {
+    static let shared = AiyuTermGhosttySecureInputManager()
 
     private var activeControllers: Set<ObjectIdentifier> = []
 
-    func apply(_ action: ghostty_action_secure_input_e, controller: LineyGhosttyController) {
+    func apply(_ action: ghostty_action_secure_input_e, controller: AiyuTermGhosttyController) {
         let controllerID = ObjectIdentifier(controller)
         switch action {
         case GHOSTTY_SECURE_INPUT_ON:
@@ -1893,7 +1893,7 @@ private final class LineyGhosttySecureInputManager {
         }
     }
 
-    func release(controller: LineyGhosttyController) {
+    func release(controller: AiyuTermGhosttyController) {
         deactivate(ObjectIdentifier(controller))
     }
 

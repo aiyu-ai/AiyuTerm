@@ -1,6 +1,6 @@
 //
 //  LocalizationManager.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //
@@ -8,7 +8,7 @@ import Combine
 import Foundation
 
 extension Notification.Name {
-    static let lineyLocalizationDidChange = Notification.Name("liney.localizationDidChange")
+    static let aiyuTermLocalizationDidChange = Notification.Name("aiyuterm.localizationDidChange")
 }
 
 @MainActor
@@ -60,7 +60,7 @@ final class LocalizationManager: ObservableObject {
         guard selectedLanguage != language else { return }
         selectedLanguage = language
         Self.cachedSelectedLanguage = language
-        NotificationCenter.default.post(name: .lineyLocalizationDidChange, object: language)
+        NotificationCenter.default.post(name: .aiyuTermLocalizationDidChange, object: language)
     }
 
     func string(_ key: String) -> String {

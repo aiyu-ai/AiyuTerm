@@ -1,13 +1,13 @@
 //
 //  HAPIIntegrationSupport.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: Codex
 //
 
 import Foundation
 
-private func lineyLocalizedHAPIString(_ key: String) -> String {
+private func aiyuTermLocalizedHAPIString(_ key: String) -> String {
     LocalizationManager.shared.string(key)
 }
 
@@ -16,11 +16,11 @@ struct HAPIInstallationStatus: Hashable {
     var cloudflaredExecutablePath: String? = nil
 
     var primaryActionTitle: String {
-        lineyLocalizedHAPIString("main.hapi.openMenu")
+        aiyuTermLocalizedHAPIString("main.hapi.openMenu")
     }
 
     var primaryActionHelpText: String {
-        lineyLocalizedHAPIString("main.hapi.help.openMenu")
+        aiyuTermLocalizedHAPIString("main.hapi.help.openMenu")
     }
 }
 

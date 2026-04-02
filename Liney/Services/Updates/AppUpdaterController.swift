@@ -1,6 +1,6 @@
 //
 //  AppUpdaterController.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //
@@ -36,9 +36,9 @@ final class AppUpdaterController {
     nonisolated static let releasesURL = URL(string: "https://github.com/\(repository)/releases")!
     nonisolated static let feedURLInfoPlistKey = "SUFeedURL"
     nonisolated static let defaultFeedURLString = "https://raw.githubusercontent.com/\(repository)/stable/appcast.xml"
-    static let sparkleKeyAccount = "liney"
+    static let sparkleKeyAccount = "aiyuterm"
     static let defaultPrivateKeyPath: String = {
-        let releaseHome = ProcessInfo.processInfo.environment["LINEY_RELEASE_HOME"] ?? "\(NSHomeDirectory())/.liney_release"
+        let releaseHome = ProcessInfo.processInfo.environment["AIYUTERM_RELEASE_HOME"] ?? "\(NSHomeDirectory())/.aiyuterm_release"
         return "\(releaseHome)/sparkle_private_key"
     }()
 

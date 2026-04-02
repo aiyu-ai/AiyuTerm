@@ -1,6 +1,6 @@
 //
 //  GitHubCLIService.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: everettjf
 //

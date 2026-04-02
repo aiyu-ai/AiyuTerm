@@ -1,6 +1,6 @@
 # Feature Backlog
 
-This document turns the current product discussion into tracked, scoped GitHub issues that fit the existing Liney architecture.
+This document turns the current product discussion into tracked, scoped GitHub issues that fit the existing AiyuTerm architecture.
 
 ## Priorities
 
@@ -21,7 +21,7 @@ This document turns the current product discussion into tracked, scoped GitHub i
 ### P2
 
 - [#46](https://github.com/everettjf/liney/issues/46) Profile and improve canvas-heavy UI performance
-- [#47](https://github.com/everettjf/liney/issues/47) Define an extension architecture for Liney features
+- [#47](https://github.com/everettjf/liney/issues/47) Define an extension architecture for AiyuTerm features
 
 ## Dependency Notes
 
@@ -33,4 +33,4 @@ This document turns the current product discussion into tracked, scoped GitHub i
 
 ## Not Tracked Here
 
-- The `Claude Code overloaded_error` report appears to be an upstream service issue rather than a Liney repository problem, so it is intentionally not tracked as a Liney issue.
+- The `Claude Code overloaded_error` report appears to be an upstream service issue rather than an AiyuTerm repository problem, so it is intentionally not tracked as an AiyuTerm issue.
