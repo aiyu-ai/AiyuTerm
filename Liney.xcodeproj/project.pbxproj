@@ -24,7 +24,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		5A45CEF92F67D58F00861AB5 /* Liney.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Liney.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5A45CEF92F67D58F00861AB5 /* AiyuTerm.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AiyuTerm.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5A45D2092F692B3200861AB5 /* Liney.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = Liney.xcodeproj; sourceTree = "<group>"; };
 		5A45D2732F692C4D00861AB5 /* Liney.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = Liney.xcodeproj; sourceTree = "<group>"; };
 		8B1A2B3C4D5E6F708090A002 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
@@ -92,7 +92,7 @@
 		5A45CEFA2F67D58F00861AB5 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				5A45CEF92F67D58F00861AB5 /* Liney.app */,
+				5A45CEF92F67D58F00861AB5 /* AiyuTerm.app */,
 				8B1A2B3C4D5E6F708090A004 /* LineyTests.xctest */,
 			);
 			name = Products;
@@ -145,8 +145,8 @@
 				7F0A1B2C3D4E5F6071829302 /* Sparkle */,
 				5A4973A92F6F90ED00B79656 /* Sentry */,
 			);
-			productName = Liney;
-			productReference = 5A45CEF92F67D58F00861AB5 /* Liney.app */;
+			productName = AiyuTerm;
+			productReference = 5A45CEF92F67D58F00861AB5 /* AiyuTerm.app */;
 			productType = "com.apple.product-type.application";
 		};
 		8B1A2B3C4D5E6F708090A007 /* LineyTests */ = {
@@ -438,7 +438,7 @@
 					Carbon,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.aiyuai.aiyuterm;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = AiyuTerm;
 				REGISTER_APP_GROUPS = NO;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -477,7 +477,7 @@
 					Carbon,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.aiyuai.aiyuterm;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = AiyuTerm;
 				REGISTER_APP_GROUPS = NO;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -551,13 +551,13 @@
 				MACOSX_DEPLOYMENT_TARGET = 15.6;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aiyuai.aiyutermtests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = AiyuTerm;
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Liney.app/Contents/MacOS/Liney";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AiyuTerm.app/Contents/MacOS/AiyuTerm";
 			};
 			name = Debug;
 		};
@@ -618,11 +618,11 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aiyuai.aiyutermtests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = AiyuTerm;
 				SDKROOT = macosx;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Liney.app/Contents/MacOS/Liney";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AiyuTerm.app/Contents/MacOS/AiyuTerm";
 			};
 			name = Release;
 		};
