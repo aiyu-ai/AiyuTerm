@@ -191,6 +191,7 @@ final class WorkspaceStoreTests: XCTestCase {
         return directoryURL
     }
 
+
     private func runProcess(
         executable: String,
         arguments: [String],

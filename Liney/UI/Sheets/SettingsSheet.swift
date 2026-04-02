@@ -1962,6 +1962,8 @@ struct SidebarIconCustomizationSheet: View {
             return SidebarItemIcon.randomRepository
         case .worktree, .appDefaultWorktree:
             return SidebarItemIcon.randomRepository
+        case .workspaceGroup:
+            return SidebarItemIcon.random
         case .appDefaultLocalTerminal:
             return SidebarItemIcon.random
         }
