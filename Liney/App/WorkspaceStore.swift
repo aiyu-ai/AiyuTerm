@@ -1,6 +1,6 @@
 //
 //  WorkspaceStore.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -10,7 +10,7 @@ import Combine
 import Foundation
 
 extension Notification.Name {
-    static let lineyAppSettingsDidChange = Notification.Name("liney.appSettingsDidChange")
+    static let aiyuTermAppSettingsDidChange = Notification.Name("aiyuterm.appSettingsDidChange")
 }
 
 @MainActor
@@ -314,8 +314,8 @@ final class WorkspaceStore: ObservableObject {
         ]
 
         items.append(
-            contentsOf: LineyFeatureRegistry.shared.commandPaletteItems(
-                context: LineyExtensionContext(
+            contentsOf: AiyuTermFeatureRegistry.shared.commandPaletteItems(
+                context: AiyuTermExtensionContext(
                     selectedWorkspace: selectedWorkspace,
                     workspaces: workspaces
                 )
@@ -539,7 +539,7 @@ final class WorkspaceStore: ObservableObject {
                     )
                 )
             }
-            if LineyFeatureFlags.showsRemoteSessionCreationUI {
+            if AiyuTermFeatureFlags.showsRemoteSessionCreationUI {
                 items.append(
                     CommandPaletteItem(
                         id: "workspace-ssh:\(workspace.id.uuidString)",
@@ -638,7 +638,7 @@ final class WorkspaceStore: ObservableObject {
         appSettings = initialAppSettings ?? appSettingsPersistence.load()
         appSettings.githubIntegrationEnabled = false
         LocalizationManager.shared.updateSelectedLanguage(appSettings.appLanguage)
-        NotificationCenter.default.post(name: .lineyAppSettingsDidChange, object: appSettings)
+        NotificationCenter.default.post(name: .aiyuTermAppSettingsDidChange, object: appSettings)
         let state = normalizeLaunchState(initialWorkspaceState ?? persistence.load())
         workspaces = state.workspaces.map(WorkspaceModel.init(record:))
         globalCanvasState = state.globalCanvasState.pruned(to: validGlobalCanvasCardIDs(in: workspaces))
@@ -1082,7 +1082,7 @@ final class WorkspaceStore: ObservableObject {
         settings.quickCommandPresets = QuickCommandCatalog.normalizedCommands(
             commands,
             categories: settings.quickCommandCategories,
-            reservedShortcuts: LineyKeyboardShortcuts.effectiveShortcuts(in: settings)
+            reservedShortcuts: AiyuTermKeyboardShortcuts.effectiveShortcuts(in: settings)
         )
         settings.quickCommandRecentIDs = QuickCommandCatalog.normalizedRecentCommandIDs(
             settings.quickCommandRecentIDs,
@@ -1117,7 +1117,7 @@ final class WorkspaceStore: ObservableObject {
         }
 
         workspace.sessionController.focus(targetPaneID)
-        switch lineyQuickCommandDispatch(for: preset) {
+        switch aiyuTermQuickCommandDispatch(for: preset) {
         case .insert(let text):
             session.insertText(text)
             receive(
@@ -1725,7 +1725,7 @@ final class WorkspaceStore: ObservableObject {
     }
 
     func rememberSSHPresetSelection(selectedPresetID: UUID?) {
-        let updatedSelection = lineyRememberedSSHPresetSelection(
+        let updatedSelection = aiyuTermRememberedSSHPresetSelection(
             currentPresets: appSettings.sshPresets,
             selectedPresetID: selectedPresetID
         )
@@ -1758,7 +1758,7 @@ final class WorkspaceStore: ObservableObject {
     }
 
     func rememberAgentPresetSelection(selectedPresetID: UUID?) {
-        let updatedSelection = lineyRememberedAgentPresetSelection(
+        let updatedSelection = aiyuTermRememberedAgentPresetSelection(
             currentPresets: appSettings.agentPresets,
             selectedPresetID: selectedPresetID
         )
@@ -2228,13 +2228,13 @@ final class WorkspaceStore: ObservableObject {
 
     func dispatch(_ command: WorkspaceCommand) {
         switch command {
-        case .openLineyWebsite:
+        case .openAiyuTermWebsite:
             dismissCommandPalette()
-            openLineyWebsite()
+            openAiyuTermWebsite()
 
-        case .submitLineyFeedback:
+        case .submitAiyuTermFeedback:
             dismissCommandPalette()
-            submitLineyFeedback()
+            submitAiyuTermFeedback()
 
         case .toggleCommandPalette:
             isCommandPalettePresented.toggle()
@@ -2484,7 +2484,7 @@ final class WorkspaceStore: ObservableObject {
             statusMessageTask?.cancel()
             statusMessage = WorkspaceStatusMessage(text: text, tone: tone)
             if deliverSystemNotification && appSettings.systemNotificationsEnabled {
-                WorkspaceNotificationCenter.shared.deliver(title: "Liney", body: text)
+                WorkspaceNotificationCenter.shared.deliver(title: "AiyuTerm", body: text)
             }
             statusMessageTask = Task { @MainActor in
                 try? await Task.sleep(nanoseconds: 4_000_000_000)
@@ -2747,7 +2747,7 @@ final class WorkspaceStore: ObservableObject {
     private func persistAppSettings() {
         do {
             try appSettingsPersistence.save(appSettings)
-            NotificationCenter.default.post(name: .lineyAppSettingsDidChange, object: appSettings)
+            NotificationCenter.default.post(name: .aiyuTermAppSettingsDidChange, object: appSettings)
         } catch {
             presentedError = PresentedError(title: localized("main.error.saveSettings.title"), message: error.localizedDescription)
         }
@@ -2983,13 +2983,13 @@ final class WorkspaceStore: ObservableObject {
         receive(.statusMessage(localized("main.status.releaseNotesOpened"), .neutral, deliverSystemNotification: false))
     }
 
-    private func openLineyWebsite() {
+    private func openAiyuTermWebsite() {
         guard let url = URL(string: "https://liney.dev") else { return }
         NSWorkspace.shared.open(url)
         receive(.statusMessage(localized("extension.support.websiteOpened"), .neutral, deliverSystemNotification: false))
     }
 
-    private func submitLineyFeedback() {
+    private func submitAiyuTermFeedback() {
         guard let url = URL(string: "https://github.com/wuwenrui/liney/issues/new") else { return }
         NSWorkspace.shared.open(url)
         receive(.statusMessage(localized("extension.support.feedbackOpened"), .neutral, deliverSystemNotification: false))
@@ -3457,7 +3457,7 @@ final class WorkspaceStore: ObservableObject {
     }
 }
 
-func lineyRememberedAgentPresetSelection(
+func aiyuTermRememberedAgentPresetSelection(
     currentPresets: [AgentPreset],
     selectedPresetID: UUID?
 ) -> (presets: [AgentPreset], preferredPresetID: UUID?) {
@@ -3468,7 +3468,7 @@ func lineyRememberedAgentPresetSelection(
     return (currentPresets, selectedPresetID)
 }
 
-func lineyRememberedSSHPresetSelection(
+func aiyuTermRememberedSSHPresetSelection(
     currentPresets: [SSHPreset],
     selectedPresetID: UUID?
 ) -> (presets: [SSHPreset], preferredPresetID: UUID?) {

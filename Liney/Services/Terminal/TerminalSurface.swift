@@ -1,6 +1,6 @@
 //
 //  TerminalSurface.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -69,15 +69,15 @@ enum TerminalSurfaceFactory {
         preferred _: TerminalEngineKind,
         launchConfiguration: TerminalLaunchConfiguration
     ) -> ManagedTerminalSessionSurfaceController {
-        if lineyIsRunningTests() {
-            return LineyTestManagedTerminalSurfaceController(launchConfiguration: launchConfiguration)
+        if aiyuTermIsRunningTests() {
+            return AiyuTermTestManagedTerminalSurfaceController(launchConfiguration: launchConfiguration)
         }
-        return LineyGhosttyController(launchConfiguration: launchConfiguration)
+        return AiyuTermGhosttyController(launchConfiguration: launchConfiguration)
     }
 }
 
 @MainActor
-private final class LineyTestManagedTerminalSurfaceController: ManagedTerminalSessionSurfaceController {
+private final class AiyuTermTestManagedTerminalSurfaceController: ManagedTerminalSessionSurfaceController {
     let resolvedEngine: TerminalEngineKind = .libghosttyPreferred
     let view = NSView(frame: .zero)
 
@@ -150,25 +150,25 @@ private final class LineyTestManagedTerminalSurfaceController: ManagedTerminalSe
     }
 }
 
-func lineyTextFinderAction(for sender: Any?) -> NSTextFinder.Action? {
+func aiyuTermTextFinderAction(for sender: Any?) -> NSTextFinder.Action? {
     guard let menuItem = sender as? NSMenuItem else { return nil }
     return NSTextFinder.Action(rawValue: menuItem.tag)
 }
 
-enum LineyGhosttySearchNavigation: String {
+enum AiyuTermGhosttySearchNavigation: String {
     case previous
     case next
 }
 
-func lineyGhosttySearchBindingAction(for query: String) -> String {
+func aiyuTermGhosttySearchBindingAction(for query: String) -> String {
     "search:\(query)"
 }
 
-func lineyGhosttySearchNavigationBindingAction(_ direction: LineyGhosttySearchNavigation) -> String {
+func aiyuTermGhosttySearchNavigationBindingAction(_ direction: AiyuTermGhosttySearchNavigation) -> String {
     "navigate_search:\(direction.rawValue)"
 }
 
-func lineyTerminalDropText(fileURLs: [URL], plainText: String?) -> String? {
+func aiyuTermTerminalDropText(fileURLs: [URL], plainText: String?) -> String? {
     let quotedPaths = fileURLs
         .filter(\.isFileURL)
         .map(\.path)

@@ -1,8 +1,8 @@
-# Liney Repository Collaboration Guide
+# AiyuTerm Repository Collaboration Guide
 
 ## Project Overview
 
-Liney is a native macOS terminal workspace app built around `AppKit + SwiftUI + a vendored Ghostty runtime`.
+AiyuTerm is a native macOS terminal workspace app built around `AppKit + SwiftUI + a vendored Ghostty runtime`.
 The core product experience centers on a multi-repository sidebar, worktree switching, terminal pane and tab layout restoration, diff and overview helper views, and GitHub and update-related features.
 
 The repository now uses an Xcode project as the primary development entry point. The root still contains release scripts, docs, website code, and local build artifacts.
@@ -10,7 +10,7 @@ The repository now uses an Xcode project as the primary development entry point.
 ## Repository Layout
 
 - `Liney/`: Main application source root.
-- `Liney/App/`: App assembly and high-level state orchestration. Start with `WorkspaceStore.swift`, `LineyDesktopApplication.swift`, and `WorkspaceGitHubCoordinator.swift`.
+- `Liney/App/`: App assembly and high-level state orchestration. Start with `WorkspaceStore.swift`, `AiyuTermDesktopApplication.swift`, and `WorkspaceGitHubCoordinator.swift`.
 - `Liney/Domain/`: Domain models for workspaces, pane layouts, tabs, and related state.
 - `Liney/Persistence/`: Workspace state, settings persistence, and migrations.
 - `Liney/Services/Git/`: Git repository inspection, worktree discovery, GitHub CLI integration, and metadata watching.
@@ -66,7 +66,7 @@ Additional notes:
 
 - After UI, state-management, terminal lifecycle, or update-flow changes, run at least one `xcodebuild ... build`.
 - For git, worktree, layout, diff, overview, or settings logic changes, prefer adding or updating focused unit tests under `Tests/`.
-- For terminal input, keyboard shortcut, IME, or Ghostty adapter changes, pay special attention to `Tests/LineyGhosttyInputSupportTests.swift` and `Tests/ShellSessionTests.swift`.
+- For terminal input, keyboard shortcut, IME, or Ghostty adapter changes, pay special attention to `Tests/AiyuTermGhosttyInputSupportTests.swift` and `Tests/ShellSessionTests.swift`.
 - For changes affecting the sidebar, pane layout, worktree switching, command palette, diff windows, or external editor integration, include a brief manual smoke test and state what was covered.
 - For documentation-only changes, at minimum verify that referenced files still exist and command examples still match the current project layout.
 

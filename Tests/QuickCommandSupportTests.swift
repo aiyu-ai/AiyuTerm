@@ -1,6 +1,6 @@
 //
 //  QuickCommandSupportTests.swift
-//  LineyTests
+//  AiyuTermTests
 //
 //  Author: wuwenrui
 //
@@ -27,7 +27,7 @@ final class QuickCommandSupportTests: XCTestCase {
             "codex resume"
         )
         XCTAssertEqual(
-            LineyKeyboardShortcuts.effectiveShortcut(for: .closeWindow, in: settings),
+            AiyuTermKeyboardShortcuts.effectiveShortcut(for: .closeWindow, in: settings),
             StoredShortcut(key: "w", command: true, shift: true, option: false, control: false)
         )
     }
@@ -80,8 +80,8 @@ final class QuickCommandSupportTests: XCTestCase {
     }
 
     func testDebugBuildUsesSeparatePersistenceDirectoryName() {
-        XCTAssertEqual(lineyStateDirectoryName(isDebugBuild: true), ".liney-debug")
-        XCTAssertEqual(lineyStateDirectoryName(isDebugBuild: false), ".liney")
+        XCTAssertEqual(aiyuTermStateDirectoryName(isDebugBuild: true), ".aiyuterm-debug")
+        XCTAssertEqual(aiyuTermStateDirectoryName(isDebugBuild: false), ".aiyuterm")
     }
 
     func testQuickCommandNormalizationTrimsAndDropsDuplicates() {
@@ -177,7 +177,7 @@ final class QuickCommandSupportTests: XCTestCase {
             )
         )
 
-        let match = lineyQuickCommandMatch(for: event, in: settings)
+        let match = aiyuTermQuickCommandMatch(for: event, in: settings)
         XCTAssertEqual(match?.id, "deploy")
         XCTAssertEqual(match?.submitsReturn, true)
     }
@@ -198,8 +198,8 @@ final class QuickCommandSupportTests: XCTestCase {
             submitsReturn: true
         )
 
-        XCTAssertEqual(lineyQuickCommandDispatch(for: insertPreset), .insert("codex"))
-        XCTAssertEqual(lineyQuickCommandDispatch(for: runPreset), .run("codex"))
+        XCTAssertEqual(aiyuTermQuickCommandDispatch(for: insertPreset), .insert("codex"))
+        XCTAssertEqual(aiyuTermQuickCommandDispatch(for: runPreset), .run("codex"))
     }
 
     func testSettingsEncodingPreservesQuickCommandShortcutAndAutoReturn() throws {
@@ -336,23 +336,23 @@ final class QuickCommandSupportTests: XCTestCase {
         var settings = AppSettings()
         let shortcut = StoredShortcut(key: "p", command: true, shift: false, option: false, control: false)
 
-        LineyKeyboardShortcuts.setShortcut(shortcut, for: .openDiff, in: &settings)
+        AiyuTermKeyboardShortcuts.setShortcut(shortcut, for: .openDiff, in: &settings)
 
-        XCTAssertEqual(LineyKeyboardShortcuts.effectiveShortcut(for: .openDiff, in: settings), shortcut)
-        XCTAssertNil(LineyKeyboardShortcuts.effectiveShortcut(for: .toggleCommandPalette, in: settings))
-        XCTAssertEqual(LineyKeyboardShortcuts.state(for: .toggleCommandPalette, in: settings), .disabled)
+        XCTAssertEqual(AiyuTermKeyboardShortcuts.effectiveShortcut(for: .openDiff, in: settings), shortcut)
+        XCTAssertNil(AiyuTermKeyboardShortcuts.effectiveShortcut(for: .toggleCommandPalette, in: settings))
+        XCTAssertEqual(AiyuTermKeyboardShortcuts.state(for: .toggleCommandPalette, in: settings), .disabled)
     }
 
     func testShortcutResetRestoresDefaultBinding() {
         var settings = AppSettings()
 
-        LineyKeyboardShortcuts.disableShortcut(for: .closePane, in: &settings)
-        XCTAssertNil(LineyKeyboardShortcuts.effectiveShortcut(for: .closePane, in: settings))
+        AiyuTermKeyboardShortcuts.disableShortcut(for: .closePane, in: &settings)
+        XCTAssertNil(AiyuTermKeyboardShortcuts.effectiveShortcut(for: .closePane, in: settings))
 
-        LineyKeyboardShortcuts.resetShortcut(for: .closePane, in: &settings)
+        AiyuTermKeyboardShortcuts.resetShortcut(for: .closePane, in: &settings)
 
         XCTAssertEqual(
-            LineyKeyboardShortcuts.effectiveShortcut(for: .closePane, in: settings),
+            AiyuTermKeyboardShortcuts.effectiveShortcut(for: .closePane, in: settings),
             StoredShortcut(key: "w", command: true, shift: false, option: true, control: false)
         )
     }
@@ -361,14 +361,14 @@ final class QuickCommandSupportTests: XCTestCase {
         var settings = AppSettings()
         let shortcut = StoredShortcut(key: "7", command: true, shift: false, option: false, control: false)
 
-        LineyKeyboardShortcuts.setShortcut(shortcut, for: .selectTabByNumber, in: &settings)
+        AiyuTermKeyboardShortcuts.setShortcut(shortcut, for: .selectTabByNumber, in: &settings)
 
         XCTAssertEqual(
-            LineyKeyboardShortcuts.effectiveShortcut(for: .selectTabByNumber, in: settings),
+            AiyuTermKeyboardShortcuts.effectiveShortcut(for: .selectTabByNumber, in: settings),
             StoredShortcut(key: "1", command: true, shift: false, option: false, control: false)
         )
         XCTAssertEqual(
-            LineyKeyboardShortcuts.displayString(for: .selectTabByNumber, in: settings),
+            AiyuTermKeyboardShortcuts.displayString(for: .selectTabByNumber, in: settings),
             "⌘1…9"
         )
     }
@@ -384,19 +384,19 @@ final class QuickCommandSupportTests: XCTestCase {
         let settings = AppSettings()
 
         XCTAssertEqual(
-            LineyKeyboardShortcuts.effectiveShortcut(for: .focusPaneLeft, in: settings),
+            AiyuTermKeyboardShortcuts.effectiveShortcut(for: .focusPaneLeft, in: settings),
             StoredShortcut(key: "←", command: true, shift: false, option: true, control: false)
         )
         XCTAssertEqual(
-            LineyKeyboardShortcuts.effectiveShortcut(for: .focusPaneRight, in: settings),
+            AiyuTermKeyboardShortcuts.effectiveShortcut(for: .focusPaneRight, in: settings),
             StoredShortcut(key: "→", command: true, shift: false, option: true, control: false)
         )
         XCTAssertEqual(
-            LineyKeyboardShortcuts.effectiveShortcut(for: .focusPaneUp, in: settings),
+            AiyuTermKeyboardShortcuts.effectiveShortcut(for: .focusPaneUp, in: settings),
             StoredShortcut(key: "↑", command: true, shift: false, option: true, control: false)
         )
         XCTAssertEqual(
-            LineyKeyboardShortcuts.effectiveShortcut(for: .focusPaneDown, in: settings),
+            AiyuTermKeyboardShortcuts.effectiveShortcut(for: .focusPaneDown, in: settings),
             StoredShortcut(key: "↓", command: true, shift: false, option: true, control: false)
         )
     }
@@ -405,11 +405,11 @@ final class QuickCommandSupportTests: XCTestCase {
         let settings = AppSettings()
 
         XCTAssertEqual(
-            LineyKeyboardShortcuts.effectiveShortcut(for: .nextTab, in: settings),
+            AiyuTermKeyboardShortcuts.effectiveShortcut(for: .nextTab, in: settings),
             StoredShortcut(key: "\t", command: false, shift: false, option: false, control: true)
         )
         XCTAssertEqual(
-            LineyKeyboardShortcuts.effectiveShortcut(for: .previousTab, in: settings),
+            AiyuTermKeyboardShortcuts.effectiveShortcut(for: .previousTab, in: settings),
             StoredShortcut(key: "\t", command: false, shift: true, option: false, control: true)
         )
     }
@@ -418,15 +418,15 @@ final class QuickCommandSupportTests: XCTestCase {
         let settings = AppSettings()
 
         XCTAssertEqual(
-            LineyKeyboardShortcuts.effectiveShortcut(for: .duplicatePane, in: settings),
+            AiyuTermKeyboardShortcuts.effectiveShortcut(for: .duplicatePane, in: settings),
             StoredShortcut(key: "d", command: true, shift: false, option: true, control: false)
         )
         XCTAssertEqual(
-            LineyKeyboardShortcuts.effectiveShortcut(for: .togglePaneZoom, in: settings),
+            AiyuTermKeyboardShortcuts.effectiveShortcut(for: .togglePaneZoom, in: settings),
             StoredShortcut(key: "\r", command: true, shift: false, option: false, control: false)
         )
         XCTAssertEqual(
-            LineyKeyboardShortcuts.effectiveShortcut(for: .openDiff, in: settings),
+            AiyuTermKeyboardShortcuts.effectiveShortcut(for: .openDiff, in: settings),
             StoredShortcut(key: ".", command: true, shift: true, option: false, control: false)
         )
     }
@@ -435,27 +435,27 @@ final class QuickCommandSupportTests: XCTestCase {
         let settings = AppSettings()
 
         XCTAssertEqual(
-            LineyKeyboardShortcuts.effectiveShortcut(for: .hideApp, in: settings),
+            AiyuTermKeyboardShortcuts.effectiveShortcut(for: .hideApp, in: settings),
             StoredShortcut(key: "h", command: true, shift: false, option: false, control: false)
         )
         XCTAssertEqual(
-            LineyKeyboardShortcuts.effectiveShortcut(for: .hideOtherApps, in: settings),
+            AiyuTermKeyboardShortcuts.effectiveShortcut(for: .hideOtherApps, in: settings),
             StoredShortcut(key: "h", command: true, shift: false, option: true, control: false)
         )
         XCTAssertEqual(
-            LineyKeyboardShortcuts.effectiveShortcut(for: .quitApp, in: settings),
+            AiyuTermKeyboardShortcuts.effectiveShortcut(for: .quitApp, in: settings),
             StoredShortcut(key: "q", command: true, shift: false, option: false, control: false)
         )
         XCTAssertEqual(
-            LineyKeyboardShortcuts.effectiveShortcut(for: .copy, in: settings),
+            AiyuTermKeyboardShortcuts.effectiveShortcut(for: .copy, in: settings),
             StoredShortcut(key: "c", command: true, shift: false, option: false, control: false)
         )
         XCTAssertEqual(
-            LineyKeyboardShortcuts.effectiveShortcut(for: .findPrevious, in: settings),
+            AiyuTermKeyboardShortcuts.effectiveShortcut(for: .findPrevious, in: settings),
             StoredShortcut(key: "g", command: true, shift: true, option: false, control: false)
         )
         XCTAssertEqual(
-            LineyKeyboardShortcuts.effectiveShortcut(for: .minimizeWindow, in: settings),
+            AiyuTermKeyboardShortcuts.effectiveShortcut(for: .minimizeWindow, in: settings),
             StoredShortcut(key: "m", command: true, shift: false, option: false, control: false)
         )
     }
@@ -479,15 +479,15 @@ final class QuickCommandSupportTests: XCTestCase {
         )
 
         XCTAssertEqual(
-            lineyShortcutMatch(for: event, in: settings),
-            LineyShortcutMatch(action: .focusPaneLeft, tabNumber: nil)
+            aiyuTermShortcutMatch(for: event, in: settings),
+            AiyuTermShortcutMatch(action: .focusPaneLeft, tabNumber: nil)
         )
     }
 
     func testShortcutMatchingUsesStoredKeyForOptionModifiedLetters() {
         var settings = AppSettings()
         let shortcut = StoredShortcut(key: "d", command: false, shift: false, option: true, control: false)
-        LineyKeyboardShortcuts.setShortcut(shortcut, for: .splitRight, in: &settings)
+        AiyuTermKeyboardShortcuts.setShortcut(shortcut, for: .splitRight, in: &settings)
 
         let event = try! XCTUnwrap(
             NSEvent.keyEvent(
@@ -505,8 +505,8 @@ final class QuickCommandSupportTests: XCTestCase {
         )
 
         XCTAssertEqual(
-            lineyShortcutMatch(for: event, in: settings),
-            LineyShortcutMatch(action: .splitRight, tabNumber: nil)
+            aiyuTermShortcutMatch(for: event, in: settings),
+            AiyuTermShortcutMatch(action: .splitRight, tabNumber: nil)
         )
     }
 
@@ -529,8 +529,8 @@ final class QuickCommandSupportTests: XCTestCase {
         )
 
         XCTAssertEqual(
-            lineyShortcutMatch(for: event, in: settings),
-            LineyShortcutMatch(action: .nextTab, tabNumber: nil)
+            aiyuTermShortcutMatch(for: event, in: settings),
+            AiyuTermShortcutMatch(action: .nextTab, tabNumber: nil)
         )
     }
 
@@ -553,47 +553,47 @@ final class QuickCommandSupportTests: XCTestCase {
         )
 
         XCTAssertEqual(
-            lineyShortcutMatch(for: event, in: settings),
-            LineyShortcutMatch(action: .togglePaneZoom, tabNumber: nil)
+            aiyuTermShortcutMatch(for: event, in: settings),
+            AiyuTermShortcutMatch(action: .togglePaneZoom, tabNumber: nil)
         )
     }
 
     func testHotKeyWindowKeepsAppRunningWhenLastWindowCloses() {
-        XCTAssertFalse(lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: true, isRunningTests: false))
+        XCTAssertFalse(aiyuTermShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: true, isRunningTests: false))
     }
 
     func testStandardWindowModeTerminatesAfterLastWindowCloses() {
-        XCTAssertTrue(lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: false, isRunningTests: false))
+        XCTAssertTrue(aiyuTermShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: false, isRunningTests: false))
     }
 
     func testRunningTestsKeepsAppAliveAfterLastWindowCloses() {
-        XCTAssertFalse(lineyShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: false, isRunningTests: true))
+        XCTAssertFalse(aiyuTermShouldTerminateAfterLastWindowClosed(hotKeyWindowEnabled: false, isRunningTests: true))
     }
 
     func testLastWindowCloseInterceptsTerminationWhenQuitNeedsConfirmation() {
         XCTAssertTrue(
-            lineyShouldInterceptLastWindowCloseForTermination(
+            aiyuTermShouldInterceptLastWindowCloseForTermination(
                 hotKeyWindowEnabled: false,
                 openWindowCount: 1,
                 needsConfirmQuit: true
             )
         )
         XCTAssertFalse(
-            lineyShouldInterceptLastWindowCloseForTermination(
+            aiyuTermShouldInterceptLastWindowCloseForTermination(
                 hotKeyWindowEnabled: false,
                 openWindowCount: 2,
                 needsConfirmQuit: true
             )
         )
         XCTAssertFalse(
-            lineyShouldInterceptLastWindowCloseForTermination(
+            aiyuTermShouldInterceptLastWindowCloseForTermination(
                 hotKeyWindowEnabled: true,
                 openWindowCount: 1,
                 needsConfirmQuit: true
             )
         )
         XCTAssertFalse(
-            lineyShouldInterceptLastWindowCloseForTermination(
+            aiyuTermShouldInterceptLastWindowCloseForTermination(
                 hotKeyWindowEnabled: false,
                 openWindowCount: 1,
                 needsConfirmQuit: false
@@ -602,25 +602,25 @@ final class QuickCommandSupportTests: XCTestCase {
     }
 
     func testDockReopenRestoresWindowWhenNoVisibleWindows() {
-        XCTAssertTrue(lineyShouldReopenMainWindow(hasVisibleWindows: false))
-        XCTAssertFalse(lineyShouldReopenMainWindow(hasVisibleWindows: true))
+        XCTAssertTrue(aiyuTermShouldReopenMainWindow(hasVisibleWindows: false))
+        XCTAssertFalse(aiyuTermShouldReopenMainWindow(hasVisibleWindows: true))
     }
 
     func testQuitConfirmationOnlyAppliesWhenEnabledAndCommandsNeedIt() {
         XCTAssertTrue(
-            lineyShouldConfirmTermination(
+            aiyuTermShouldConfirmTermination(
                 confirmQuitWhenCommandsRunning: true,
                 needsConfirmQuit: true
             )
         )
         XCTAssertFalse(
-            lineyShouldConfirmTermination(
+            aiyuTermShouldConfirmTermination(
                 confirmQuitWhenCommandsRunning: false,
                 needsConfirmQuit: true
             )
         )
         XCTAssertFalse(
-            lineyShouldConfirmTermination(
+            aiyuTermShouldConfirmTermination(
                 confirmQuitWhenCommandsRunning: true,
                 needsConfirmQuit: false
             )
@@ -630,25 +630,25 @@ final class QuickCommandSupportTests: XCTestCase {
     func testQuitConfirmationCopyUsesSingularAndPluralText() {
         LocalizationManager.shared.updateSelectedLanguage(.english)
         XCTAssertEqual(
-            lineyQuitConfirmationCopy(quitConfirmationSessionCount: 1).message,
+            aiyuTermQuitConfirmationCopy(quitConfirmationSessionCount: 1).message,
             "1 terminal session still has a running command. Quitting now will stop it. You can turn this confirmation off in Settings > General."
         )
         XCTAssertEqual(
-            lineyQuitConfirmationCopy(quitConfirmationSessionCount: 3).message,
+            aiyuTermQuitConfirmationCopy(quitConfirmationSessionCount: 3).message,
             "3 terminal sessions still have running commands. Quitting now will stop them. You can turn this confirmation off in Settings > General."
         )
 
         LocalizationManager.shared.updateSelectedLanguage(.simplifiedChinese)
         XCTAssertEqual(
-            lineyQuitConfirmationCopy(quitConfirmationSessionCount: 1).title,
-            "要退出 Liney 吗？"
+            aiyuTermQuitConfirmationCopy(quitConfirmationSessionCount: 1).title,
+            "要退出 AiyuTerm 吗？"
         )
         XCTAssertEqual(
-            lineyQuitConfirmationCopy(quitConfirmationSessionCount: 1).message,
+            aiyuTermQuitConfirmationCopy(quitConfirmationSessionCount: 1).message,
             "仍有 1 个终端会话在运行命令。 现在退出会停止它。 你可以在“设置 > 通用”中关闭此确认。"
         )
         XCTAssertEqual(
-            lineyQuitConfirmationCopy(quitConfirmationSessionCount: 3).message,
+            aiyuTermQuitConfirmationCopy(quitConfirmationSessionCount: 3).message,
             "仍有 3 个终端会话在运行命令。 现在退出会停止它们。 你可以在“设置 > 通用”中关闭此确认。"
         )
 
@@ -656,15 +656,15 @@ final class QuickCommandSupportTests: XCTestCase {
     }
 
     func testGhosttyLogFilterSuppressesKnownGhosttySpamOnly() {
-        XCTAssertTrue(LineyGhosttyLogFilter.shouldSuppress("io_thread: mailbox message=start_synchronized_output"))
-        XCTAssertTrue(LineyGhosttyLogFilter.shouldSuppress("debug(io_thread): mailbox message=start_synchronized_output"))
-        XCTAssertTrue(LineyGhosttyLogFilter.shouldSuppress("reading configuration file path=/Users/eevv/Library/Application Support/com.mitchellh.ghostty/config"))
-        XCTAssertTrue(LineyGhosttyLogFilter.shouldSuppress("config: default shell source=env value=/bin/zsh"))
-        XCTAssertTrue(LineyGhosttyLogFilter.shouldSuppress("generic_renderer: updating display link display id=3"))
-        XCTAssertTrue(LineyGhosttyLogFilter.shouldSuppress("\n"))
-        XCTAssertTrue(LineyGhosttyLogFilter.shouldSuppress("   \n"))
-        XCTAssertFalse(LineyGhosttyLogFilter.shouldSuppress("io_thread: mailbox message=end_synchronized_output"))
-        XCTAssertFalse(LineyGhosttyLogFilter.shouldSuppress("warning(io_thread): error draining mailbox err=something"))
-        XCTAssertFalse(LineyGhosttyLogFilter.shouldSuppress("generic_renderer: fatal display link failure"))
+        XCTAssertTrue(AiyuTermGhosttyLogFilter.shouldSuppress("io_thread: mailbox message=start_synchronized_output"))
+        XCTAssertTrue(AiyuTermGhosttyLogFilter.shouldSuppress("debug(io_thread): mailbox message=start_synchronized_output"))
+        XCTAssertTrue(AiyuTermGhosttyLogFilter.shouldSuppress("reading configuration file path=/Users/eevv/Library/Application Support/com.mitchellh.ghostty/config"))
+        XCTAssertTrue(AiyuTermGhosttyLogFilter.shouldSuppress("config: default shell source=env value=/bin/zsh"))
+        XCTAssertTrue(AiyuTermGhosttyLogFilter.shouldSuppress("generic_renderer: updating display link display id=3"))
+        XCTAssertTrue(AiyuTermGhosttyLogFilter.shouldSuppress("\n"))
+        XCTAssertTrue(AiyuTermGhosttyLogFilter.shouldSuppress("   \n"))
+        XCTAssertFalse(AiyuTermGhosttyLogFilter.shouldSuppress("io_thread: mailbox message=end_synchronized_output"))
+        XCTAssertFalse(AiyuTermGhosttyLogFilter.shouldSuppress("warning(io_thread): error draining mailbox err=something"))
+        XCTAssertFalse(AiyuTermGhosttyLogFilter.shouldSuppress("generic_renderer: fatal display link failure"))
     }
 }

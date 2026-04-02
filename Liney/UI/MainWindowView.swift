@@ -1,6 +1,6 @@
 //
 //  MainWindowView.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -71,8 +71,8 @@ struct MainWindowView: View {
     @ViewBuilder
     private func hapiToolbarControl(using installation: HAPIInstallationStatus) -> some View {
         ToolbarSegmentedControl(
-            backgroundColor: LineyTheme.chromeBackground.opacity(0.96),
-            borderColor: LineyTheme.border,
+            backgroundColor: AiyuTermTheme.chromeBackground.opacity(0.96),
+            borderColor: AiyuTermTheme.border,
             leadingAction: { anchorView in
                 present(menu: makeHAPIMenu(using: installation), from: anchorView)
             },
@@ -89,14 +89,14 @@ struct MainWindowView: View {
                 HStack(spacing: 6) {
                     ToolbarFeatureIcon(
                         systemName: "dot.radiowaves.left.and.right",
-                        tint: LineyTheme.accent
+                        tint: AiyuTermTheme.accent
                     )
                 }
             },
             trailingContent: {
                 Image(systemName: "chevron.down")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(LineyTheme.secondaryText)
+                    .foregroundStyle(AiyuTermTheme.secondaryText)
             }
         )
     }
@@ -107,16 +107,16 @@ struct MainWindowView: View {
 
     private var sleepPreventionSplitButtonBackground: Color {
         if store.sleepPreventionSession == nil {
-            return LineyTheme.chromeBackground.opacity(0.96)
+            return AiyuTermTheme.chromeBackground.opacity(0.96)
         }
-        return LineyTheme.warning.opacity(0.14)
+        return AiyuTermTheme.warning.opacity(0.14)
     }
 
     private var sleepPreventionSplitButtonBorder: Color {
         if store.sleepPreventionSession == nil {
-            return LineyTheme.border
+            return AiyuTermTheme.border
         }
-        return LineyTheme.warning.opacity(0.42)
+        return AiyuTermTheme.warning.opacity(0.42)
     }
 
     private func dismissCanvas(restoreFocus: Bool = true) {
@@ -202,8 +202,8 @@ struct MainWindowView: View {
             ToolbarItemGroup(placement: .primaryAction) {
                 HStack(spacing: 10) {
                     ToolbarSegmentedControl(
-                    backgroundColor: LineyTheme.chromeBackground.opacity(0.96),
-                    borderColor: LineyTheme.border,
+                    backgroundColor: AiyuTermTheme.chromeBackground.opacity(0.96),
+                    borderColor: AiyuTermTheme.border,
                     leadingAction: { anchorView in
                         present(menu: makeQuickCommandMenu(), from: anchorView)
                     },
@@ -222,23 +222,23 @@ struct MainWindowView: View {
                         HStack(spacing: 6) {
                             ToolbarFeatureIcon(
                                 systemName: "chevron.left.slash.chevron.right",
-                                tint: LineyTheme.accent
+                                tint: AiyuTermTheme.accent
                             )
                             Image(systemName: "chevron.down")
                                 .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(LineyTheme.secondaryText)
+                                .foregroundStyle(AiyuTermTheme.secondaryText)
                         }
                     },
                     trailingContent: {
                         Image(systemName: "slider.horizontal.3")
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(LineyTheme.secondaryText)
+                            .foregroundStyle(AiyuTermTheme.secondaryText)
                     }
                     )
 
                     ToolbarSegmentedControl(
-                    backgroundColor: LineyTheme.chromeBackground.opacity(0.96),
-                    borderColor: LineyTheme.border,
+                    backgroundColor: AiyuTermTheme.chromeBackground.opacity(0.96),
+                    borderColor: AiyuTermTheme.border,
                     leadingAction: { _ in
                         store.openSelectedWorkspaceInPreferredExternalEditor()
                     },
@@ -255,14 +255,14 @@ struct MainWindowView: View {
                         HStack(spacing: 6) {
                             ToolbarFeatureIcon(
                                 systemName: "arrow.up.forward.app.fill",
-                                tint: LineyTheme.accent
+                                tint: AiyuTermTheme.accent
                             )
                         }
                     },
                     trailingContent: {
                         Image(systemName: "chevron.down")
                             .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(LineyTheme.secondaryText)
+                            .foregroundStyle(AiyuTermTheme.secondaryText)
                     }
                     )
 
@@ -288,13 +288,13 @@ struct MainWindowView: View {
                         leadingContent: {
                             ToolbarFeatureIcon(
                                 systemName: sleepPreventionIconName,
-                                tint: store.sleepPreventionSession == nil ? LineyTheme.secondaryText : LineyTheme.warning
+                                tint: store.sleepPreventionSession == nil ? AiyuTermTheme.secondaryText : AiyuTermTheme.warning
                             )
                         },
                         trailingContent: {
                             Image(systemName: "chevron.down")
                                 .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(LineyTheme.secondaryText)
+                                .foregroundStyle(AiyuTermTheme.secondaryText)
                         }
                     )
                 }
@@ -986,11 +986,11 @@ private struct StatusBanner: View {
     private var tint: Color {
         switch message.tone {
         case .neutral:
-            return LineyTheme.secondaryText
+            return AiyuTermTheme.secondaryText
         case .success:
-            return LineyTheme.success
+            return AiyuTermTheme.success
         case .warning:
-            return LineyTheme.warning
+            return AiyuTermTheme.warning
         }
     }
 
@@ -1005,8 +1005,8 @@ private struct StatusBanner: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(LineyTheme.canvasBackground.opacity(0.96), in: Capsule())
-        .overlay(Capsule().stroke(LineyTheme.border, lineWidth: 1))
+        .background(AiyuTermTheme.canvasBackground.opacity(0.96), in: Capsule())
+        .overlay(Capsule().stroke(AiyuTermTheme.border, lineWidth: 1))
         .shadow(color: .black.opacity(0.18), radius: 18, y: 8)
     }
 }

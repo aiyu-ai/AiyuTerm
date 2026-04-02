@@ -1,65 +1,66 @@
-# Liney
+# AiyuTerm
 
 [English Version](./README.md)
 
-[![Website](https://img.shields.io/badge/Website-liney.dev-111111?style=flat-square)](https://liney.dev)
-[![Releases](https://img.shields.io/badge/Download-GitHub%20Releases-24292f?style=flat-square&logo=github)](https://github.com/wuwenrui/liney/releases)
-[![Platform](https://img.shields.io/badge/Platform-macOS-black?style=flat-square)](https://liney.dev)
+[![Platform](https://img.shields.io/badge/Platform-macOS-black?style=flat-square)](https://github.com/AiyuAI/AiyuTerm)
 [![License](https://img.shields.io/badge/License-Apache%202.0-2ea44f?style=flat-square)](./LICENSE)
 
-Liney 是一款原生 macOS 终端工作区应用，面向需要频繁在多个仓库、worktree、分支和分屏之间切换的开发者。
+AiyuTerm 是一款原生 macOS 终端工作区应用，面向需要频繁在多个仓库、worktree、分支和分屏之间切换的开发者。支持本地 shell、SSH、tmux 会话管理，以及 AI Agent 会话的实时状态提醒。
 
-它把代码库、worktree、终端标签页和分屏布局集中到一个专注的工作空间中，让你不必来回整理一堆 Terminal 窗口，也能保持上下文连续。
+> AiyuTerm 基于 [Liney](https://github.com/wuwenrui/liney)（作者 wuwenrui）fork 而来，感谢原作者提供的优秀基础。
 
-![Liney 应用截图](./images/screenshot.png)
+![AiyuTerm 应用截图](./images/screenshot.png)
 
-## 为什么选择 Liney
+## 功能特性
 
-- 在同一个侧边栏里管理多个仓库和 worktree。
-- 回到某个仓库时，快速恢复上次使用的分屏布局。
-- 混合使用本地 shell、SSH 和 agent 驱动的终端会话。
-- 在一个围绕键盘高频操作设计的原生 macOS 应用中完成工作。
+- 在同一个侧边栏里管理多个仓库和 worktree
+- 回到某个仓库时，快速恢复上次使用的分屏布局
+- 混合使用本地 shell、SSH 和 Agent 驱动的终端会话
+- Tmux 会话管理面板（attach、创建、重命名、kill）
+- Agent 状态徽章：Claude Code 权限请求和任务完成的实时通知
+- 围绕键盘高频操作设计的原生 macOS 应用
 
 ## 安装
-
-### Homebrew
-
-```bash
-brew update && brew install --cask wuwenrui/tap/liney
-```
 
 ### 直接下载
 
 从 GitHub Releases 下载最新已签名的 `.dmg`：
 
-<https://github.com/wuwenrui/liney/releases/latest>
+<https://github.com/AiyuAI/AiyuTerm/releases/latest>
 
 ## 快速开始
 
-1. 打开 Liney。
-2. 向侧边栏添加一个或多个本地仓库。
-3. 选择一个仓库或 worktree，并打开一个终端标签页。
-4. 按需拆分面板，并在切换 worktree 时继续沿用已有布局。
+1. 打开 AiyuTerm
+2. 向侧边栏添加一个或多个本地仓库
+3. 选择一个仓库或 worktree，打开终端标签页
+4. 按需拆分面板，切换 worktree 时继续沿用已有布局
+
+## Agent 状态徽章
+
+AiyuTerm 在侧边栏图标上实时显示 Claude Code 的状态：
+
+| 状态 | 徽章 | 触发条件 |
+|------|------|---------|
+| 权限请求 | 红色脉冲 | Claude Code 等待用户批准 |
+| 任务完成 | 绿色对勾 | Claude Code 完成了一个任务 |
+| 错误 | 红色静态 | Claude Code 遇到错误 |
+
+基于 Claude Code hooks 实现。详见 [docs/agent-status-badges.md](./docs/agent-status-badges.md)。
 
 ## 系统要求
 
 - macOS 14.6 或更高版本
-- 当前发布包同时支持 Apple Silicon 和 Intel Mac
-
-## 相关链接
-
-- Website: <https://liney.dev>
-- Releases: <https://github.com/wuwenrui/liney/releases>
-- Issues: <https://github.com/wuwenrui/liney/issues>
-- Discord: <https://discord.com/invite/eGzEaP6TzR>
+- 同时支持 Apple Silicon 和 Intel Mac
 
 ## 面向开发者
 
-开发环境配置、构建命令、测试方式、仓库结构以及发布流程文档位于 [`DEVELOP.md`](./DEVELOP.md)。
+开发环境配置、构建命令、测试方式和发布流程：[`DEVELOP.md`](./DEVELOP.md)
 
-## Star History
+## 致谢
 
-[![Star History Chart](https://api.star-history.com/svg?repos=wuwenrui/liney&type=Date)](https://www.star-history.com/#wuwenrui/liney&Date)
+- [Liney](https://github.com/wuwenrui/liney)（作者 wuwenrui）-- 本项目 fork 自该开源终端工作区应用
+- [Ghostty](https://ghostty.org/) -- AiyuTerm 使用的终端引擎
+- [Sparkle](https://sparkle-project.org/) -- 自动更新框架
 
 ## 许可证
 

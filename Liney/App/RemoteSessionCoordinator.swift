@@ -1,13 +1,13 @@
 //
 //  RemoteSessionCoordinator.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
 
 import Foundation
 
-private func lineyLocalizedRemoteString(_ key: String) -> String {
+private func aiyuTermLocalizedRemoteString(_ key: String) -> String {
     LocalizationManager.shared.string(key)
 }
 
@@ -18,9 +18,9 @@ enum RemoteSessionCoordinatorError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingTarget:
-            return lineyLocalizedRemoteString("remote.error.missingTarget")
+            return aiyuTermLocalizedRemoteString("remote.error.missingTarget")
         case .missingAgentPreset:
-            return lineyLocalizedRemoteString("remote.error.missingAgentPreset")
+            return aiyuTermLocalizedRemoteString("remote.error.missingAgentPreset")
         }
     }
 }
@@ -46,7 +46,7 @@ struct RemoteSessionCoordinator {
             backendConfiguration: backendConfiguration,
             workingDirectory: workspace.activeWorktreePath,
             activityKind: .remote,
-            activityTitle: lineyLocalizedRemoteString("remote.activity.openedShell"),
+            activityTitle: aiyuTermLocalizedRemoteString("remote.activity.openedShell"),
             activityDetail: "\(target.name) · \(target.ssh.destination)",
             replayAction: .createSession(
                 backendConfiguration: backendConfiguration,
@@ -73,7 +73,7 @@ struct RemoteSessionCoordinator {
             backendConfiguration: backendConfiguration,
             workingDirectory: workspace.activeWorktreePath,
             activityKind: .agent,
-            activityTitle: lineyLocalizedRemoteString("remote.activity.openedAgent"),
+            activityTitle: aiyuTermLocalizedRemoteString("remote.activity.openedAgent"),
             activityDetail: "\(target.name) · \(preset.name)",
             replayAction: .createSession(
                 backendConfiguration: backendConfiguration,
@@ -96,7 +96,7 @@ struct RemoteSessionCoordinator {
             backendConfiguration: backendConfiguration,
             workingDirectory: workspace.activeWorktreePath,
             activityKind: .remote,
-            activityTitle: lineyLocalizedRemoteString("remote.activity.browsedRepository"),
+            activityTitle: aiyuTermLocalizedRemoteString("remote.activity.browsedRepository"),
             activityDetail: "\(target.name) · \(target.ssh.destination)",
             replayAction: .createSession(
                 backendConfiguration: backendConfiguration,

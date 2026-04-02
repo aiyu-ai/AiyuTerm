@@ -1,6 +1,6 @@
 //
 //  WorkspaceSettingsTests.swift
-//  LineyTests
+//  AiyuTermTests
 //
 //  Author: wuwenrui
 //
@@ -294,15 +294,15 @@ final class WorkspaceSettingsTests: XCTestCase {
     }
 
     func testSeededRandomRepositoryIconIsStableForSameRepositoryName() {
-        let first = SidebarItemIcon.randomRepository(preferredSeed: "Liney", avoiding: [])
-        let second = SidebarItemIcon.randomRepository(preferredSeed: "Liney", avoiding: [])
+        let first = SidebarItemIcon.randomRepository(preferredSeed: "AiyuTerm", avoiding: [])
+        let second = SidebarItemIcon.randomRepository(preferredSeed: "AiyuTerm", avoiding: [])
 
         XCTAssertEqual(first, second)
     }
 
     func testSeededRandomRepositoryIconFallsBackWhenPreferredChoiceAlreadyUsed() {
-        let preferred = SidebarItemIcon.randomRepository(preferredSeed: "Liney", avoiding: [])
-        let avoided = SidebarItemIcon.randomRepository(preferredSeed: "Liney", avoiding: [preferred])
+        let preferred = SidebarItemIcon.randomRepository(preferredSeed: "AiyuTerm", avoiding: [])
+        let avoided = SidebarItemIcon.randomRepository(preferredSeed: "AiyuTerm", avoiding: [preferred])
 
         XCTAssertNotEqual(preferred.symbolName, avoided.symbolName)
         XCTAssertNotEqual(preferred.palette, avoided.palette)

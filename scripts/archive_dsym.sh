@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
-APP_NAME="${APP_NAME:-Liney}"
+APP_NAME="${APP_NAME:-AiyuTerm}"
 VERSION="${VERSION:-}"
 OUTPUT_DIR="${OUTPUT_DIR:-$ROOT_DIR/dist}"
 DSYM_SOURCE_PATH="${DSYM_SOURCE_PATH:-$OUTPUT_DIR/DerivedData/Build/Products/Release/$APP_NAME.app.dSYM}"

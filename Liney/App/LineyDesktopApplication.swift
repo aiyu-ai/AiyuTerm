@@ -1,6 +1,6 @@
 //
-//  LineyDesktopApplication.swift
-//  Liney
+//  AiyuTermDesktopApplication.swift
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -10,8 +10,8 @@ import Carbon
 import SwiftUI
 
 @MainActor
-public final class LineyDesktopApplication: NSObject {
-    private static let windowTabbingIdentifier = "dev.liney.window"
+public final class AiyuTermDesktopApplication: NSObject {
+    private static let windowTabbingIdentifier = "dev.aiyuterm.window"
 
     private final class WindowContext: NSObject, NSWindowDelegate {
         let store: WorkspaceStore
@@ -19,12 +19,12 @@ public final class LineyDesktopApplication: NSObject {
         var persistsWorkspaceState: Bool
         let baseLevel: NSWindow.Level
         let baseCollectionBehavior: NSWindow.CollectionBehavior
-        weak var owner: LineyDesktopApplication?
+        weak var owner: AiyuTermDesktopApplication?
 
         init(
             store: WorkspaceStore,
             persistsWorkspaceState: Bool,
-            owner: LineyDesktopApplication
+            owner: AiyuTermDesktopApplication
         ) {
             self.store = store
             self.persistsWorkspaceState = persistsWorkspaceState
@@ -37,7 +37,7 @@ public final class LineyDesktopApplication: NSObject {
             )
 
             let window = NSWindow(contentViewController: host)
-            window.title = "Liney"
+            window.title = "AiyuTerm"
             window.setContentSize(NSSize(width: 1440, height: 920))
             window.minSize = NSSize(width: 1120, height: 720)
             window.center()
@@ -48,7 +48,7 @@ public final class LineyDesktopApplication: NSObject {
             window.titlebarAppearsTransparent = false
             window.toolbarStyle = .unifiedCompact
             window.tabbingMode = .preferred
-            window.tabbingIdentifier = LineyDesktopApplication.windowTabbingIdentifier
+            window.tabbingIdentifier = AiyuTermDesktopApplication.windowTabbingIdentifier
             window.isMovableByWindowBackground = false
 
             baseLevel = window.level
@@ -98,7 +98,7 @@ public final class LineyDesktopApplication: NSObject {
     }
 
     public func launch() {
-        LineyGhosttyBootstrap.initialize()
+        AiyuTermGhosttyBootstrap.initialize()
         NSApplication.shared.appearance = NSAppearance(named: .darkAqua)
         NSWindow.allowsAutomaticWindowTabbing = true
 
@@ -134,7 +134,7 @@ public final class LineyDesktopApplication: NSObject {
     }
 
     public func shutdown() {
-        LineyGlobalHotKeyMonitor.shared.unregister()
+        AiyuTermGlobalHotKeyMonitor.shared.unregister()
         for context in windowContexts {
             context.store.stopSleepPrevention()
         }
@@ -282,7 +282,7 @@ public final class LineyDesktopApplication: NSObject {
     }
 
     var needsConfirmQuit: Bool {
-        LineyGhosttyRuntime.shared.needsConfirmQuit || quitConfirmationSessionCount > 0
+        AiyuTermGhosttyRuntime.shared.needsConfirmQuit || quitConfirmationSessionCount > 0
     }
 
     var quitConfirmationSessionCount: Int {
@@ -393,7 +393,7 @@ public final class LineyDesktopApplication: NSObject {
     }
 
     private func shouldCloseWindowContext(_ context: WindowContext) -> Bool {
-        guard lineyShouldInterceptLastWindowCloseForTermination(
+        guard aiyuTermShouldInterceptLastWindowCloseForTermination(
             hotKeyWindowEnabled: isHotKeyWindowEnabled,
             openWindowCount: windowContexts.count,
             needsConfirmQuit: needsConfirmQuit
@@ -422,14 +422,14 @@ public final class LineyDesktopApplication: NSObject {
 
     private func syncWindowPresentation() {
         if hotKeyWindowSettings.hotKeyWindowEnabled {
-            LineyGlobalHotKeyMonitor.shared.register(
+            AiyuTermGlobalHotKeyMonitor.shared.register(
                 shortcut: hotKeyWindowSettings.hotKeyWindowShortcut,
                 action: { [weak self] in
                     self?.toggleHotKeyWindow()
                 }
             )
         } else {
-            LineyGlobalHotKeyMonitor.shared.unregister()
+            AiyuTermGlobalHotKeyMonitor.shared.unregister()
         }
 
         for context in windowContexts {
@@ -475,7 +475,7 @@ public final class LineyDesktopApplication: NSObject {
     }
 }
 
-func lineyShouldInterceptLastWindowCloseForTermination(
+func aiyuTermShouldInterceptLastWindowCloseForTermination(
     hotKeyWindowEnabled: Bool,
     openWindowCount: Int,
     needsConfirmQuit: Bool
@@ -484,8 +484,8 @@ func lineyShouldInterceptLastWindowCloseForTermination(
 }
 
 @MainActor
-private final class LineyGlobalHotKeyMonitor {
-    static let shared = LineyGlobalHotKeyMonitor()
+private final class AiyuTermGlobalHotKeyMonitor {
+    static let shared = AiyuTermGlobalHotKeyMonitor()
 
     private var hotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
@@ -527,7 +527,7 @@ private final class LineyGlobalHotKeyMonitor {
             GetApplicationEventTarget(),
             { _, _, _ in
                 Task { @MainActor in
-                    LineyGlobalHotKeyMonitor.shared.action?()
+                    AiyuTermGlobalHotKeyMonitor.shared.action?()
                 }
                 return noErr
             },

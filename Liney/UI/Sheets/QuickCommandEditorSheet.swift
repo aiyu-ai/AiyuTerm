@@ -1,6 +1,6 @@
 //
 //  QuickCommandEditorSheet.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -38,7 +38,7 @@ struct QuickCommandEditorSheet: View {
 
     var body: some View {
         ZStack {
-            LineyTheme.appBackground
+            AiyuTermTheme.appBackground
 
             VStack(spacing: 0) {
                 topBar
@@ -57,12 +57,12 @@ struct QuickCommandEditorSheet: View {
         .frame(width: 1080, height: 700)
         .padding(12)
         .background(
-            LineyTheme.panelBackground,
+            AiyuTermTheme.panelBackground,
             in: RoundedRectangle(cornerRadius: 22, style: .continuous)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(LineyTheme.border, lineWidth: 1)
+                .stroke(AiyuTermTheme.border, lineWidth: 1)
         )
         .task {
             draftCategories = store.quickCommandCategories
@@ -119,23 +119,23 @@ struct QuickCommandEditorSheet: View {
 
             Text(localizedFormat("sheet.quickCommands.countFormat", draftCommands.count))
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(LineyTheme.secondaryText)
+                .foregroundStyle(AiyuTermTheme.secondaryText)
                 .padding(.horizontal, 9)
                 .padding(.vertical, 5)
-                .background(LineyTheme.subtleFill, in: Capsule())
+                .background(AiyuTermTheme.subtleFill, in: Capsule())
                 .overlay(
                     Capsule()
-                        .stroke(LineyTheme.border, lineWidth: 1)
+                        .stroke(AiyuTermTheme.border, lineWidth: 1)
                 )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
         .padding(.top, 10)
         .padding(.bottom, 10)
-        .background(LineyTheme.panelBackground.opacity(0.98))
+        .background(AiyuTermTheme.panelBackground.opacity(0.98))
         .overlay(alignment: .bottom) {
             Rectangle()
-                .fill(LineyTheme.border)
+                .fill(AiyuTermTheme.border)
                 .frame(height: 1)
         }
     }
@@ -146,13 +146,13 @@ struct QuickCommandEditorSheet: View {
                 QuickCommandCompactButton(
                     systemName: "plus",
                     title: localized("sheet.quickCommands.addCompact"),
-                    tint: LineyTheme.accent,
+                    tint: AiyuTermTheme.accent,
                     action: addCommand
                 )
                 QuickCommandCompactButton(
                     systemName: "square.and.arrow.down",
                     title: localized("sheet.quickCommands.addPredefined"),
-                    tint: LineyTheme.localAccent,
+                    tint: AiyuTermTheme.localAccent,
                     action: { showPredefinedLibrary = true }
                 )
 
@@ -161,7 +161,7 @@ struct QuickCommandEditorSheet: View {
                 QuickCommandCompactMenu(
                     systemName: "ellipsis",
                     title: localized("sheet.quickCommands.more"),
-                    tint: LineyTheme.warning,
+                    tint: AiyuTermTheme.warning,
                     localized: localized,
                     showCategoryManager: {
                         showCategoryManager = true
@@ -185,14 +185,14 @@ struct QuickCommandEditorSheet: View {
                                 HStack {
                                     Text(section.category.title)
                                         .font(.system(size: 9, weight: .semibold))
-                                        .foregroundStyle(LineyTheme.secondaryText)
+                                        .foregroundStyle(AiyuTermTheme.secondaryText)
                                         .textCase(.uppercase)
 
                                     Spacer()
 
                                     Text("\(section.commands.count)")
                                         .font(.system(size: 9, weight: .semibold))
-                                        .foregroundStyle(LineyTheme.mutedText)
+                                        .foregroundStyle(AiyuTermTheme.mutedText)
                                 }
 
                                 VStack(spacing: 4) {
@@ -215,7 +215,7 @@ struct QuickCommandEditorSheet: View {
 
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundStyle(LineyTheme.mutedText)
+                    .foregroundStyle(AiyuTermTheme.mutedText)
 
                 TextField(localized("sheet.quickCommands.searchPlaceholder"), text: $searchQuery)
                     .textFieldStyle(.plain)
@@ -226,23 +226,23 @@ struct QuickCommandEditorSheet: View {
                         searchQuery = ""
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(LineyTheme.mutedText)
+                            .foregroundStyle(AiyuTermTheme.mutedText)
                     }
                     .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 11)
             .padding(.vertical, 8)
-            .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(LineyTheme.border, lineWidth: 1)
+                    .stroke(AiyuTermTheme.border, lineWidth: 1)
             )
         }
         .padding(16)
         .frame(width: 340)
         .frame(maxHeight: .infinity, alignment: .topLeading)
-        .background(LineyTheme.appBackground.opacity(0.16))
+        .background(AiyuTermTheme.appBackground.opacity(0.16))
     }
 
     private var detailPane: some View {
@@ -271,14 +271,14 @@ struct QuickCommandEditorSheet: View {
 
                     Text(localized("sheet.quickCommands.searchPlaceholder"))
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(LineyTheme.secondaryText)
+                        .foregroundStyle(AiyuTermTheme.secondaryText)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 .padding(14)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(LineyTheme.panelBackground.opacity(0.72))
+        .background(AiyuTermTheme.panelBackground.opacity(0.72))
     }
 
     private var footer: some View {
@@ -296,10 +296,10 @@ struct QuickCommandEditorSheet: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
-        .background(LineyTheme.panelBackground.opacity(0.98))
+        .background(AiyuTermTheme.panelBackground.opacity(0.98))
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(LineyTheme.border)
+                .fill(AiyuTermTheme.border)
                 .frame(height: 1)
         }
     }
@@ -468,14 +468,14 @@ struct QuickCommandEditorSheet: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(text)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(LineyTheme.secondaryText)
+                .foregroundStyle(AiyuTermTheme.secondaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(LineyTheme.border, lineWidth: 1)
+                .stroke(AiyuTermTheme.border, lineWidth: 1)
         )
     }
 }
@@ -505,10 +505,10 @@ private struct QuickCommandCompactButton: View {
             .foregroundStyle(tint)
             .padding(.horizontal, 10)
             .padding(.vertical, 7)
-            .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(LineyTheme.border, lineWidth: 1)
+                    .stroke(AiyuTermTheme.border, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -544,10 +544,10 @@ private struct QuickCommandCompactMenu: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(tint)
                 .frame(width: 28, height: 28)
-                .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(LineyTheme.border, lineWidth: 1)
+                        .stroke(AiyuTermTheme.border, lineWidth: 1)
                 )
         }
         .menuStyle(.borderlessButton)
@@ -563,7 +563,7 @@ private struct QuickCommandLoadingState: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(localized("common.loading"))
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(LineyTheme.secondaryText)
+                .foregroundStyle(AiyuTermTheme.secondaryText)
 
             VStack(spacing: 4) {
                 QuickCommandLoadingRow()
@@ -573,10 +573,10 @@ private struct QuickCommandLoadingState: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(LineyTheme.border, lineWidth: 1)
+                .stroke(AiyuTermTheme.border, lineWidth: 1)
         )
     }
 }
@@ -588,7 +588,7 @@ private struct QuickCommandDetailLoadingState: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 10) {
                 RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .fill(LineyTheme.subtleRaisedFill)
+                    .fill(AiyuTermTheme.subtleRaisedFill)
                     .frame(width: 16, height: 16)
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -614,10 +614,10 @@ private struct QuickCommandDetailLoadingState: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(LineyTheme.panelRaised, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(AiyuTermTheme.panelRaised, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(LineyTheme.border, lineWidth: 1)
+                .stroke(AiyuTermTheme.border, lineWidth: 1)
         )
     }
 
@@ -625,7 +625,7 @@ private struct QuickCommandDetailLoadingState: View {
         VStack(alignment: .leading, spacing: 8) {
             QuickCommandSkeletonBar(width: width, height: 10)
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(LineyTheme.subtleFill)
+                .fill(AiyuTermTheme.subtleFill)
                 .frame(height: 34)
         }
     }
@@ -635,14 +635,14 @@ private struct QuickCommandDetailLoadingState: View {
             VStack(alignment: .leading, spacing: 8) {
                 QuickCommandSkeletonBar(width: 58, height: 10)
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(LineyTheme.subtleFill)
+                    .fill(AiyuTermTheme.subtleFill)
                     .frame(height: 34)
             }
 
             VStack(alignment: .leading, spacing: 8) {
                 QuickCommandSkeletonBar(width: 78, height: 10)
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(LineyTheme.subtleFill)
+                    .fill(AiyuTermTheme.subtleFill)
                     .frame(height: 34)
             }
         }
@@ -652,7 +652,7 @@ private struct QuickCommandDetailLoadingState: View {
         VStack(alignment: .leading, spacing: 8) {
             QuickCommandSkeletonBar(width: 62, height: 10)
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(LineyTheme.subtleFill)
+                .fill(AiyuTermTheme.subtleFill)
                 .frame(height: 178)
         }
     }
@@ -663,7 +663,7 @@ private struct QuickCommandDetailLoadingState: View {
                 QuickCommandSkeletonBar(width: 280, height: 12)
                 Spacer()
                 Capsule()
-                    .fill(LineyTheme.subtleRaisedFill)
+                    .fill(AiyuTermTheme.subtleRaisedFill)
                     .frame(width: 58, height: 30)
             }
 
@@ -676,7 +676,7 @@ private struct QuickCommandLoadingRow: View {
     var body: some View {
         HStack(spacing: 8) {
             RoundedRectangle(cornerRadius: 4, style: .continuous)
-                .fill(LineyTheme.subtleRaisedFill)
+                .fill(AiyuTermTheme.subtleRaisedFill)
                 .frame(width: 14, height: 14)
 
             VStack(alignment: .leading, spacing: 4) {
@@ -688,7 +688,7 @@ private struct QuickCommandLoadingRow: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(LineyTheme.appBackground.opacity(0.28), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(AiyuTermTheme.appBackground.opacity(0.28), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -698,7 +698,7 @@ private struct QuickCommandSkeletonBar: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: height / 2, style: .continuous)
-            .fill(LineyTheme.subtleRaisedFill)
+            .fill(AiyuTermTheme.subtleRaisedFill)
             .frame(width: width, height: height)
     }
 }
@@ -706,7 +706,7 @@ private struct QuickCommandSkeletonBar: View {
 private struct QuickCommandSkeletonButton: View {
     var body: some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .fill(LineyTheme.subtleFill)
+            .fill(AiyuTermTheme.subtleFill)
             .frame(width: 32, height: 30)
     }
 }
@@ -729,11 +729,11 @@ private struct QuickCommandListItem: View {
                     HStack(spacing: 6) {
                         Text(command.normalizedTitle)
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(LineyTheme.tertiaryText)
+                            .foregroundStyle(AiyuTermTheme.tertiaryText)
                             .lineLimit(1)
 
                         if command.submitsReturn {
-                            QuickCommandMetaTag(title: "Return", tint: LineyTheme.success)
+                            QuickCommandMetaTag(title: "Return", tint: AiyuTermTheme.success)
                         }
 
                         Spacer(minLength: 0)
@@ -741,14 +741,14 @@ private struct QuickCommandListItem: View {
                         if let shortcut = command.shortcut {
                             Text(shortcut.displayString)
                                 .font(.system(size: 9, weight: .semibold))
-                                .foregroundStyle(LineyTheme.mutedText)
+                                .foregroundStyle(AiyuTermTheme.mutedText)
                                 .lineLimit(1)
                         }
                     }
 
                     Text(command.normalizedCommand.nilIfEmpty ?? " ")
                         .font(.system(size: 9, design: .monospaced))
-                        .foregroundStyle(LineyTheme.mutedText)
+                        .foregroundStyle(AiyuTermTheme.mutedText)
                         .lineLimit(1)
                 }
 
@@ -771,11 +771,11 @@ private struct QuickCommandListItem: View {
     }
 
     private var backgroundColor: Color {
-        isSelected ? tint.opacity(0.16) : LineyTheme.subtleFill
+        isSelected ? tint.opacity(0.16) : AiyuTermTheme.subtleFill
     }
 
     private var borderColor: Color {
-        isSelected ? tint.opacity(0.55) : LineyTheme.border
+        isSelected ? tint.opacity(0.55) : AiyuTermTheme.border
     }
 
     private var tint: Color {
@@ -874,7 +874,7 @@ private struct QuickCommandDetailPanel: View {
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .stroke(LineyTheme.border, lineWidth: 1)
+                                .stroke(AiyuTermTheme.border, lineWidth: 1)
                         )
                 }
 
@@ -889,23 +889,23 @@ private struct QuickCommandDetailPanel: View {
                         : localized("sheet.quickCommands.autoReturnDisabledDetail")
                     )
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(LineyTheme.mutedText)
+                    .foregroundStyle(AiyuTermTheme.mutedText)
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(LineyTheme.border, lineWidth: 1)
+                        .stroke(AiyuTermTheme.border, lineWidth: 1)
                 )
             }
         }
         .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(LineyTheme.panelRaised, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(AiyuTermTheme.panelRaised, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(LineyTheme.border, lineWidth: 1)
+                .stroke(AiyuTermTheme.border, lineWidth: 1)
         )
     }
 
@@ -916,7 +916,7 @@ private struct QuickCommandDetailPanel: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(LineyTheme.secondaryText)
+                .foregroundStyle(AiyuTermTheme.secondaryText)
 
             content()
         }
@@ -1017,7 +1017,7 @@ private struct QuickCommandLibrarySheet: View {
 
     var body: some View {
         ZStack {
-            LineyTheme.appBackground
+            AiyuTermTheme.appBackground
 
             VStack(spacing: 0) {
                 HStack {
@@ -1039,7 +1039,7 @@ private struct QuickCommandLibrarySheet: View {
                 .padding(.bottom, 10)
                 .overlay(alignment: .bottom) {
                     Rectangle()
-                        .fill(LineyTheme.border)
+                        .fill(AiyuTermTheme.border)
                         .frame(height: 1)
                 }
 
@@ -1047,17 +1047,17 @@ private struct QuickCommandLibrarySheet: View {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(spacing: 10) {
                             Image(systemName: "magnifyingglass")
-                                .foregroundStyle(LineyTheme.mutedText)
+                                .foregroundStyle(AiyuTermTheme.mutedText)
 
                             TextField(localized("sheet.quickCommands.searchPlaceholder"), text: $searchQuery)
                                 .textFieldStyle(.plain)
                         }
                         .padding(.horizontal, 11)
                         .padding(.vertical, 8)
-                        .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                         .overlay(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(LineyTheme.border, lineWidth: 1)
+                                .stroke(AiyuTermTheme.border, lineWidth: 1)
                         )
 
                         ScrollView {
@@ -1092,7 +1092,7 @@ private struct QuickCommandLibrarySheet: View {
                     .padding(.vertical, 12)
                     .frame(width: 220)
                     .frame(maxHeight: .infinity, alignment: .topLeading)
-                    .background(LineyTheme.appBackground.opacity(0.16))
+                    .background(AiyuTermTheme.appBackground.opacity(0.16))
 
                     Divider()
 
@@ -1104,7 +1104,7 @@ private struct QuickCommandLibrarySheet: View {
 
                                 Text(localized("sheet.quickCommands.searchPlaceholder"))
                                     .font(.system(size: 12, weight: .medium))
-                                    .foregroundStyle(LineyTheme.secondaryText)
+                                    .foregroundStyle(AiyuTermTheme.secondaryText)
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                             .padding(24)
@@ -1156,7 +1156,7 @@ private struct QuickCommandLibrarySheet: View {
                         )
                     )
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(LineyTheme.secondaryText)
+                    .foregroundStyle(AiyuTermTheme.secondaryText)
 
                     Spacer()
 
@@ -1176,18 +1176,18 @@ private struct QuickCommandLibrarySheet: View {
                 .padding(.vertical, 10)
                 .overlay(alignment: .top) {
                     Rectangle()
-                        .fill(LineyTheme.border)
+                        .fill(AiyuTermTheme.border)
                         .frame(height: 1)
                 }
             }
             .frame(width: 900, height: 500)
             .background(
-                LineyTheme.panelBackground,
+                AiyuTermTheme.panelBackground,
                 in: RoundedRectangle(cornerRadius: 22, style: .continuous)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(LineyTheme.border, lineWidth: 1)
+                    .stroke(AiyuTermTheme.border, lineWidth: 1)
             )
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -1221,16 +1221,16 @@ private struct QuickCommandLibraryCategoryRow: View {
 
             Spacer()
         }
-        .foregroundStyle(isSelected ? LineyTheme.accent : LineyTheme.secondaryText)
+        .foregroundStyle(isSelected ? AiyuTermTheme.accent : AiyuTermTheme.secondaryText)
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(isSelected ? LineyTheme.accent.opacity(0.12) : LineyTheme.subtleFill)
+                .fill(isSelected ? AiyuTermTheme.accent.opacity(0.12) : AiyuTermTheme.subtleFill)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(isSelected ? LineyTheme.accent.opacity(0.35) : LineyTheme.border, lineWidth: 1)
+                .stroke(isSelected ? AiyuTermTheme.accent.opacity(0.35) : AiyuTermTheme.border, lineWidth: 1)
         )
     }
 }
@@ -1254,14 +1254,14 @@ private struct QuickCommandLibraryItem: View {
                     HStack {
                         Text(command.normalizedTitle)
                             .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(LineyTheme.tertiaryText)
+                            .foregroundStyle(AiyuTermTheme.tertiaryText)
 
                         Spacer()
 
                         if isAlreadyImported {
-                            QuickCommandMetaTag(title: "Added", tint: LineyTheme.secondaryText)
+                            QuickCommandMetaTag(title: "Added", tint: AiyuTermTheme.secondaryText)
                         } else if isSelected {
-                            QuickCommandMetaTag(title: "Selected", tint: LineyTheme.accent)
+                            QuickCommandMetaTag(title: "Selected", tint: AiyuTermTheme.accent)
                         }
                     }
 
@@ -1271,7 +1271,7 @@ private struct QuickCommandLibraryItem: View {
 
                     Text(command.command)
                         .font(.system(size: 11, design: .monospaced))
-                        .foregroundStyle(LineyTheme.secondaryText)
+                        .foregroundStyle(AiyuTermTheme.secondaryText)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
@@ -1291,16 +1291,16 @@ private struct QuickCommandLibraryItem: View {
 
     private var backgroundColor: Color {
         if isAlreadyImported {
-            return LineyTheme.subtleFill
+            return AiyuTermTheme.subtleFill
         }
-        return isSelected ? LineyTheme.accent.opacity(0.12) : LineyTheme.panelRaised
+        return isSelected ? AiyuTermTheme.accent.opacity(0.12) : AiyuTermTheme.panelRaised
     }
 
     private var borderColor: Color {
         if isAlreadyImported {
-            return LineyTheme.border
+            return AiyuTermTheme.border
         }
-        return isSelected ? LineyTheme.accent.opacity(0.35) : LineyTheme.border
+        return isSelected ? AiyuTermTheme.accent.opacity(0.35) : AiyuTermTheme.border
     }
 }
 
@@ -1351,7 +1351,7 @@ private struct QuickCommandCategoryManagerSheet: View {
 
                     Text(localized("sheet.quickCommands.categoriesSubtitle"))
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(LineyTheme.secondaryText)
+                        .foregroundStyle(AiyuTermTheme.secondaryText)
                 }
 
                 Spacer()
@@ -1372,7 +1372,7 @@ private struct QuickCommandCategoryManagerSheet: View {
             .padding(18)
             .overlay(alignment: .bottom) {
                 Rectangle()
-                    .fill(LineyTheme.border)
+                    .fill(AiyuTermTheme.border)
                     .frame(height: 1)
             }
 
@@ -1381,7 +1381,7 @@ private struct QuickCommandCategoryManagerSheet: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text(localized("sheet.quickCommands.builtInCategories"))
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(LineyTheme.secondaryText)
+                            .foregroundStyle(AiyuTermTheme.secondaryText)
 
                         ForEach(QuickCommandCategory.builtInCategories) { category in
                             HStack(spacing: 12) {
@@ -1395,16 +1395,16 @@ private struct QuickCommandCategoryManagerSheet: View {
                                         .font(.system(size: 12, weight: .semibold))
                                     Text(localized("sheet.quickCommands.builtInCategoryHint"))
                                         .font(.system(size: 10, weight: .medium))
-                                        .foregroundStyle(LineyTheme.secondaryText)
+                                        .foregroundStyle(AiyuTermTheme.secondaryText)
                                 }
 
                                 Spacer()
                             }
                             .padding(12)
-                            .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .stroke(LineyTheme.border, lineWidth: 1)
+                                    .stroke(AiyuTermTheme.border, lineWidth: 1)
                             )
                         }
                     }
@@ -1412,15 +1412,15 @@ private struct QuickCommandCategoryManagerSheet: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text(localized("sheet.quickCommands.customCategories"))
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(LineyTheme.secondaryText)
+                            .foregroundStyle(AiyuTermTheme.secondaryText)
 
                         if customCategories.isEmpty {
                             Text(localized("sheet.quickCommands.noCustomCategories"))
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(LineyTheme.secondaryText)
+                                .foregroundStyle(AiyuTermTheme.secondaryText)
                                 .padding(12)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                         } else {
                             ForEach(customCategories) { category in
                                 customCategoryRow(category)
@@ -1447,12 +1447,12 @@ private struct QuickCommandCategoryManagerSheet: View {
             .padding(16)
             .overlay(alignment: .top) {
                 Rectangle()
-                    .fill(LineyTheme.border)
+                    .fill(AiyuTermTheme.border)
                     .frame(height: 1)
             }
         }
         .frame(width: 720, height: 620)
-        .background(LineyTheme.panelBackground)
+        .background(AiyuTermTheme.panelBackground)
     }
 
     @ViewBuilder
@@ -1482,13 +1482,13 @@ private struct QuickCommandCategoryManagerSheet: View {
                         )
                     )
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(LineyTheme.secondaryText)
+                    .foregroundStyle(AiyuTermTheme.secondaryText)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 6)
-                    .background(LineyTheme.panelBackground, in: Capsule())
+                    .background(AiyuTermTheme.panelBackground, in: Capsule())
                     .overlay(
                         Capsule()
-                            .stroke(LineyTheme.border, lineWidth: 1)
+                            .stroke(AiyuTermTheme.border, lineWidth: 1)
                     )
                 }
 
@@ -1512,10 +1512,10 @@ private struct QuickCommandCategoryManagerSheet: View {
             .buttonStyle(.bordered)
         }
         .padding(12)
-        .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(LineyTheme.border, lineWidth: 1)
+                .stroke(AiyuTermTheme.border, lineWidth: 1)
         )
     }
 
@@ -1574,30 +1574,30 @@ private struct QuickCommandCategoryManagerSheet: View {
 private func quickCommandCategoryTint(_ id: String) -> Color {
     switch id {
     case QuickCommandCategory.codex.id:
-        return LineyTheme.accent
+        return AiyuTermTheme.accent
     case QuickCommandCategory.claude.id:
-        return LineyTheme.warning
+        return AiyuTermTheme.warning
     case QuickCommandCategory.cloud.id:
-        return LineyTheme.localAccent
+        return AiyuTermTheme.localAccent
     case QuickCommandCategory.linux.id,
          QuickCommandCategory.system.id:
-        return LineyTheme.secondaryText
+        return AiyuTermTheme.secondaryText
     case QuickCommandCategory.files.id,
          QuickCommandCategory.archives.id:
-        return LineyTheme.localAccent
+        return AiyuTermTheme.localAccent
     case QuickCommandCategory.search.id,
          QuickCommandCategory.text.id:
-        return LineyTheme.success
+        return AiyuTermTheme.success
     case QuickCommandCategory.processes.id,
          QuickCommandCategory.network.id:
-        return LineyTheme.warning
+        return AiyuTermTheme.warning
     case QuickCommandCategory.complex.id:
-        return LineyTheme.localAccent
+        return AiyuTermTheme.localAccent
     case QuickCommandCategory.git.id,
          QuickCommandCategory.homebrew.id,
          QuickCommandCategory.macos.id:
-        return LineyTheme.accent
+        return AiyuTermTheme.accent
     default:
-        return LineyTheme.accent
+        return AiyuTermTheme.accent
     }
 }

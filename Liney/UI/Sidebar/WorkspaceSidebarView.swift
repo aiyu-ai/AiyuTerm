@@ -1,6 +1,6 @@
 //
 //  WorkspaceSidebarView.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -26,13 +26,13 @@ struct WorkspaceSidebarView: View {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 11 * uiScale, weight: .semibold))
-                    .foregroundStyle(LineyTheme.mutedText)
+                    .foregroundStyle(AiyuTermTheme.mutedText)
 
                 TextField(
                     text: $query,
                     prompt: Text(localized("sidebar.filterWorkspaces"))
                         .font(.system(size: 11 * uiScale, weight: .medium))
-                        .foregroundStyle(LineyTheme.mutedText)
+                        .foregroundStyle(AiyuTermTheme.mutedText)
                 ) {
                     EmptyView()
                 }
@@ -41,21 +41,21 @@ struct WorkspaceSidebarView: View {
             }
             .padding(.horizontal, 12 * uiScale)
             .padding(.vertical, 8 * uiScale)
-            .background(LineyTheme.sidebarSearchBackground, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .background(AiyuTermTheme.sidebarSearchBackground, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
             .padding(.horizontal, 8 * uiScale)
             .padding(.top, 12 * uiScale)
             .padding(.bottom, 10 * uiScale)
-            .background(LineyTheme.sidebarBackground)
+            .background(AiyuTermTheme.sidebarBackground)
             .overlay(alignment: .bottom) {
                 Rectangle()
-                    .fill(LineyTheme.border)
+                    .fill(AiyuTermTheme.border)
                     .frame(height: 1)
             }
 
             WorkspaceOutlineSidebar(query: query, onOpenRepository: store.addWorkspaceFromOpenPanel)
                 .environmentObject(store)
         }
-        .background(LineyTheme.sidebarBackground)
+        .background(AiyuTermTheme.sidebarBackground)
     }
 }
 
@@ -147,17 +147,17 @@ private struct SidebarOpenRepositoryRow: View {
         .background(
             RoundedRectangle(cornerRadius: 7, style: .continuous)
                 .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
-                .foregroundStyle(LineyTheme.border)
+                .foregroundStyle(AiyuTermTheme.border)
         )
-        .foregroundStyle(LineyTheme.secondaryText)
+        .foregroundStyle(AiyuTermTheme.secondaryText)
         .help(localized("sidebar.openFolderHelp"))
     }
 }
 
 @MainActor
 private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSource, NSOutlineViewDelegate {
-    private static let workspaceDragType = NSPasteboard.PasteboardType("com.liney.workspace.ids")
-    private static let groupDragType = NSPasteboard.PasteboardType("com.liney.group.id")
+    private static let workspaceDragType = NSPasteboard.PasteboardType("com.aiyuterm.workspace.ids")
+    private static let groupDragType = NSPasteboard.PasteboardType("com.aiyuterm.group.id")
 
     weak var container: SidebarOutlineContainerView?
     weak var store: WorkspaceStore?
@@ -587,7 +587,7 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
                 )
             }
 
-            if LineyFeatureFlags.showsRemoteSessionCreationUI {
+            if AiyuTermFeatureFlags.showsRemoteSessionCreationUI {
                 addMenuItem(
                     to: menu,
                     title: localized("sidebar.menu.newSSHSession"),
@@ -1552,9 +1552,9 @@ private final class SidebarOutlineRowView: NSTableRowView {
     override func drawSelection(in dirtyRect: NSRect) {
         let rect = bounds.insetBy(dx: 6, dy: 1)
         let path = NSBezierPath(roundedRect: rect, xRadius: 12, yRadius: 12)
-        LineyTheme.sidebarSelectionFill.setFill()
+        AiyuTermTheme.sidebarSelectionFill.setFill()
         path.fill()
-        LineyTheme.sidebarSelectionStroke.setStroke()
+        AiyuTermTheme.sidebarSelectionStroke.setStroke()
         path.lineWidth = 1.25
         path.stroke()
     }
@@ -1637,7 +1637,7 @@ private struct GroupRowContent: View {
 
                 Text(group.name)
                     .font(.system(size: 11 * uiScale, weight: .bold, design: .rounded))
-                    .foregroundStyle(isSelected ? LineyTheme.tertiaryText : LineyTheme.mutedText)
+                    .foregroundStyle(isSelected ? AiyuTermTheme.tertiaryText : AiyuTermTheme.mutedText)
                     .lineLimit(1)
                     .truncationMode(.tail)
 
@@ -1645,20 +1645,20 @@ private struct GroupRowContent: View {
 
                 Text("\(childCount)")
                     .font(.system(size: 9 * uiScale, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(LineyTheme.mutedText.opacity(0.7))
+                    .foregroundStyle(AiyuTermTheme.mutedText.opacity(0.7))
             }
             .padding(.vertical, 4 * uiScale)
             .padding(.leading, 2 * uiScale)
             .padding(.trailing, 8 * uiScale)
 
             Rectangle()
-                .fill(LineyTheme.border.opacity(0.5))
+                .fill(AiyuTermTheme.border.opacity(0.5))
                 .frame(height: 0.5)
                 .padding(.leading, 2 * uiScale)
                 .padding(.trailing, 8 * uiScale)
         }
         .background(
-            LineyTheme.subtleFill.opacity(isHovering ? 0.8 : 0),
+            AiyuTermTheme.subtleFill.opacity(isHovering ? 0.8 : 0),
             in: RoundedRectangle(cornerRadius: 6, style: .continuous)
         )
         .onHover { isInside in
@@ -1719,7 +1719,7 @@ private struct WorkspaceRowContent: View {
                 if appSettings.sidebarShowsSecondaryLabels {
                     Text(workspace.supportsRepositoryFeatures ? workspace.currentBranch : workspace.activeWorktreePath.lastPathComponentValue)
                         .font(.system(size: 10 * uiScale, weight: .medium, design: .monospaced))
-                        .foregroundStyle(LineyTheme.mutedText)
+                        .foregroundStyle(AiyuTermTheme.mutedText)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
@@ -1732,13 +1732,13 @@ private struct WorkspaceRowContent: View {
                     if workspace.isPinned {
                         Image(systemName: "pin.fill")
                             .font(.system(size: 9 * uiScale, weight: .bold))
-                            .foregroundStyle(LineyTheme.accent)
+                            .foregroundStyle(AiyuTermTheme.accent)
                     }
 
                     if workspace.isArchived {
                         Image(systemName: "archivebox.fill")
                             .font(.system(size: 9 * uiScale, weight: .bold))
-                            .foregroundStyle(LineyTheme.mutedText)
+                            .foregroundStyle(AiyuTermTheme.mutedText)
                     }
 
                     if workspace.activeSessionCount > 1 {
@@ -1768,7 +1768,7 @@ private struct WorkspaceRowContent: View {
         .padding(.leading, 2 * uiScale)
         .padding(.trailing, 8 * uiScale)
         .background(
-            LineyTheme.subtleFill.opacity(isHovering ? 1 : 0),
+            AiyuTermTheme.subtleFill.opacity(isHovering ? 1 : 0),
             in: RoundedRectangle(cornerRadius: 8, style: .continuous)
         )
         .onHover { isInside in
@@ -1829,7 +1829,7 @@ private struct WorktreeRowContent: View {
             if worktree.isLocked {
                 Image(systemName: "lock.fill")
                     .font(.system(size: 8 * uiScale))
-                    .foregroundStyle(LineyTheme.mutedText)
+                    .foregroundStyle(AiyuTermTheme.mutedText)
             }
             Spacer()
             if appSettings.sidebarShowsWorktreeBadges {
@@ -1850,7 +1850,7 @@ private struct WorktreeRowContent: View {
         .padding(.trailing, 8 * uiScale)
         .frame(maxWidth: .infinity, minHeight: 24 * uiScale, alignment: .leading)
         .background(
-            LineyTheme.subtleFill.opacity(isHovering ? 1 : 0),
+            AiyuTermTheme.subtleFill.opacity(isHovering ? 1 : 0),
             in: RoundedRectangle(cornerRadius: 8, style: .continuous)
         )
         .onHover { isInside in
@@ -2016,7 +2016,7 @@ struct SidebarIconActivityBadge: View {
             Circle()
                 .fill(activityColor)
                 .frame(width: badgeSize, height: badgeSize)
-                .overlay(Circle().stroke(LineyTheme.sidebarBackground, lineWidth: 1))
+                .overlay(Circle().stroke(AiyuTermTheme.sidebarBackground, lineWidth: 1))
                 .scaleEffect(coreScale)
                 .opacity(coreOpacity)
                 .shadow(color: activityColor.opacity(kind == .working ? 0.9 : 0), radius: glowRadius)
@@ -2108,7 +2108,7 @@ struct AgentStatusOverlayBadge: View {
             )
             .overlay(
                 Circle()
-                    .stroke(LineyTheme.sidebarBackground, lineWidth: size > 18 ? 2 : 1.5)
+                    .stroke(AiyuTermTheme.sidebarBackground, lineWidth: size > 18 ? 2 : 1.5)
             )
             .frame(width: badgeSize, height: badgeSize)
             .shadow(color: glowColor.opacity(glowOpacity), radius: glowRadius / 2)
@@ -2482,24 +2482,24 @@ private struct SidebarInfoBadge: View {
     private var foreground: Color {
         switch tone {
         case .neutral:
-            return LineyTheme.mutedText
+            return AiyuTermTheme.mutedText
         case .accent:
-            return LineyTheme.accent
+            return AiyuTermTheme.accent
         case .success:
-            return LineyTheme.success
+            return AiyuTermTheme.success
         case .subtleSuccess:
-            return LineyTheme.success.opacity(0.82)
+            return AiyuTermTheme.success.opacity(0.82)
         case .warning:
-            return LineyTheme.warning
+            return AiyuTermTheme.warning
         }
     }
 
     private var background: Color {
         switch tone {
         case .subtleSuccess:
-            return LineyTheme.success.opacity(0.08)
+            return AiyuTermTheme.success.opacity(0.08)
         default:
-            return LineyTheme.subtleFill
+            return AiyuTermTheme.subtleFill
         }
     }
 
@@ -2573,7 +2573,7 @@ private struct SidebarInlineIconButton: View {
                 .frame(width: 22, height: 22)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(LineyTheme.secondaryText)
+        .foregroundStyle(AiyuTermTheme.secondaryText)
         .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
     }
 }

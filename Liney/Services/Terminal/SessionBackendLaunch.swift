@@ -1,6 +1,6 @@
 //
 //  SessionBackendLaunch.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -40,7 +40,7 @@ extension SessionBackendConfiguration {
                 arguments: local.shellArguments,
                 displayName: URL(fileURLWithPath: local.shellPath).lastPathComponent
             )
-            let prepared = LineyGhosttyShellIntegration.prepare(
+            let prepared = AiyuTermGhosttyShellIntegration.prepare(
                 command: command,
                 environment: baseEnvironment
             )
@@ -90,7 +90,7 @@ extension SessionBackendConfiguration {
                 arguments: configuration.arguments,
                 displayName: configuration.name
             )
-            let prepared = LineyGhosttyShellIntegration.prepare(
+            let prepared = AiyuTermGhosttyShellIntegration.prepare(
                 command: command,
                 environment: environment
             )

@@ -8,9 +8,9 @@ source "$ROOT_DIR/scripts/sparkle_tools.sh"
 
 PROJECT_PATH="${PROJECT_PATH:-$ROOT_DIR/Liney.xcodeproj}"
 SCHEME="${SCHEME:-Liney}"
-SPARKLE_KEY_ACCOUNT="${SPARKLE_KEY_ACCOUNT:-liney}"
-LINEY_RELEASE_HOME="${LINEY_RELEASE_HOME:-$HOME/.liney_release}"
-SPARKLE_PRIVATE_KEY_FILE="${SPARKLE_PRIVATE_KEY_FILE:-$LINEY_RELEASE_HOME/sparkle_private_key}"
+SPARKLE_KEY_ACCOUNT="${SPARKLE_KEY_ACCOUNT:-aiyuterm}"
+AIYUTERM_RELEASE_HOME="${AIYUTERM_RELEASE_HOME:-$HOME/.aiyuterm_release}"
+SPARKLE_PRIVATE_KEY_FILE="${SPARKLE_PRIVATE_KEY_FILE:-$AIYUTERM_RELEASE_HOME/sparkle_private_key}"
 
 mkdir -p "$(dirname "$SPARKLE_PRIVATE_KEY_FILE")"
 
@@ -27,5 +27,5 @@ echo "Private key file: $SPARKLE_PRIVATE_KEY_FILE"
 echo "Public key: $PUBLIC_KEY"
 echo
 echo "Security note:"
-echo "- Do not commit the private key into the public Liney repository."
+echo "- Do not commit the private key into the public AiyuTerm repository."
 echo "- Prefer storing release secrets in a private release-infra repo, CI secret store, or dedicated release machine."

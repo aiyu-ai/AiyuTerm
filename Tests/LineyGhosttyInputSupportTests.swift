@@ -1,6 +1,6 @@
 //
-//  LineyGhosttyInputSupportTests.swift
-//  LineyTests
+//  AiyuTermGhosttyInputSupportTests.swift
+//  AiyuTermTests
 //
 //  Author: wuwenrui
 //
@@ -11,13 +11,13 @@ import GhosttyKit
 import XCTest
 @testable import Liney
 
-final class LineyGhosttyInputSupportTests: XCTestCase {
+final class AiyuTermGhosttyInputSupportTests: XCTestCase {
     private let returnKeyCode = UInt16(kVK_Return)
     private let keypadEnterKeyCode = UInt16(kVK_ANSI_KeypadEnter)
 
     func testShiftReturnUsesTextInputRouting() {
         XCTAssertFalse(
-            LineyGhosttyTextInputRouting.shouldPreferRawKeyEvent(
+            AiyuTermGhosttyTextInputRouting.shouldPreferRawKeyEvent(
                 keyCode: returnKeyCode,
                 modifierFlags: [.shift]
             )
@@ -26,7 +26,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testCommandReturnStillUsesRawKeyRouting() {
         XCTAssertTrue(
-            LineyGhosttyTextInputRouting.shouldPreferRawKeyEvent(
+            AiyuTermGhosttyTextInputRouting.shouldPreferRawKeyEvent(
                 keyCode: returnKeyCode,
                 modifierFlags: [.command]
             )
@@ -35,7 +35,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testOptionKeypadEnterStillUsesRawKeyRouting() {
         XCTAssertTrue(
-            LineyGhosttyTextInputRouting.shouldPreferRawKeyEvent(
+            AiyuTermGhosttyTextInputRouting.shouldPreferRawKeyEvent(
                 keyCode: keypadEnterKeyCode,
                 modifierFlags: [.option]
             )
@@ -44,7 +44,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testOptionLeftArrowUsesRawKeyRouting() {
         XCTAssertTrue(
-            LineyGhosttyTextInputRouting.shouldPreferRawKeyEvent(
+            AiyuTermGhosttyTextInputRouting.shouldPreferRawKeyEvent(
                 keyCode: UInt16(kVK_LeftArrow),
                 modifierFlags: [.option]
             )
@@ -53,7 +53,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testOptionDeleteUsesRawKeyRouting() {
         XCTAssertTrue(
-            LineyGhosttyTextInputRouting.shouldPreferRawKeyEvent(
+            AiyuTermGhosttyTextInputRouting.shouldPreferRawKeyEvent(
                 keyCode: UInt16(kVK_Delete),
                 modifierFlags: [.option]
             )
@@ -62,7 +62,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testOptionPrintableKeyStillUsesTextInputRouting() {
         XCTAssertFalse(
-            LineyGhosttyTextInputRouting.shouldPreferRawKeyEvent(
+            AiyuTermGhosttyTextInputRouting.shouldPreferRawKeyEvent(
                 keyCode: UInt16(kVK_ANSI_B),
                 modifierFlags: [.option]
             )
@@ -71,7 +71,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testSSHOptionLeftArrowUsesBackwardWordEscapeSequence() {
         XCTAssertEqual(
-            lineyGhosttySSHWordNavigationEscapeSequence(
+            aiyuTermGhosttySSHWordNavigationEscapeSequence(
                 keyCode: UInt16(kVK_LeftArrow),
                 modifierFlags: [.option],
                 backendConfiguration: .ssh(
@@ -91,7 +91,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testSSHOptionRightArrowUsesForwardWordEscapeSequence() {
         XCTAssertEqual(
-            lineyGhosttySSHWordNavigationEscapeSequence(
+            aiyuTermGhosttySSHWordNavigationEscapeSequence(
                 keyCode: UInt16(kVK_RightArrow),
                 modifierFlags: [.option],
                 backendConfiguration: .ssh(
@@ -111,7 +111,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testLocalOptionArrowDoesNotUseSSHWordNavigationEscapeSequence() {
         XCTAssertNil(
-            lineyGhosttySSHWordNavigationEscapeSequence(
+            aiyuTermGhosttySSHWordNavigationEscapeSequence(
                 keyCode: UInt16(kVK_LeftArrow),
                 modifierFlags: [.option],
                 backendConfiguration: .local()
@@ -121,7 +121,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testSSHCommandOptionArrowDoesNotUseSSHWordNavigationEscapeSequence() {
         XCTAssertNil(
-            lineyGhosttySSHWordNavigationEscapeSequence(
+            aiyuTermGhosttySSHWordNavigationEscapeSequence(
                 keyCode: UInt16(kVK_LeftArrow),
                 modifierFlags: [.command, .option],
                 backendConfiguration: .ssh(
@@ -140,7 +140,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testSSHOptionArrowAllowsAdditionalSystemModifierBits() {
         XCTAssertEqual(
-            lineyGhosttySSHWordNavigationEscapeSequence(
+            aiyuTermGhosttySSHWordNavigationEscapeSequence(
                 keyCode: UInt16(kVK_LeftArrow),
                 modifierFlags: [.option, .numericPad],
                 backendConfiguration: .ssh(
@@ -162,7 +162,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
         let flags = NSEvent.ModifierFlags(rawValue: UInt(NX_DEVICELALTKEYMASK))
 
         XCTAssertEqual(
-            lineyGhosttySSHWordNavigationEscapeSequence(
+            aiyuTermGhosttySSHWordNavigationEscapeSequence(
                 keyCode: UInt16(kVK_LeftArrow),
                 modifierFlags: flags,
                 backendConfiguration: .ssh(
@@ -184,7 +184,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
         let flags = NSEvent.ModifierFlags(rawValue: UInt(NX_DEVICERALTKEYMASK))
 
         XCTAssertEqual(
-            lineyGhosttySSHWordNavigationEscapeSequence(
+            aiyuTermGhosttySSHWordNavigationEscapeSequence(
                 keyCode: UInt16(kVK_RightArrow),
                 modifierFlags: flags,
                 backendConfiguration: .ssh(
@@ -204,7 +204,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testPlainReturnDoesNotUseRawKeyRouting() {
         XCTAssertFalse(
-            LineyGhosttyTextInputRouting.shouldPreferRawKeyEvent(
+            AiyuTermGhosttyTextInputRouting.shouldPreferRawKeyEvent(
                 keyCode: returnKeyCode,
                 modifierFlags: []
             )
@@ -213,7 +213,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testNonReturnKeyNeverUsesRawKeyRouting() {
         XCTAssertFalse(
-            LineyGhosttyTextInputRouting.shouldPreferRawKeyEvent(
+            AiyuTermGhosttyTextInputRouting.shouldPreferRawKeyEvent(
                 keyCode: UInt16(kVK_ANSI_A),
                 modifierFlags: [.command]
             )
@@ -222,7 +222,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testRawKeyDispatchStaysComposingWhileMarkedTextIsActive() {
         XCTAssertTrue(
-            LineyGhosttyTextInputRouting.shouldMarkRawKeyEventAsComposing(
+            AiyuTermGhosttyTextInputRouting.shouldMarkRawKeyEventAsComposing(
                 hadMarkedTextBeforeInterpretation: false,
                 hasMarkedTextAfterInterpretation: true
             )
@@ -231,7 +231,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testRawKeyDispatchStaysComposingWhenMarkedTextWasJustCleared() {
         XCTAssertTrue(
-            LineyGhosttyTextInputRouting.shouldMarkRawKeyEventAsComposing(
+            AiyuTermGhosttyTextInputRouting.shouldMarkRawKeyEventAsComposing(
                 hadMarkedTextBeforeInterpretation: true,
                 hasMarkedTextAfterInterpretation: false
             )
@@ -240,7 +240,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testRawKeyDispatchIsPlainOutsideComposition() {
         XCTAssertFalse(
-            LineyGhosttyTextInputRouting.shouldMarkRawKeyEventAsComposing(
+            AiyuTermGhosttyTextInputRouting.shouldMarkRawKeyEventAsComposing(
                 hadMarkedTextBeforeInterpretation: false,
                 hasMarkedTextAfterInterpretation: false
             )
@@ -249,7 +249,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testImeMarkedTextUpdateSkipsRawFallback() {
         XCTAssertFalse(
-            LineyGhosttyTextInputRouting.shouldDispatchRawKeyFallbackAfterTextInterpretation(
+            AiyuTermGhosttyTextInputRouting.shouldDispatchRawKeyFallbackAfterTextInterpretation(
                 accumulatedText: "",
                 handledTextInputCommand: false,
                 hadMarkedTextBeforeInterpretation: false,
@@ -260,7 +260,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testImeMarkedTextClearSkipsRawFallback() {
         XCTAssertFalse(
-            LineyGhosttyTextInputRouting.shouldDispatchRawKeyFallbackAfterTextInterpretation(
+            AiyuTermGhosttyTextInputRouting.shouldDispatchRawKeyFallbackAfterTextInterpretation(
                 accumulatedText: "",
                 handledTextInputCommand: false,
                 hadMarkedTextBeforeInterpretation: true,
@@ -271,7 +271,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testImeMarkedTextUpdateSyncsPreedit() {
         XCTAssertTrue(
-            LineyGhosttyTextInputRouting.shouldSyncPreeditAfterTextInterpretation(
+            AiyuTermGhosttyTextInputRouting.shouldSyncPreeditAfterTextInterpretation(
                 hadMarkedTextBeforeInterpretation: false,
                 hasMarkedTextAfterInterpretation: true
             )
@@ -280,7 +280,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testImeMarkedTextClearSyncsPreedit() {
         XCTAssertTrue(
-            LineyGhosttyTextInputRouting.shouldSyncPreeditAfterTextInterpretation(
+            AiyuTermGhosttyTextInputRouting.shouldSyncPreeditAfterTextInterpretation(
                 hadMarkedTextBeforeInterpretation: true,
                 hasMarkedTextAfterInterpretation: false
             )
@@ -289,7 +289,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testPlainUnhandledKeyDoesNotSyncPreedit() {
         XCTAssertFalse(
-            LineyGhosttyTextInputRouting.shouldSyncPreeditAfterTextInterpretation(
+            AiyuTermGhosttyTextInputRouting.shouldSyncPreeditAfterTextInterpretation(
                 hadMarkedTextBeforeInterpretation: false,
                 hasMarkedTextAfterInterpretation: false
             )
@@ -298,7 +298,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testPlainUnhandledKeyStillUsesRawFallback() {
         XCTAssertTrue(
-            LineyGhosttyTextInputRouting.shouldDispatchRawKeyFallbackAfterTextInterpretation(
+            AiyuTermGhosttyTextInputRouting.shouldDispatchRawKeyFallbackAfterTextInterpretation(
                 accumulatedText: "",
                 handledTextInputCommand: false,
                 hadMarkedTextBeforeInterpretation: false,
@@ -309,7 +309,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testDeleteEventKeepsInsertedAsciiAsMarkedTextWhileComposing() {
         XCTAssertTrue(
-            LineyGhosttyTextInputRouting.shouldTreatInsertedTextAsMarkedTextDuringDeletion(
+            AiyuTermGhosttyTextInputRouting.shouldTreatInsertedTextAsMarkedTextDuringDeletion(
                 insertedText: "n",
                 keyCode: UInt16(kVK_Delete),
                 hadMarkedTextBeforeDeletion: true
@@ -319,7 +319,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testDeleteEventKeepsInsertedCjkTextAsMarkedTextWhileComposing() {
         XCTAssertTrue(
-            LineyGhosttyTextInputRouting.shouldTreatInsertedTextAsMarkedTextDuringDeletion(
+            AiyuTermGhosttyTextInputRouting.shouldTreatInsertedTextAsMarkedTextDuringDeletion(
                 insertedText: "你",
                 keyCode: UInt16(kVK_Delete),
                 hadMarkedTextBeforeDeletion: true
@@ -329,7 +329,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testDeleteEventWithoutMarkedTextDoesNotCreateMarkedText() {
         XCTAssertFalse(
-            LineyGhosttyTextInputRouting.shouldTreatInsertedTextAsMarkedTextDuringDeletion(
+            AiyuTermGhosttyTextInputRouting.shouldTreatInsertedTextAsMarkedTextDuringDeletion(
                 insertedText: "n",
                 keyCode: UInt16(kVK_Delete),
                 hadMarkedTextBeforeDeletion: false
@@ -339,7 +339,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testNonDeleteEventStillCommitsInsertedText() {
         XCTAssertFalse(
-            LineyGhosttyTextInputRouting.shouldTreatInsertedTextAsMarkedTextDuringDeletion(
+            AiyuTermGhosttyTextInputRouting.shouldTreatInsertedTextAsMarkedTextDuringDeletion(
                 insertedText: "n",
                 keyCode: UInt16(kVK_ANSI_N),
                 hadMarkedTextBeforeDeletion: true
@@ -349,7 +349,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testDeleteBackwardByDecomposingSelectorDeletesMarkedText() {
         XCTAssertEqual(
-            LineyGhosttyTextInputCommandAction.resolve(
+            AiyuTermGhosttyTextInputCommandAction.resolve(
                 selector: #selector(NSResponder.deleteBackwardByDecomposingPreviousCharacter(_:)),
                 hasMarkedText: true
             ),
@@ -359,7 +359,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testCancelOperationClearsMarkedText() {
         XCTAssertEqual(
-            LineyGhosttyTextInputCommandAction.resolve(
+            AiyuTermGhosttyTextInputCommandAction.resolve(
                 selector: #selector(NSResponder.cancelOperation(_:)),
                 hasMarkedText: true
             ),
@@ -369,7 +369,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testCancelOperationWithoutMarkedTextFallsThrough() {
         XCTAssertEqual(
-            LineyGhosttyTextInputCommandAction.resolve(
+            AiyuTermGhosttyTextInputCommandAction.resolve(
                 selector: #selector(NSResponder.cancelOperation(_:)),
                 hasMarkedText: false
             ),
@@ -379,7 +379,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testMoveWordLeftSelectorResolvesToBackwardWordCommand() {
         XCTAssertEqual(
-            LineyGhosttyTextInputCommandAction.resolve(
+            AiyuTermGhosttyTextInputCommandAction.resolve(
                 selector: #selector(NSResponder.moveWordLeft(_:)),
                 hasMarkedText: false
             ),
@@ -389,7 +389,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testMoveWordRightSelectorResolvesToForwardWordCommand() {
         XCTAssertEqual(
-            LineyGhosttyTextInputCommandAction.resolve(
+            AiyuTermGhosttyTextInputCommandAction.resolve(
                 selector: #selector(NSResponder.moveWordRight(_:)),
                 hasMarkedText: false
             ),
@@ -399,12 +399,12 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testImeDebugLoggingCanBeEnabledByEnvironment() {
         XCTAssertTrue(
-            lineyGhosttyShouldEnableIMEDebugLogging(environment: ["LINEY_DEBUG_IME": "1"])
+            aiyuTermGhosttyShouldEnableIMEDebugLogging(environment: ["LINEY_DEBUG_IME": "1"])
         )
     }
 
     func testImeDebugLoggingDefaultsToEnabled() {
-        XCTAssertTrue(lineyGhosttyShouldEnableIMEDebugLogging(environment: [:]))
+        XCTAssertTrue(aiyuTermGhosttyShouldEnableIMEDebugLogging(environment: [:]))
     }
 
     func testReturnIsNotSentAsLiteralText() {
@@ -499,7 +499,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testUnboundOptionShortcutStillAttemptsMenu() {
         XCTAssertTrue(
-            lineyGhosttyShouldAttemptMenuKeyEquivalent(
+            aiyuTermGhosttyShouldAttemptMenuKeyEquivalent(
                 bindingFlags: nil,
                 modifierFlags: [.option],
                 hasActiveKeySequence: false,
@@ -510,7 +510,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testPlainUnboundKeyDoesNotAttemptMenu() {
         XCTAssertFalse(
-            lineyGhosttyShouldAttemptMenuKeyEquivalent(
+            aiyuTermGhosttyShouldAttemptMenuKeyEquivalent(
                 bindingFlags: nil,
                 modifierFlags: [],
                 hasActiveKeySequence: false,
@@ -521,7 +521,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testUnboundShortcutSkipsMenuDuringActiveKeySequence() {
         XCTAssertFalse(
-            lineyGhosttyShouldAttemptMenuKeyEquivalent(
+            aiyuTermGhosttyShouldAttemptMenuKeyEquivalent(
                 bindingFlags: nil,
                 modifierFlags: [.option],
                 hasActiveKeySequence: true,
@@ -532,14 +532,14 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testGhosttySplitRightStopsDispatchingWhenShortcutIsCustomized() {
         var settings = AppSettings()
-        LineyKeyboardShortcuts.setShortcut(
+        AiyuTermKeyboardShortcuts.setShortcut(
             StoredShortcut(key: "d", command: false, shift: false, option: true, control: false),
             for: .splitRight,
             in: &settings
         )
 
         XCTAssertFalse(
-            lineyGhosttyShouldDispatchWorkspaceSplitAction(
+            aiyuTermGhosttyShouldDispatchWorkspaceSplitAction(
                 GHOSTTY_SPLIT_DIRECTION_RIGHT,
                 settings: settings
             )
@@ -548,10 +548,10 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testGhosttySplitDownStopsDispatchingWhenShortcutIsDisabled() {
         var settings = AppSettings()
-        LineyKeyboardShortcuts.disableShortcut(for: .splitDown, in: &settings)
+        AiyuTermKeyboardShortcuts.disableShortcut(for: .splitDown, in: &settings)
 
         XCTAssertFalse(
-            lineyGhosttyShouldDispatchWorkspaceSplitAction(
+            aiyuTermGhosttyShouldDispatchWorkspaceSplitAction(
                 GHOSTTY_SPLIT_DIRECTION_DOWN,
                 settings: settings
             )
@@ -560,7 +560,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testGhosttySplitRightStillDispatchesWithDefaultShortcut() {
         XCTAssertTrue(
-            lineyGhosttyShouldDispatchWorkspaceSplitAction(
+            aiyuTermGhosttyShouldDispatchWorkspaceSplitAction(
                 GHOSTTY_SPLIT_DIRECTION_RIGHT,
                 settings: AppSettings()
             )
@@ -630,14 +630,14 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testClampUsesTextLengthForNotFoundSelection() {
         XCTAssertEqual(
-            LineyGhosttyMarkedTextState.clamp(NSRange(location: NSNotFound, length: 3), textLength: 5),
+            AiyuTermGhosttyMarkedTextState.clamp(NSRange(location: NSNotFound, length: 3), textLength: 5),
             NSRange(location: 5, length: 0)
         )
     }
 
     func testClampCollapsesEmptyTextSelections() {
         XCTAssertEqual(
-            LineyGhosttyMarkedTextState.clamp(NSRange(location: 4, length: 2), textLength: 0),
+            AiyuTermGhosttyMarkedTextState.clamp(NSRange(location: 4, length: 2), textLength: 0),
             NSRange(location: 0, length: 0)
         )
     }
@@ -646,41 +646,41 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
         let menuItem = NSMenuItem(title: "Find", action: nil, keyEquivalent: "f")
         menuItem.tag = NSTextFinder.Action.showFindInterface.rawValue
 
-        XCTAssertEqual(lineyTextFinderAction(for: menuItem), .showFindInterface)
+        XCTAssertEqual(aiyuTermTextFinderAction(for: menuItem), .showFindInterface)
     }
 
     func testTextFinderActionIgnoresUnsupportedSender() {
-        XCTAssertNil(lineyTextFinderAction(for: NSObject()))
+        XCTAssertNil(aiyuTermTextFinderAction(for: NSObject()))
     }
 
     func testGhosttySearchBindingActionUsesSearchPrefix() {
         XCTAssertEqual(
-            lineyGhosttySearchBindingAction(for: "needle"),
+            aiyuTermGhosttySearchBindingAction(for: "needle"),
             "search:needle"
         )
     }
 
     func testGhosttySearchBindingActionPreservesLiteralQueryText() {
         XCTAssertEqual(
-            lineyGhosttySearchBindingAction(for: "error: timeout /tmp/a b"),
+            aiyuTermGhosttySearchBindingAction(for: "error: timeout /tmp/a b"),
             "search:error: timeout /tmp/a b"
         )
     }
 
     func testGhosttySearchBindingActionAllowsEmptyQuery() {
         XCTAssertEqual(
-            lineyGhosttySearchBindingAction(for: ""),
+            aiyuTermGhosttySearchBindingAction(for: ""),
             "search:"
         )
     }
 
     func testGhosttySearchNavigationBindingActionUsesNavigateSearchAction() {
         XCTAssertEqual(
-            lineyGhosttySearchNavigationBindingAction(.next),
+            aiyuTermGhosttySearchNavigationBindingAction(.next),
             "navigate_search:next"
         )
         XCTAssertEqual(
-            lineyGhosttySearchNavigationBindingAction(.previous),
+            aiyuTermGhosttySearchNavigationBindingAction(.previous),
             "navigate_search:previous"
         )
     }
@@ -692,20 +692,20 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
         ]
 
         XCTAssertEqual(
-            lineyTerminalDropText(fileURLs: fileURLs, plainText: nil),
+            aiyuTermTerminalDropText(fileURLs: fileURLs, plainText: nil),
             "'/tmp/liney screenshot.png' '/tmp/it'\\''s-liney.jpg'"
         )
     }
 
     func testTerminalDropTextFallsBackToPlainText() {
         XCTAssertEqual(
-            lineyTerminalDropText(fileURLs: [], plainText: "dragged prompt"),
+            aiyuTermTerminalDropText(fileURLs: [], plainText: "dragged prompt"),
             "dragged prompt"
         )
     }
 
     func testDeleteBackwardRemovesSingleComposedCharacter() {
-        var state = LineyGhosttyMarkedTextState(
+        var state = AiyuTermGhosttyMarkedTextState(
             text: "你好",
             selectedRange: NSRange(location: 2, length: 0)
         )
@@ -717,7 +717,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
     }
 
     func testDeleteBackwardRemovesSingleCharacterWhenImeSelectionSpansMarkedText() {
-        var state = LineyGhosttyMarkedTextState(
+        var state = AiyuTermGhosttyMarkedTextState(
             text: "你好",
             selectedRange: NSRange(location: 0, length: 2)
         )
@@ -729,7 +729,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
     }
 
     func testSetMarkedTextHonorsReplacementRangeAndOffsetsSelection() {
-        var state = LineyGhosttyMarkedTextState(
+        var state = AiyuTermGhosttyMarkedTextState(
             text: "nihao",
             selectedRange: NSRange(location: 5, length: 0)
         )
@@ -753,7 +753,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testModifierActionReleasesControlEvenWhenAnotherModifierRemainsPressed() {
         XCTAssertEqual(
-            lineyGhosttyModifierAction(
+            aiyuTermGhosttyModifierAction(
                 keyCode: UInt16(kVK_Control),
                 modifierFlags: [.command]
             ),
@@ -767,7 +767,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
         )
 
         XCTAssertEqual(
-            lineyGhosttyModifierAction(
+            aiyuTermGhosttyModifierAction(
                 keyCode: UInt16(kVK_RightControl),
                 modifierFlags: flags
             ),
@@ -777,7 +777,7 @@ final class LineyGhosttyInputSupportTests: XCTestCase {
 
     func testModifierActionIgnoresNonModifierKeys() {
         XCTAssertNil(
-            lineyGhosttyModifierAction(
+            aiyuTermGhosttyModifierAction(
                 keyCode: UInt16(kVK_ANSI_C),
                 modifierFlags: [.control]
             )

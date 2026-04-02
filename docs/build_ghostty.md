@@ -2,11 +2,11 @@
 
 This note records the current manual process for rebuilding the vendored `Liney/Vendor/GhosttyKit.xcframework`.
 
-Liney does not currently generate this framework in-repo. The xcframework is vendored into source control and updated manually when the embedded Ghostty runtime needs to change.
+AiyuTerm does not currently generate this framework in-repo. The xcframework is vendored into source control and updated manually when the embedded Ghostty runtime needs to change.
 
 ## What This Framework Is
 
-Liney links against Ghostty's macOS library through `GhosttyKit.xcframework`.
+AiyuTerm links against Ghostty's macOS library through `GhosttyKit.xcframework`.
 
 Ghostty's upstream build system can emit an xcframework directly. In current upstream source:
 
@@ -25,7 +25,7 @@ Relevant upstream sources:
 
 - Prefer a specific Ghostty release tag or pinned commit. Do not vendor from upstream `main` casually.
 - Ghostty requires a specific Zig version per Ghostty release. Check the official build docs before building.
-- The current Liney release flow expects the macOS library slice to contain both `arm64` and `x86_64`.
+- The current AiyuTerm release flow expects the macOS library slice to contain both `arm64` and `x86_64`.
 - Replacing only the binary without the matching headers is risky because the C API surface can change between Ghostty revisions.
 
 ## Prerequisites
@@ -90,7 +90,7 @@ Upstream currently writes the xcframework to `macos/GhosttyKit.xcframework` unde
 
 ## Replace The Vendored Framework
 
-From the Liney repository root:
+From the AiyuTerm repository root:
 
 ```bash
 rm -rf Liney/Vendor/GhosttyKit.xcframework
@@ -117,7 +117,7 @@ Confirm the xcframework metadata advertises the same architecture set:
 plutil -p Liney/Vendor/GhosttyKit.xcframework/Info.plist
 ```
 
-Then verify Liney still builds:
+Then verify AiyuTerm still builds:
 
 ```bash
 scripts/build_macos_app.sh

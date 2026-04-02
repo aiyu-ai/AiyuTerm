@@ -1,6 +1,6 @@
 //
 //  WorkspaceMetadataWatchService.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -20,7 +20,7 @@ final class WorkspaceMetadataWatchService {
     }
 
     private let fileManager = FileManager.default
-    private let queue = DispatchQueue(label: "com.liney.workspace-metadata-watch")
+    private let queue = DispatchQueue(label: "com.aiyuterm.workspace-metadata-watch")
     private var handles: [WatchHandle] = []
     private var pendingCallbacks: [UUID: DispatchWorkItem] = [:]
 

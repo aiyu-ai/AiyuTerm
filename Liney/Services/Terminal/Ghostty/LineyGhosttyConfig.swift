@@ -1,6 +1,6 @@
 //
-//  LineyGhosttyConfig.swift
-//  Liney
+//  AiyuTermGhosttyConfig.swift
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -8,7 +8,7 @@
 import Foundation
 import GhosttyKit
 
-enum LineyGhosttyConfigManager {
+enum AiyuTermGhosttyConfigManager {
     static func buildConfig(
         settings: AppSettings,
         fileManager: FileManager = .default
@@ -43,7 +43,7 @@ enum LineyGhosttyConfigManager {
 
     static func managedConfigContents(settings: AppSettings) -> String {
         var lines = [
-            "# Managed by Liney. Manual edits will be overwritten."
+            "# Managed by AiyuTerm. Manual edits will be overwritten."
         ]
 
         if let terminalFontFamily = settings.terminalFontFamily {
@@ -58,9 +58,9 @@ enum LineyGhosttyConfigManager {
     }
 
     static func managedConfigFileURL(fileManager: FileManager = .default) -> URL {
-        lineyStateDirectoryURL(fileManager: fileManager)
+        aiyuTermStateDirectoryURL(fileManager: fileManager)
             .appendingPathComponent("ghostty", isDirectory: true)
-            .appendingPathComponent("liney-managed.config")
+            .appendingPathComponent("aiyuterm-managed.config")
     }
 
     private static func quotedValue(_ value: String) -> String {

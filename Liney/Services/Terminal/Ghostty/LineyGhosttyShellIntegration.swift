@@ -1,13 +1,13 @@
 //
-//  LineyGhosttyShellIntegration.swift
-//  Liney
+//  AiyuTermGhosttyShellIntegration.swift
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
 
 import Foundation
 
-struct LineyGhosttyResourcePaths: Equatable {
+struct AiyuTermGhosttyResourcePaths: Equatable {
     var ghosttyResourcesDirectory: String?
     var terminfoDirectory: String?
 
@@ -34,18 +34,18 @@ struct LineyGhosttyResourcePaths: Equatable {
         self.terminfoDirectory = terminfoDirectory
     }
 
-    static func bundleMain() -> LineyGhosttyResourcePaths {
-        LineyGhosttyResourcePaths(resourceRootURL: Bundle.main.resourceURL)
+    static func bundleMain() -> AiyuTermGhosttyResourcePaths {
+        AiyuTermGhosttyResourcePaths(resourceRootURL: Bundle.main.resourceURL)
     }
 }
 
-enum LineyGhosttyShellIntegration {
+enum AiyuTermGhosttyShellIntegration {
     private static let defaultShellFeatures = ["ssh-env"]
 
     static func prepare(
         command: TerminalCommandDefinition,
         environment: [String: String],
-        resourcePaths: LineyGhosttyResourcePaths = .bundleMain()
+        resourcePaths: AiyuTermGhosttyResourcePaths = .bundleMain()
     ) -> (command: TerminalCommandDefinition, environment: [String: String]) {
         var environment = environment
 

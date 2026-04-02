@@ -1,6 +1,6 @@
 //
 //  TerminalPaneView.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -80,7 +80,7 @@ struct TerminalPaneView: View {
             }
             .frame(height: 30)
             .padding(.horizontal, 10)
-            .background(isFocused ? LineyTheme.panelRaised : LineyTheme.paneHeaderBackground)
+            .background(isFocused ? AiyuTermTheme.panelRaised : AiyuTermTheme.paneHeaderBackground)
 
             if isSearchPresented {
                 PaneSearchBar(
@@ -99,11 +99,11 @@ struct TerminalPaneView: View {
                 )
                 .padding(.horizontal, 8)
                 .padding(.bottom, 8)
-                .background(isFocused ? LineyTheme.panelRaised : LineyTheme.paneHeaderBackground)
+                .background(isFocused ? AiyuTermTheme.panelRaised : AiyuTermTheme.paneHeaderBackground)
             }
 
             TerminalHostView(session: session, shouldRestoreFocus: isFocused)
-                .background(LineyTheme.paneBackground)
+                .background(AiyuTermTheme.paneBackground)
                 .onTapGesture {
                     workspace.focusPane(paneID)
                 }
@@ -119,9 +119,9 @@ struct TerminalPaneView: View {
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(isFocused ? LineyTheme.accent.opacity(0.46) : LineyTheme.border, lineWidth: isFocused ? 1.2 : 1)
+                .stroke(isFocused ? AiyuTermTheme.accent.opacity(0.46) : AiyuTermTheme.border, lineWidth: isFocused ? 1.2 : 1)
         )
-        .background(LineyTheme.paneBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .background(AiyuTermTheme.paneBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .shadow(color: Color.black.opacity(isFocused ? 0.12 : 0.05), radius: isFocused ? 5 : 2, y: 2)
         .contextMenu {
             Button(localized("terminal.menu.splitRight")) {
@@ -204,12 +204,12 @@ struct TerminalPaneView: View {
 
         HStack(spacing: 8) {
             Circle()
-                .fill(session.hasActiveProcess ? LineyTheme.success : LineyTheme.warning)
+                .fill(session.hasActiveProcess ? AiyuTermTheme.success : AiyuTermTheme.warning)
                 .frame(width: 7, height: 7)
 
             Text(session.title)
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(LineyTheme.tertiaryText)
+                .foregroundStyle(AiyuTermTheme.tertiaryText)
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .layoutPriority(1)
@@ -334,11 +334,11 @@ private struct PaneTag: View {
     private var foreground: Color {
         switch tone {
         case .neutral:
-            return LineyTheme.mutedText
+            return AiyuTermTheme.mutedText
         case .accent:
-            return LineyTheme.accent
+            return AiyuTermTheme.accent
         case .warning:
-            return LineyTheme.warning
+            return AiyuTermTheme.warning
         }
     }
 
@@ -350,7 +350,7 @@ private struct PaneTag: View {
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
             .fixedSize(horizontal: true, vertical: false)
-            .background(LineyTheme.subtleFill, in: Capsule())
+            .background(AiyuTermTheme.subtleFill, in: Capsule())
     }
 }
 
@@ -365,8 +365,8 @@ private struct PaneHeaderButton: View {
                 .frame(width: 18, height: 18)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(LineyTheme.secondaryText)
-        .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+        .foregroundStyle(AiyuTermTheme.secondaryText)
+        .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
     }
 }
 
@@ -392,7 +392,7 @@ private struct PaneSearchBar: View {
                 .onExitCommand(perform: onClose)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 7)
-                .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
 
             if let resultLabel {
                 PaneTag(text: resultLabel, tone: .neutral)
@@ -446,6 +446,6 @@ private struct PaneStatusStrip: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
-        .background(LineyTheme.panelRaised.opacity(0.72))
+        .background(AiyuTermTheme.panelRaised.opacity(0.72))
     }
 }

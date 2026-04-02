@@ -1,6 +1,6 @@
 //
 //  AppLanguageTests.swift
-//  LineyTests
+//  AiyuTermTests
 //
 //  Author: wuwenrui
 //

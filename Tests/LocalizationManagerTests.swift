@@ -1,6 +1,6 @@
 //
 //  LocalizationManagerTests.swift
-//  LineyTests
+//  AiyuTermTests
 //
 //  Author: wuwenrui
 //
@@ -51,7 +51,7 @@ final class LocalizationManagerTests: XCTestCase {
         XCTAssertEqual(L10nTable.string(for: "settings.section.terminal.title", language: .english), "Terminal")
         XCTAssertEqual(L10nTable.string(for: "settings.button.cancel", language: .english), "Cancel")
         XCTAssertEqual(L10nTable.string(for: "settings.general.language.title", language: .english), "Language")
-        XCTAssertEqual(L10nTable.string(for: "settings.general.language.appliesImmediately", language: .english), "Changes apply immediately throughout Liney.")
+        XCTAssertEqual(L10nTable.string(for: "settings.general.language.appliesImmediately", language: .english), "Changes apply immediately throughout AiyuTerm.")
         XCTAssertEqual(L10nTable.string(for: "main.hapi.launchCurrentProject", language: .english), "Launch HAPI in Current Project")
         XCTAssertEqual(L10nTable.string(for: "settings.general.terminal.group", language: .english), "Terminal")
         XCTAssertEqual(L10nTable.string(for: "settings.general.terminal.useCustomFont", language: .english), "Use custom terminal font")
@@ -61,7 +61,7 @@ final class LocalizationManagerTests: XCTestCase {
         XCTAssertEqual(L10nTable.string(for: "settings.sidebar.defaultIcons.repository.title", language: .english), "Repository")
         XCTAssertEqual(L10nTable.string(for: "settings.updates.group", language: .english), "Automatic Updates")
         XCTAssertEqual(L10nTable.string(for: "settings.updates.checkNow", language: .english), "Check for Updates Now")
-        XCTAssertEqual(L10nTable.string(for: "settings.shortcuts.intro", language: .english), "Liney shortcuts are routed through the app menu so they continue to work while a terminal pane has focus.")
+        XCTAssertEqual(L10nTable.string(for: "settings.shortcuts.intro", language: .english), "AiyuTerm shortcuts are routed through the app menu so they continue to work while a terminal pane has focus.")
         XCTAssertEqual(L10nTable.string(for: "settings.shortcuts.resetAll", language: .english), "Reset All to Defaults")
         XCTAssertEqual(L10nTable.string(for: "settings.workspace.group", language: .english), "Workspace")
         XCTAssertEqual(L10nTable.string(for: "settings.workspace.runScript", language: .english), "Run script")
@@ -83,7 +83,7 @@ final class LocalizationManagerTests: XCTestCase {
         XCTAssertEqual(L10nTable.string(for: "settings.shortcuts.action.toggleCommandPalette.subtitle", language: .english), "Search and run workspace actions.")
         XCTAssertEqual(
             L10nTable.string(for: "settings.general.behavior.refreshIntervalHint", language: .english),
-            "Controls how often Liney automatically refreshes repository and worktree status when automatic refresh is enabled. Minimum 10 seconds."
+            "Controls how often AiyuTerm automatically refreshes repository and worktree status when automatic refresh is enabled. Minimum 10 seconds."
         )
         XCTAssertEqual(L10nTable.string(for: "settings.shortcuts.action.hideApp.title", language: .english), "Hide App")
         XCTAssertEqual(L10nTable.string(for: "settings.shortcuts.action.minimizeWindow.title", language: .english), "Minimize Window")
@@ -95,7 +95,7 @@ final class LocalizationManagerTests: XCTestCase {
         XCTAssertEqual(L10nTable.string(for: "settings.section.terminal.title", language: .simplifiedChinese), "终端")
         XCTAssertEqual(L10nTable.string(for: "settings.button.cancel", language: .simplifiedChinese), "取消")
         XCTAssertEqual(L10nTable.string(for: "settings.general.language.title", language: .simplifiedChinese), "语言")
-        XCTAssertEqual(L10nTable.string(for: "settings.general.language.appliesImmediately", language: .simplifiedChinese), "更改会立即在 Liney 中生效。")
+        XCTAssertEqual(L10nTable.string(for: "settings.general.language.appliesImmediately", language: .simplifiedChinese), "更改会立即在 AiyuTerm 中生效。")
         XCTAssertEqual(L10nTable.string(for: "main.hapi.launchCurrentProject", language: .simplifiedChinese), "在当前项目中启动 HAPI")
         XCTAssertEqual(L10nTable.string(for: "settings.general.terminal.group", language: .simplifiedChinese), "终端")
         XCTAssertEqual(L10nTable.string(for: "settings.general.terminal.useCustomFont", language: .simplifiedChinese), "使用自定义终端字体")
@@ -105,7 +105,7 @@ final class LocalizationManagerTests: XCTestCase {
         XCTAssertEqual(L10nTable.string(for: "settings.sidebar.defaultIcons.repository.title", language: .simplifiedChinese), "仓库")
         XCTAssertEqual(L10nTable.string(for: "settings.updates.group", language: .simplifiedChinese), "自动更新")
         XCTAssertEqual(L10nTable.string(for: "settings.updates.checkNow", language: .simplifiedChinese), "立即检查更新")
-        XCTAssertEqual(L10nTable.string(for: "settings.shortcuts.intro", language: .simplifiedChinese), "Liney 的快捷键通过应用菜单分发，因此即使终端面板获得焦点时也能继续工作。")
+        XCTAssertEqual(L10nTable.string(for: "settings.shortcuts.intro", language: .simplifiedChinese), "AiyuTerm 的快捷键通过应用菜单分发，因此即使终端面板获得焦点时也能继续工作。")
         XCTAssertEqual(L10nTable.string(for: "settings.shortcuts.resetAll", language: .simplifiedChinese), "恢复全部默认值")
         XCTAssertEqual(L10nTable.string(for: "settings.workspace.group", language: .simplifiedChinese), "工作区")
         XCTAssertEqual(L10nTable.string(for: "settings.workspace.runScript", language: .simplifiedChinese), "运行脚本")
@@ -127,7 +127,7 @@ final class LocalizationManagerTests: XCTestCase {
         XCTAssertEqual(L10nTable.string(for: "settings.shortcuts.action.toggleCommandPalette.subtitle", language: .simplifiedChinese), "搜索并执行工作区动作。")
         XCTAssertEqual(
             L10nTable.string(for: "settings.general.behavior.refreshIntervalHint", language: .simplifiedChinese),
-            "控制在启用自动刷新时，Liney 自动刷新仓库和 worktree 状态的频率。最小为 10 秒。"
+            "控制在启用自动刷新时，AiyuTerm 自动刷新仓库和 worktree 状态的频率。最小为 10 秒。"
         )
         XCTAssertEqual(L10nTable.string(for: "settings.shortcuts.action.hideApp.title", language: .simplifiedChinese), "隐藏应用")
         XCTAssertEqual(L10nTable.string(for: "settings.shortcuts.action.minimizeWindow.title", language: .simplifiedChinese), "最小化窗口")
@@ -149,7 +149,7 @@ final class LocalizationManagerTests: XCTestCase {
     }
 
     func testUpdateSelectedLanguagePostsChangeNotification() {
-        let expectation = expectation(forNotification: .lineyLocalizationDidChange, object: nil)
+        let expectation = expectation(forNotification: .aiyuTermLocalizationDidChange, object: nil)
 
         LocalizationManager.shared.updateSelectedLanguage(.simplifiedChinese)
 

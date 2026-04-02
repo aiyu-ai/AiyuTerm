@@ -1,24 +1,24 @@
 <!--
   terminal-architecture.md
-  Liney
+  AiyuTerm
 
   Author: wuwenrui
 -->
 
 # Terminal Architecture
 
-Liney keeps terminal code split between a small set of abstractions and a dedicated Ghostty adapter layer. The goal is to let higher-level session code talk to a stable interface while the `libghostty` bridge stays isolated.
+AiyuTerm keeps terminal code split between a small set of abstractions and a dedicated Ghostty adapter layer. The goal is to let higher-level session code talk to a stable interface while the `libghostty` bridge stays isolated.
 
 ## Directory Layout
 
 ```text
 Liney/Services/Terminal/
 ├─ Ghostty/
-│  ├─ LineyGhosttyBootstrap.swift
-│  ├─ LineyGhosttyClipboardSupport.swift
-│  ├─ LineyGhosttyController.swift
-│  ├─ LineyGhosttyInputSupport.swift
-│  └─ LineyGhosttyRuntime.swift
+│  ├─ AiyuTermGhosttyBootstrap.swift
+│  ├─ AiyuTermGhosttyClipboardSupport.swift
+│  ├─ AiyuTermGhosttyController.swift
+│  ├─ AiyuTermGhosttyInputSupport.swift
+│  └─ AiyuTermGhosttyRuntime.swift
 ├─ SessionBackendLaunch.swift
 ├─ ShellSession.swift
 ├─ TerminalSurface.swift
@@ -53,11 +53,11 @@ This layer should not know about Ghostty callbacks beyond the controller protoco
 
 Coordinates multiple sessions for a workspace and feeds pane-level UI state.
 
-### `Ghostty/LineyGhosttyRuntime.swift`
+### `Ghostty/AiyuTermGhosttyRuntime.swift`
 
 Owns the shared `libghostty` app/runtime instance, callback wiring, and clipboard callback entry points.
 
-### `Ghostty/LineyGhosttyController.swift`
+### `Ghostty/AiyuTermGhosttyController.swift`
 
 Bridges one managed terminal surface to AppKit:
 
@@ -66,15 +66,15 @@ Bridges one managed terminal surface to AppKit:
 - manages search/read-only state snapshots
 - handles input, IME, selection, cursor, and secure-input behaviors
 
-### `Ghostty/LineyGhosttyInputSupport.swift`
+### `Ghostty/AiyuTermGhosttyInputSupport.swift`
 
 Contains pure keyboard and IME helper logic. This file is intentionally kept light on object state so its behavior can be unit tested directly.
 
-### `Ghostty/LineyGhosttyClipboardSupport.swift`
+### `Ghostty/AiyuTermGhosttyClipboardSupport.swift`
 
 Normalizes clipboard read/write helpers and payload typing used by the runtime and controller.
 
-### `Ghostty/LineyGhosttyBootstrap.swift`
+### `Ghostty/AiyuTermGhosttyBootstrap.swift`
 
 Performs one-time `libghostty` global initialization before the app starts driving any terminal surface.
 

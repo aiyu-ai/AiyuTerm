@@ -1,6 +1,6 @@
 //
 //  CurrentUserLoginShell.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: Codex
 //

@@ -1,6 +1,6 @@
 //
 //  TmuxAttachCoordinatorTests.swift
-//  LineyTests
+//  AiyuTermTests
 //
 //  Author: wuwenrui
 //

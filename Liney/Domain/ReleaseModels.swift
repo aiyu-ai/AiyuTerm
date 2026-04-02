@@ -1,6 +1,6 @@
 //
 //  ReleaseModels.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //

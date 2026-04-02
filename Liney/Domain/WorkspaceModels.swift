@@ -1,6 +1,6 @@
 //
 //  WorkspaceModels.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -44,16 +44,16 @@ struct WorkspaceGroup: Codable, Hashable, Identifiable {
     }
 }
 
-private func lineyLocalizedWorkflowString(_ key: String) -> String {
+private func aiyuTermLocalizedWorkflowString(_ key: String) -> String {
     LocalizationManager.shared.string(key)
 }
 
-private func lineyLocalizedModelString(_ key: String) -> String {
+private func aiyuTermLocalizedModelString(_ key: String) -> String {
     LocalizationManager.shared.string(key)
 }
 
-private func lineyLocalizedModelFormat(_ key: String, _ arguments: CVarArg...) -> String {
-    l10nFormat(lineyLocalizedModelString(key), locale: .current, arguments: arguments)
+private func aiyuTermLocalizedModelFormat(_ key: String, _ arguments: CVarArg...) -> String {
+    l10nFormat(aiyuTermLocalizedModelString(key), locale: .current, arguments: arguments)
 }
 
 enum WorkspaceKind: String, Codable {
@@ -63,9 +63,9 @@ enum WorkspaceKind: String, Codable {
     var displayName: String {
         switch self {
         case .repository:
-            return lineyLocalizedModelString("workspace.kind.repository")
+            return aiyuTermLocalizedModelString("workspace.kind.repository")
         case .localTerminal:
-            return lineyLocalizedModelString("workspace.kind.localTerminal")
+            return aiyuTermLocalizedModelString("workspace.kind.localTerminal")
         }
     }
 }
@@ -86,11 +86,11 @@ enum SessionBackendKind: String, Codable, CaseIterable {
     var displayName: String {
         switch self {
         case .localShell:
-            return lineyLocalizedModelString("session.backend.localShell")
+            return aiyuTermLocalizedModelString("session.backend.localShell")
         case .ssh:
-            return lineyLocalizedModelString("session.backend.ssh")
+            return aiyuTermLocalizedModelString("session.backend.ssh")
         case .agent:
-            return lineyLocalizedModelString("session.backend.agent")
+            return aiyuTermLocalizedModelString("session.backend.agent")
         }
     }
 }
@@ -419,13 +419,13 @@ enum WorkspaceWorkflowLocalSessionMode: String, Codable, Hashable, CaseIterable,
     var title: String {
         switch self {
         case .reuseFocused:
-            return lineyLocalizedWorkflowString("settings.workflow.localSession.reuseFocused")
+            return aiyuTermLocalizedWorkflowString("settings.workflow.localSession.reuseFocused")
         case .newSession:
-            return lineyLocalizedWorkflowString("settings.workflow.localSession.newSession")
+            return aiyuTermLocalizedWorkflowString("settings.workflow.localSession.newSession")
         case .splitRight:
-            return lineyLocalizedWorkflowString("settings.workflow.localSession.splitRight")
+            return aiyuTermLocalizedWorkflowString("settings.workflow.localSession.splitRight")
         case .splitDown:
-            return lineyLocalizedWorkflowString("settings.workflow.localSession.splitDown")
+            return aiyuTermLocalizedWorkflowString("settings.workflow.localSession.splitDown")
         }
     }
 }
@@ -441,13 +441,13 @@ enum WorkspaceWorkflowAgentMode: String, Codable, Hashable, CaseIterable, Identi
     var title: String {
         switch self {
         case .none:
-            return lineyLocalizedWorkflowString("settings.workflow.agent.none")
+            return aiyuTermLocalizedWorkflowString("settings.workflow.agent.none")
         case .newSession:
-            return lineyLocalizedWorkflowString("settings.workflow.agent.newSession")
+            return aiyuTermLocalizedWorkflowString("settings.workflow.agent.newSession")
         case .splitRight:
-            return lineyLocalizedWorkflowString("settings.workflow.agent.splitRight")
+            return aiyuTermLocalizedWorkflowString("settings.workflow.agent.splitRight")
         case .splitDown:
-            return lineyLocalizedWorkflowString("settings.workflow.agent.splitDown")
+            return aiyuTermLocalizedWorkflowString("settings.workflow.agent.splitDown")
         }
     }
 }
@@ -491,17 +491,17 @@ enum WorkspaceActivityKind: String, Codable, Hashable, CaseIterable {
     var displayName: String {
         switch self {
         case .workflow:
-            return lineyLocalizedModelString("activity.kind.workflow")
+            return aiyuTermLocalizedModelString("activity.kind.workflow")
         case .command:
-            return lineyLocalizedModelString("activity.kind.command")
+            return aiyuTermLocalizedModelString("activity.kind.command")
         case .agent:
-            return lineyLocalizedModelString("activity.kind.agent")
+            return aiyuTermLocalizedModelString("activity.kind.agent")
         case .remote:
-            return lineyLocalizedModelString("activity.kind.remote")
+            return aiyuTermLocalizedModelString("activity.kind.remote")
         case .github:
-            return lineyLocalizedModelString("activity.kind.github")
+            return aiyuTermLocalizedModelString("activity.kind.github")
         case .release:
-            return lineyLocalizedModelString("activity.kind.release")
+            return aiyuTermLocalizedModelString("activity.kind.release")
         }
     }
 }
@@ -665,7 +665,7 @@ struct WorktreeModel: Codable, Hashable, Identifiable {
     }
 
     var branchLabel: String {
-        branch ?? lineyLocalizedModelString("worktree.detached")
+        branch ?? aiyuTermLocalizedModelString("worktree.detached")
     }
 }
 
@@ -730,19 +730,19 @@ enum GlobalCanvasColorGroup: String, Codable, Hashable, CaseIterable, Identifiab
     var title: String {
         switch self {
         case .none:
-            return lineyLocalizedModelString("canvas.color.none")
+            return aiyuTermLocalizedModelString("canvas.color.none")
         case .blue:
-            return lineyLocalizedModelString("canvas.color.blue")
+            return aiyuTermLocalizedModelString("canvas.color.blue")
         case .teal:
-            return lineyLocalizedModelString("canvas.color.teal")
+            return aiyuTermLocalizedModelString("canvas.color.teal")
         case .green:
-            return lineyLocalizedModelString("canvas.color.green")
+            return aiyuTermLocalizedModelString("canvas.color.green")
         case .amber:
-            return lineyLocalizedModelString("canvas.color.amber")
+            return aiyuTermLocalizedModelString("canvas.color.amber")
         case .rose:
-            return lineyLocalizedModelString("canvas.color.rose")
+            return aiyuTermLocalizedModelString("canvas.color.rose")
         case .slate:
-            return lineyLocalizedModelString("canvas.color.slate")
+            return aiyuTermLocalizedModelString("canvas.color.slate")
         }
     }
 }
@@ -943,7 +943,7 @@ struct WorkspaceTabStateRecord: Codable, Hashable, Identifiable {
 
     init(
         id: UUID = UUID(),
-        title: String = lineyLocalizedModelString("tab.defaultTitle"),
+        title: String = aiyuTermLocalizedModelString("tab.defaultTitle"),
         isManuallyNamed: Bool = false,
         layout: SessionLayoutNode?,
         panes: [PaneSnapshot],
@@ -961,7 +961,7 @@ struct WorkspaceTabStateRecord: Codable, Hashable, Identifiable {
 
     static func makeDefault(
         for worktreePath: String,
-        title: String = lineyLocalizedModelFormat("tab.defaultIndexedFormat", 1)
+        title: String = aiyuTermLocalizedModelFormat("tab.defaultIndexedFormat", 1)
     ) -> WorkspaceTabStateRecord {
         let initialPane = PaneSnapshot.makeDefault(cwd: worktreePath)
         return WorkspaceTabStateRecord(
@@ -988,7 +988,7 @@ extension WorkspaceTabStateRecord {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
-        title = try container.decodeIfPresent(String.self, forKey: .title) ?? lineyLocalizedModelString("tab.defaultTitle")
+        title = try container.decodeIfPresent(String.self, forKey: .title) ?? aiyuTermLocalizedModelString("tab.defaultTitle")
         isManuallyNamed = try container.decodeIfPresent(Bool.self, forKey: .isManuallyNamed) ?? false
         layout = try container.decodeIfPresent(SessionLayoutNode.self, forKey: .layout)
         panes = try container.decodeIfPresent([PaneSnapshot].self, forKey: .panes) ?? []
@@ -1184,7 +1184,7 @@ struct WorktreeSessionStateRecord: Codable, Hashable, Identifiable {
     }
 
     private static func defaultTitle(index: Int) -> String {
-        lineyLocalizedModelFormat("tab.defaultIndexedFormat", index)
+        aiyuTermLocalizedModelFormat("tab.defaultIndexedFormat", index)
     }
 }
 

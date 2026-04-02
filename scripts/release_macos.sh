@@ -10,8 +10,8 @@ ARCHIVE_DSYM_SCRIPT="${ARCHIVE_DSYM_SCRIPT:-$ROOT_DIR/scripts/archive_dsym.sh}"
 UPLOAD_DSYM_SCRIPT="${UPLOAD_DSYM_SCRIPT:-$ROOT_DIR/scripts/upload_dsym_to_sentry.sh}"
 PROJECT_PATH="${PROJECT_PATH:-$ROOT_DIR/Liney.xcodeproj}"
 SCHEME="${SCHEME:-Liney}"
-APP_NAME="${APP_NAME:-Liney}"
-EXECUTABLE_NAME="${EXECUTABLE_NAME:-Liney}"
+APP_NAME="${APP_NAME:-AiyuTerm}"
+EXECUTABLE_NAME="${EXECUTABLE_NAME:-AiyuTerm}"
 BUNDLE_IDENTIFIER="${BUNDLE_IDENTIFIER:-}"
 VERSION="${VERSION:-}"
 BUILD_NUMBER="${BUILD_NUMBER:-}"
@@ -24,8 +24,8 @@ NOTARYTOOL_PROFILE="${NOTARYTOOL_PROFILE:-}"
 APPLE_ID="${APPLE_ID:-}"
 APPLE_TEAM_ID="${APPLE_TEAM_ID:-}"
 APPLE_APP_SPECIFIC_PASSWORD="${APPLE_APP_SPECIFIC_PASSWORD:-${APPLE_PASSWORD:-${APP_SPECIFIC_PASSWORD:-}}}"
-LINEY_RELEASE_HOME="${LINEY_RELEASE_HOME:-$HOME/.liney_release}"
-SPARKLE_PRIVATE_KEY_FILE="${SPARKLE_PRIVATE_KEY_FILE:-$LINEY_RELEASE_HOME/sparkle_private_key}"
+AIYUTERM_RELEASE_HOME="${AIYUTERM_RELEASE_HOME:-$HOME/.aiyuterm_release}"
+SPARKLE_PRIVATE_KEY_FILE="${SPARKLE_PRIVATE_KEY_FILE:-$AIYUTERM_RELEASE_HOME/sparkle_private_key}"
 SPARKLE_MAX_VERSIONS="${SPARKLE_MAX_VERSIONS:-10}"
 SPARKLE_CHANNEL="${SPARKLE_CHANNEL:-}"
 
@@ -132,7 +132,7 @@ TAG="${TAG:-v$VERSION}"
 
 if [[ ! -f "$SPARKLE_PRIVATE_KEY_FILE" ]]; then
   echo "Missing Sparkle private key file: $SPARKLE_PRIVATE_KEY_FILE" >&2
-  echo "Run scripts/setup_sparkle_keys.sh first, or set SPARKLE_PRIVATE_KEY_FILE / LINEY_RELEASE_HOME." >&2
+  echo "Run scripts/setup_sparkle_keys.sh first, or set SPARKLE_PRIVATE_KEY_FILE / AIYUTERM_RELEASE_HOME." >&2
   exit 1
 fi
 
@@ -222,14 +222,14 @@ if [[ "$SKIP_TAG" != "1" ]]; then
   fi
 fi
 
-RELEASE_NOTES_FILE="$(mktemp "${TMPDIR:-/tmp}/liney-release-notes.XXXXXX.md")"
+RELEASE_NOTES_FILE="$(mktemp "${TMPDIR:-/tmp}/aiyuterm-release-notes.XXXXXX.md")"
 cat > "$RELEASE_NOTES_FILE" <<EOF
-## Liney $VERSION
+## AiyuTerm $VERSION
 
 - GitHub release: https://github.com/wuwenrui/liney/releases/tag/$TAG
 EOF
 
-APPCAST_STAGING_DIR="$(mktemp -d "${TMPDIR:-/tmp}/liney-appcast.XXXXXX")"
+APPCAST_STAGING_DIR="$(mktemp -d "${TMPDIR:-/tmp}/aiyuterm-appcast.XXXXXX")"
 ZIP_BASENAME="$(basename "$ZIP_PATH" .zip)"
 
 sparkle_create_app_zip "$APP_BUNDLE_PATH" "$ZIP_PATH"

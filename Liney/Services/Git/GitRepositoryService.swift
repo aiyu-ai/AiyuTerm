@@ -1,6 +1,6 @@
 //
 //  GitRepositoryService.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //

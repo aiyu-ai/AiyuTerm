@@ -1,6 +1,6 @@
 //
 //  AgentStatusFilePoller.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -8,12 +8,12 @@
 import CommonCrypto
 import Foundation
 
-/// Polls /tmp/liney-agent-status/<dir-hash> files written by Claude Code hooks.
+/// Polls /tmp/aiyuterm-agent-status/<dir-hash> files written by Claude Code hooks.
 /// Matches status files to workspaces by hashing the working directory path.
 @MainActor
 final class AgentStatusFilePoller {
 
-    private static let statusDir = "/tmp/liney-agent-status"
+    private static let statusDir = "/tmp/aiyuterm-agent-status"
 
     /// Provide workspaces dynamically so we always scan current state.
     var workspacesProvider: (() -> [WorkspaceModel])?

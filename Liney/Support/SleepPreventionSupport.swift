@@ -1,6 +1,6 @@
 //
 //  SleepPreventionSupport.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //

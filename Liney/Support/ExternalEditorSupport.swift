@@ -1,6 +1,6 @@
 //
 //  ExternalEditorSupport.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //

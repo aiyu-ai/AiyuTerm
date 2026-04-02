@@ -1,6 +1,6 @@
 //
 //  GlobalCanvasView.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -230,13 +230,13 @@ struct GlobalCanvasView: View {
             HStack(spacing: 8) {
                 WorkspaceCanvasBadge(
                     text: localizedFormat("canvas.header.workspaceCountFormat", workspaceFilters.count, workspaceFilters.count == 1 ? "" : "s"),
-                    tint: LineyTheme.accent
+                    tint: AiyuTermTheme.accent
                 )
                 WorkspaceCanvasBadge(
                     text: isFiltering
                         ? localizedFormat("canvas.header.visibleLiveFormat", visibleCards.count, allCards.count)
                         : localizedFormat("canvas.header.liveTabsFormat", allCards.count, allCards.count == 1 ? "" : "s"),
-                    tint: LineyTheme.secondaryText
+                    tint: AiyuTermTheme.secondaryText
                 )
                 WorkspaceCanvasBadge(
                     text: localizedFormat(
@@ -244,31 +244,31 @@ struct GlobalCanvasView: View {
                         allCards.reduce(0) { $0 + $1.activeSessionCount },
                         allCards.reduce(0) { $0 + $1.activeSessionCount } == 1 ? "" : "s"
                     ),
-                    tint: LineyTheme.success
+                    tint: AiyuTermTheme.success
                 )
                 if let activeCard = allCards.first(where: { $0.id == activeCardID }) {
                     WorkspaceCanvasBadge(
                         text: "\(activeCard.workspaceName) / \(activeCard.worktreeTitle)",
-                        tint: LineyTheme.warning
+                        tint: AiyuTermTheme.warning
                     )
                 }
                 WorkspaceCanvasBadge(
                     text: localizedFormat("canvas.header.pinnedCountFormat", allCards.filter { layout(for: $0).isPinned }.count),
-                    tint: LineyTheme.tertiaryText
+                    tint: AiyuTermTheme.tertiaryText
                 )
-                WorkspaceCanvasBadge(text: "\(Int(canvasScale * 100))%", tint: LineyTheme.tertiaryText)
+                WorkspaceCanvasBadge(text: "\(Int(canvasScale * 100))%", tint: AiyuTermTheme.tertiaryText)
             }
 
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(LineyTheme.mutedText)
+                    .foregroundStyle(AiyuTermTheme.mutedText)
 
                 TextField(
                     text: $query,
                     prompt: Text(localized("canvas.search.placeholder"))
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(LineyTheme.mutedText)
+                        .foregroundStyle(AiyuTermTheme.mutedText)
                 ) {
                     EmptyView()
                 }
@@ -280,14 +280,14 @@ struct GlobalCanvasView: View {
                         query = ""
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(LineyTheme.mutedText)
+                            .foregroundStyle(AiyuTermTheme.mutedText)
                     }
                     .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(LineyTheme.sidebarSearchBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(AiyuTermTheme.sidebarSearchBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
@@ -314,10 +314,10 @@ struct GlobalCanvasView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(LineyTheme.chromeBackground.opacity(0.96), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(AiyuTermTheme.chromeBackground.opacity(0.96), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(LineyTheme.border, lineWidth: 1)
+                .stroke(AiyuTermTheme.border, lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.18), radius: 18, y: 10)
         .controlSize(.small)
@@ -340,12 +340,12 @@ struct GlobalCanvasView: View {
         VStack(spacing: 14) {
             Image(systemName: "square.grid.3x2")
                 .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(LineyTheme.mutedText)
+                .foregroundStyle(AiyuTermTheme.mutedText)
             Text(title)
                 .font(.system(size: 15, weight: .semibold))
             Text(message)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(LineyTheme.mutedText)
+                .foregroundStyle(AiyuTermTheme.mutedText)
             HStack(spacing: 10) {
                 if isFiltering {
                     Button(localized("canvas.clearFilters")) {
@@ -409,8 +409,8 @@ struct GlobalCanvasView: View {
         }
         .labelStyle(.iconOnly)
         .padding(12)
-        .background(LineyTheme.chromeBackground.opacity(0.96), in: Capsule())
-        .overlay(Capsule().stroke(LineyTheme.border, lineWidth: 1))
+        .background(AiyuTermTheme.chromeBackground.opacity(0.96), in: Capsule())
+        .overlay(Capsule().stroke(AiyuTermTheme.border, lineWidth: 1))
         .shadow(color: .black.opacity(0.2), radius: 16, y: 8)
     }
 
@@ -846,17 +846,17 @@ struct GlobalCanvasView: View {
     private func tint(for colorGroup: GlobalCanvasColorGroup) -> Color {
         switch colorGroup {
         case .none:
-            return LineyTheme.accent
+            return AiyuTermTheme.accent
         case .blue:
-            return LineyTheme.accent
+            return AiyuTermTheme.accent
         case .teal:
-            return LineyTheme.localAccent
+            return AiyuTermTheme.localAccent
         case .green:
-            return LineyTheme.success
+            return AiyuTermTheme.success
         case .amber:
-            return LineyTheme.warning
+            return AiyuTermTheme.warning
         case .rose:
-            return LineyTheme.danger
+            return AiyuTermTheme.danger
         case .slate:
             return Color(nsColor: NSColor(calibratedRed: 0.58, green: 0.65, blue: 0.76, alpha: 1))
         }
@@ -947,21 +947,21 @@ private struct GlobalCanvasFilterChip: View {
                     .font(.system(size: 10, weight: .semibold))
                 Text(subtitle)
                     .font(.system(size: 9, weight: .bold, design: .monospaced))
-                    .foregroundStyle(isSelected ? LineyTheme.accent : LineyTheme.mutedText)
+                    .foregroundStyle(isSelected ? AiyuTermTheme.accent : AiyuTermTheme.mutedText)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(
                 RoundedRectangle(cornerRadius: 999, style: .continuous)
-                    .fill(isSelected ? LineyTheme.panelRaised : LineyTheme.subtleFill)
+                    .fill(isSelected ? AiyuTermTheme.panelRaised : AiyuTermTheme.subtleFill)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 999, style: .continuous)
-                    .stroke(isSelected ? LineyTheme.accent.opacity(0.32) : LineyTheme.border, lineWidth: 1)
+                    .stroke(isSelected ? AiyuTermTheme.accent.opacity(0.32) : AiyuTermTheme.border, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
-        .foregroundStyle(isSelected ? .white : LineyTheme.secondaryText)
+        .foregroundStyle(isSelected ? .white : AiyuTermTheme.secondaryText)
     }
 }
 
@@ -1072,7 +1072,7 @@ private struct GlobalCanvasCardView: View {
     private var titleBar: some View {
         HStack(spacing: 8) {
             Circle()
-                .fill(layout.colorGroup == .none ? (card.isSelected ? LineyTheme.accent : LineyTheme.secondaryText.opacity(0.55)) : accentTint)
+                .fill(layout.colorGroup == .none ? (card.isSelected ? AiyuTermTheme.accent : AiyuTermTheme.secondaryText.opacity(0.55)) : accentTint)
                 .frame(width: 6, height: 6)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -1085,13 +1085,13 @@ private struct GlobalCanvasCardView: View {
                     if layout.isPinned {
                         Image(systemName: "pin.fill")
                             .font(.system(size: 8, weight: .bold))
-                            .foregroundStyle(LineyTheme.warning)
+                            .foregroundStyle(AiyuTermTheme.warning)
                     }
 
                     if layout.isMinimized {
                         Image(systemName: "rectangle.compress.vertical")
                             .font(.system(size: 8, weight: .bold))
-                            .foregroundStyle(LineyTheme.mutedText)
+                            .foregroundStyle(AiyuTermTheme.mutedText)
                     }
                 }
 
@@ -1102,7 +1102,7 @@ private struct GlobalCanvasCardView: View {
 
                 Text(card.primaryPath.isEmpty ? "\(card.worktreeTitle) \(localized("canvas.card.worktreeSuffix"))" : card.primaryPath)
                     .font(.system(size: 9, weight: .medium, design: .monospaced))
-                    .foregroundStyle(LineyTheme.mutedText)
+                    .foregroundStyle(AiyuTermTheme.mutedText)
                     .lineLimit(1)
             }
 
@@ -1114,11 +1114,11 @@ private struct GlobalCanvasCardView: View {
 
             WorkspaceCanvasBadge(
                 text: card.worktreeTitle,
-                tint: card.isSelected ? LineyTheme.warning : LineyTheme.secondaryText
+                tint: card.isSelected ? AiyuTermTheme.warning : AiyuTermTheme.secondaryText
             )
             WorkspaceCanvasBadge(
                 text: localizedFormat("canvas.card.panesFormat", card.paneCount, card.paneCount == 1 ? "" : "s"),
-                tint: card.isSelected ? accentTint : LineyTheme.secondaryText
+                tint: card.isSelected ? accentTint : AiyuTermTheme.secondaryText
             )
 
             Menu {
@@ -1139,7 +1139,7 @@ private struct GlobalCanvasCardView: View {
             } label: {
                 Image(systemName: "ellipsis.circle")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(card.isSelected ? .white : LineyTheme.secondaryText)
+                    .foregroundStyle(card.isSelected ? .white : AiyuTermTheme.secondaryText)
             }
             .menuStyle(.borderlessButton)
             .fixedSize()
@@ -1149,12 +1149,12 @@ private struct GlobalCanvasCardView: View {
                     .font(.system(size: 12, weight: .semibold))
             }
             .buttonStyle(.plain)
-            .foregroundStyle(card.isSelected ? .white : LineyTheme.secondaryText)
+            .foregroundStyle(card.isSelected ? .white : AiyuTermTheme.secondaryText)
             .help(localized("canvas.card.openTab"))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
-        .background(LineyTheme.chromeBackground.opacity(0.94))
+        .background(AiyuTermTheme.chromeBackground.opacity(0.94))
         .gesture(
             DragGesture(coordinateSpace: .global)
                 .updating($dragTranslation) { value, state, _ in
@@ -1168,14 +1168,14 @@ private struct GlobalCanvasCardView: View {
 
     private var minimizedSummary: some View {
         HStack(spacing: 10) {
-            WorkspaceCanvasBadge(text: localizedFormat("canvas.card.activeCountFormat", card.activeSessionCount), tint: LineyTheme.success)
+            WorkspaceCanvasBadge(text: localizedFormat("canvas.card.activeCountFormat", card.activeSessionCount), tint: AiyuTermTheme.success)
             Text(card.tab.layout == nil ? localized("canvas.card.noLiveLayout") : localized("canvas.card.collapsedLiveView"))
                 .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(LineyTheme.mutedText)
+                .foregroundStyle(AiyuTermTheme.mutedText)
             Spacer(minLength: 0)
             Text(card.worktreePath.abbreviatedPath)
                 .font(.system(size: 9, weight: .medium, design: .monospaced))
-                .foregroundStyle(LineyTheme.mutedText)
+                .foregroundStyle(AiyuTermTheme.mutedText)
                 .lineLimit(1)
         }
         .padding(.horizontal, 12)
@@ -1192,7 +1192,7 @@ private struct GlobalCanvasCardView: View {
                 allowsInteraction: card.isSelected
             )
             .padding(10)
-            .background(LineyTheme.paneBackground)
+            .background(AiyuTermTheme.paneBackground)
             .allowsHitTesting(card.isSelected)
             .overlay {
                 if !card.isSelected {
@@ -1207,8 +1207,8 @@ private struct GlobalCanvasCardView: View {
                     .font(.system(size: 12, weight: .semibold))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .foregroundStyle(LineyTheme.mutedText)
-            .background(LineyTheme.paneBackground)
+            .foregroundStyle(AiyuTermTheme.mutedText)
+            .background(AiyuTermTheme.paneBackground)
         }
     }
 
@@ -1218,10 +1218,10 @@ private struct GlobalCanvasCardView: View {
             .overlay(alignment: .bottomTrailing) {
                 Text(localized("canvas.card.clickToFocus"))
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(LineyTheme.secondaryText)
+                    .foregroundStyle(AiyuTermTheme.secondaryText)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(LineyTheme.chromeBackground.opacity(0.96), in: Capsule())
+                    .background(AiyuTermTheme.chromeBackground.opacity(0.96), in: Capsule())
                     .padding(12)
             }
     }
@@ -1229,15 +1229,15 @@ private struct GlobalCanvasCardView: View {
     private var cardBackground: LinearGradient {
         LinearGradient(
             colors: card.isSelected
-                ? [LineyTheme.panelRaised, accentTint.opacity(0.28)]
-                : [LineyTheme.panelBackground, accentTint.opacity(layout.colorGroup == .none ? 0.08 : 0.14)],
+                ? [AiyuTermTheme.panelRaised, accentTint.opacity(0.28)]
+                : [AiyuTermTheme.panelBackground, accentTint.opacity(layout.colorGroup == .none ? 0.08 : 0.14)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
     }
 
     private var cardBorder: Color {
-        (layout.colorGroup == .none ? (card.isSelected ? LineyTheme.accent : LineyTheme.border) : accentTint.opacity(card.isSelected ? 0.65 : 0.36))
+        (layout.colorGroup == .none ? (card.isSelected ? AiyuTermTheme.accent : AiyuTermTheme.border) : accentTint.opacity(card.isSelected ? 0.65 : 0.36))
     }
 
     private var shadowColor: Color {
@@ -1293,7 +1293,7 @@ private struct WorkspaceCanvasLiveNodeView: View {
                 .frame(width: firstWidth)
 
                 Rectangle()
-                    .fill(LineyTheme.border)
+                    .fill(AiyuTermTheme.border)
                     .frame(width: dividerThickness)
 
                 WorkspaceCanvasLiveNodeView(
@@ -1316,7 +1316,7 @@ private struct WorkspaceCanvasLiveNodeView: View {
                 .frame(height: firstHeight)
 
                 Rectangle()
-                    .fill(LineyTheme.border)
+                    .fill(AiyuTermTheme.border)
                     .frame(height: dividerThickness)
 
                 WorkspaceCanvasLiveNodeView(
@@ -1343,33 +1343,33 @@ private struct WorkspaceCanvasTerminalPane: View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
                 Circle()
-                    .fill(session.hasActiveProcess ? LineyTheme.success : LineyTheme.warning)
+                    .fill(session.hasActiveProcess ? AiyuTermTheme.success : AiyuTermTheme.warning)
                     .frame(width: 6, height: 6)
 
                 Text(session.title)
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(LineyTheme.tertiaryText)
+                    .foregroundStyle(AiyuTermTheme.tertiaryText)
                     .lineLimit(1)
 
                 Spacer(minLength: 6)
 
                 Text(directoryLabel)
                     .font(.system(size: 9, weight: .medium, design: .monospaced))
-                    .foregroundStyle(LineyTheme.mutedText)
+                    .foregroundStyle(AiyuTermTheme.mutedText)
                     .lineLimit(1)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(isFocused ? LineyTheme.panelRaised : LineyTheme.paneHeaderBackground)
+            .background(isFocused ? AiyuTermTheme.panelRaised : AiyuTermTheme.paneHeaderBackground)
 
             TerminalHostView(session: session)
-                .background(LineyTheme.paneBackground)
+                .background(AiyuTermTheme.paneBackground)
                 .allowsHitTesting(allowsInteraction)
         }
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(isFocused ? LineyTheme.accent.opacity(0.4) : LineyTheme.border, lineWidth: 1)
+                .stroke(isFocused ? AiyuTermTheme.accent.opacity(0.4) : AiyuTermTheme.border, lineWidth: 1)
         )
     }
 }
@@ -1397,19 +1397,19 @@ private struct GlobalCanvasBackdrop: View {
         GeometryReader { proxy in
             ZStack {
                 LinearGradient(
-                    colors: [LineyTheme.appBackground, LineyTheme.canvasBackground],
+                    colors: [AiyuTermTheme.appBackground, AiyuTermTheme.canvasBackground],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
 
                 Circle()
-                    .fill(LineyTheme.backdropBlue)
+                    .fill(AiyuTermTheme.backdropBlue)
                     .frame(width: proxy.size.width * 0.34)
                     .blur(radius: 76)
                     .offset(x: proxy.size.width * 0.24, y: -proxy.size.height * 0.18)
 
                 Circle()
-                    .fill(LineyTheme.backdropTeal)
+                    .fill(AiyuTermTheme.backdropTeal)
                     .frame(width: proxy.size.width * 0.24)
                     .blur(radius: 64)
                     .offset(x: -proxy.size.width * 0.2, y: proxy.size.height * 0.25)

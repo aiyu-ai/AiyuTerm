@@ -1,6 +1,6 @@
 //
 //  WorkspaceSessionController.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //

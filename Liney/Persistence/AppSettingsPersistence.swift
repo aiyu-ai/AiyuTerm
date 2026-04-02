@@ -1,13 +1,13 @@
 //
 //  AppSettingsPersistence.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
 
 import Foundation
 
-private let lineyPersistenceIsDebugBuild: Bool = {
+private let aiyuTermPersistenceIsDebugBuild: Bool = {
 #if DEBUG
     true
 #else
@@ -15,13 +15,13 @@ private let lineyPersistenceIsDebugBuild: Bool = {
 #endif
 }()
 
-func lineyStateDirectoryName(isDebugBuild: Bool = lineyPersistenceIsDebugBuild) -> String {
-    isDebugBuild ? ".liney-debug" : ".liney"
+func aiyuTermStateDirectoryName(isDebugBuild: Bool = aiyuTermPersistenceIsDebugBuild) -> String {
+    isDebugBuild ? ".aiyuterm-debug" : ".aiyuterm"
 }
 
-func lineyStateDirectoryURL(fileManager: FileManager = .default) -> URL {
+func aiyuTermStateDirectoryURL(fileManager: FileManager = .default) -> URL {
     fileManager.homeDirectoryForCurrentUser.appendingPathComponent(
-        lineyStateDirectoryName(),
+        aiyuTermStateDirectoryName(),
         isDirectory: true
     )
 }
@@ -47,7 +47,7 @@ struct AppSettingsPersistence {
     }
 
     private func stateDirectoryURL() -> URL {
-        lineyStateDirectoryURL(fileManager: fileManager)
+        aiyuTermStateDirectoryURL(fileManager: fileManager)
     }
 
     private func settingsFileURL() -> URL {
@@ -71,7 +71,7 @@ struct AppSettingsPersistence {
     private func legacySettingsFileURL() -> URL {
         let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         return appSupport
-            .appendingPathComponent("Liney", isDirectory: true)
+            .appendingPathComponent("AiyuTerm", isDirectory: true)
             .appendingPathComponent("settings.json")
     }
 }

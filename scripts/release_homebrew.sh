@@ -3,8 +3,8 @@ set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
 PROJECT_FILE="${PROJECT_FILE:-$ROOT_DIR/Liney.xcodeproj/project.pbxproj}"
-APP_NAME="${APP_NAME:-Liney}"
-APP_SLUG="${APP_SLUG:-liney}"
+APP_NAME="${APP_NAME:-AiyuTerm}"
+APP_SLUG="${APP_SLUG:-aiyuterm}"
 APP_DESC="${APP_DESC:-Native macOS terminal workspace manager for git repositories, worktrees, and split panes.}"
 PROJECT_PATH="${PROJECT_PATH:-$ROOT_DIR/Liney.xcodeproj}"
 SCHEME="${SCHEME:-Liney}"
@@ -21,12 +21,12 @@ CASK_PATH="${CASK_PATH:-Casks/${APP_SLUG}.rb}"
 APP_HOMEPAGE="${APP_HOMEPAGE:-}"
 SIGNING_IDENTITY="${SIGNING_IDENTITY:-}"
 NOTARYTOOL_PROFILE="${NOTARYTOOL_PROFILE:-}"
-DEFAULT_NOTARYTOOL_PROFILE="${DEFAULT_NOTARYTOOL_PROFILE:-liney-notarytool}"
+DEFAULT_NOTARYTOOL_PROFILE="${DEFAULT_NOTARYTOOL_PROFILE:-aiyuterm-notarytool}"
 APPLE_ID="${APPLE_ID:-}"
 APPLE_TEAM_ID="${APPLE_TEAM_ID:-}"
 APPLE_APP_SPECIFIC_PASSWORD="${APPLE_APP_SPECIFIC_PASSWORD:-${APPLE_PASSWORD:-${APP_SPECIFIC_PASSWORD:-}}}"
-LINEY_RELEASE_HOME="${LINEY_RELEASE_HOME:-$HOME/.liney_release}"
-SPARKLE_PRIVATE_KEY_FILE="${SPARKLE_PRIVATE_KEY_FILE:-$LINEY_RELEASE_HOME/sparkle_private_key}"
+AIYUTERM_RELEASE_HOME="${AIYUTERM_RELEASE_HOME:-$HOME/.aiyuterm_release}"
+SPARKLE_PRIVATE_KEY_FILE="${SPARKLE_PRIVATE_KEY_FILE:-$AIYUTERM_RELEASE_HOME/sparkle_private_key}"
 SPARKLE_MAX_VERSIONS="${SPARKLE_MAX_VERSIONS:-10}"
 SPARKLE_CHANNEL="${SPARKLE_CHANNEL:-}"
 SKIP_BUMP="${SKIP_BUMP:-0}"
@@ -54,8 +54,8 @@ Environment:
   SKIP_CASK_UPDATE=1     Skip updating the Homebrew tap repository.
   SKIP_SENTRY_DSYM_UPLOAD=1  Skip uploading the release dSYM to Sentry.
   TAP_REPO=owner/repo    Override the tap repo. Default: wuwenrui/homebrew-tap.
-  LINEY_RELEASE_HOME=dir Release-only secret directory. Default: ~/.liney_release.
-  DEFAULT_NOTARYTOOL_PROFILE=name  Auto-detected notarytool profile. Default: liney-notarytool.
+  AIYUTERM_RELEASE_HOME=dir Release-only secret directory. Default: ~/.aiyuterm_release.
+  DEFAULT_NOTARYTOOL_PROFILE=name  Auto-detected notarytool profile. Default: aiyuterm-notarytool.
   SPARKLE_PRIVATE_KEY_FILE=path  Private key used for Sparkle appcast signing.
 EOF
 }
@@ -119,7 +119,7 @@ generate_release_notes() {
   local compare_url=""
   local brew_install_ref
 
-  release_notes_file="$(mktemp "${TMPDIR:-/tmp}/liney-release-notes.XXXXXX.md")"
+  release_notes_file="$(mktemp "${TMPDIR:-/tmp}/aiyuterm-release-notes.XXXXXX.md")"
 
   brew_install_ref="$(brew_install_target)"
 
@@ -240,7 +240,7 @@ fi
 
 if [[ ! -f "$SPARKLE_PRIVATE_KEY_FILE" ]]; then
   echo "Missing Sparkle private key file: $SPARKLE_PRIVATE_KEY_FILE" >&2
-  echo "Run scripts/setup_sparkle_keys.sh first, or set SPARKLE_PRIVATE_KEY_FILE / LINEY_RELEASE_HOME." >&2
+  echo "Run scripts/setup_sparkle_keys.sh first, or set SPARKLE_PRIVATE_KEY_FILE / AIYUTERM_RELEASE_HOME." >&2
   exit 1
 fi
 
@@ -332,7 +332,7 @@ fi
 RELEASE_NOTES_FILE="$(generate_release_notes "$VERSION" "$TAG" "$PREVIOUS_TAG" "$(basename "$DIST_DMG_PATH")")"
 sparkle_create_app_zip "$OUTPUT_DIR/$APP_NAME.app" "$DIST_ZIP_PATH"
 
-APPCAST_STAGING_DIR="$(mktemp -d "${TMPDIR:-/tmp}/liney-appcast.XXXXXX")"
+APPCAST_STAGING_DIR="$(mktemp -d "${TMPDIR:-/tmp}/aiyuterm-appcast.XXXXXX")"
 ZIP_BASENAME="$(basename "$DIST_ZIP_PATH" .zip)"
 cp "$DIST_ZIP_PATH" "$APPCAST_STAGING_DIR/"
 cp "$RELEASE_NOTES_FILE" "$APPCAST_STAGING_DIR/$ZIP_BASENAME.md"

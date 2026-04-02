@@ -1,6 +1,6 @@
 //
 //  WorkspaceStatePersistence.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -30,7 +30,7 @@ struct WorkspaceStatePersistence {
     }
 
     private func stateDirectoryURL() -> URL {
-        lineyStateDirectoryURL(fileManager: fileManager)
+        aiyuTermStateDirectoryURL(fileManager: fileManager)
     }
 
     private func stateFileURL() -> URL {
@@ -54,7 +54,7 @@ struct WorkspaceStatePersistence {
     private func legacyStateFileURL() -> URL {
         let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         return appSupport
-            .appendingPathComponent("Liney", isDirectory: true)
+            .appendingPathComponent("AiyuTerm", isDirectory: true)
             .appendingPathComponent("workspace-state.json")
     }
 }

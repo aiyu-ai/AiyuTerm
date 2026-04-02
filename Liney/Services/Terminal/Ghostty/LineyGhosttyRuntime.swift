@@ -1,6 +1,6 @@
 //
-//  LineyGhosttyRuntime.swift
-//  Liney
+//  AiyuTermGhosttyRuntime.swift
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -10,8 +10,8 @@ import Foundation
 import GhosttyKit
 
 @MainActor
-final class LineyGhosttyRuntime: NSObject {
-    static let shared = LineyGhosttyRuntime()
+final class AiyuTermGhosttyRuntime: NSObject {
+    static let shared = AiyuTermGhosttyRuntime()
 
     var config: ghostty_config_t!
     var app: ghostty_app_t!
@@ -24,19 +24,19 @@ final class LineyGhosttyRuntime: NSObject {
 
     private override init() {
         super.init()
-        LineyGhosttyBootstrap.initialize()
+        AiyuTermGhosttyBootstrap.initialize()
 
         config = Self.makeConfig(for: AppSettingsPersistence().load())
 
         var runtimeConfiguration = ghostty_runtime_config_s(
             userdata: Unmanaged.passUnretained(self).toOpaque(),
             supports_selection_clipboard: true,
-            wakeup_cb: lineyGhosttyWakeupCallback,
-            action_cb: lineyGhosttyActionCallback,
-            read_clipboard_cb: lineyGhosttyReadClipboardCallback,
-            confirm_read_clipboard_cb: lineyGhosttyConfirmReadClipboardCallback,
-            write_clipboard_cb: lineyGhosttyWriteClipboardCallback,
-            close_surface_cb: lineyGhosttyCloseSurfaceCallback
+            wakeup_cb: aiyuTermGhosttyWakeupCallback,
+            action_cb: aiyuTermGhosttyActionCallback,
+            read_clipboard_cb: aiyuTermGhosttyReadClipboardCallback,
+            confirm_read_clipboard_cb: aiyuTermGhosttyConfirmReadClipboardCallback,
+            write_clipboard_cb: aiyuTermGhosttyWriteClipboardCallback,
+            close_surface_cb: aiyuTermGhosttyCloseSurfaceCallback
         )
 
         guard let app = ghostty_app_new(&runtimeConfiguration, config) else {
@@ -84,7 +84,7 @@ final class LineyGhosttyRuntime: NSObject {
             object: nil
         )
         appSettingsObserver = center.addObserver(
-            forName: .lineyAppSettingsDidChange,
+            forName: .aiyuTermAppSettingsDidChange,
             object: nil,
             queue: .main
         ) { [weak self] notification in
@@ -113,7 +113,7 @@ final class LineyGhosttyRuntime: NSObject {
     private func apply(settings: AppSettings) {
         let nextConfig = Self.makeConfig(for: settings)
         ghostty_app_update_config(app, nextConfig)
-        for controller in LineyGhosttyControllerRegistry.shared.liveControllers() {
+        for controller in AiyuTermGhosttyControllerRegistry.shared.liveControllers() {
             controller.applyConfig(nextConfig)
         }
 
@@ -125,7 +125,7 @@ final class LineyGhosttyRuntime: NSObject {
 
     private static func makeConfig(for settings: AppSettings) -> ghostty_config_t {
         do {
-            return try LineyGhosttyConfigManager.buildConfig(settings: settings)
+            return try AiyuTermGhosttyConfigManager.buildConfig(settings: settings)
         } catch {
             fatalError("Unable to configure libghostty: \(error.localizedDescription)")
         }
@@ -133,7 +133,7 @@ final class LineyGhosttyRuntime: NSObject {
 
     nonisolated fileprivate static func wakeup(_ userdata: UnsafeMutableRawPointer?) {
         guard let userdata else { return }
-        let runtime = Unmanaged<LineyGhosttyRuntime>.fromOpaque(userdata).takeUnretainedValue()
+        let runtime = Unmanaged<AiyuTermGhosttyRuntime>.fromOpaque(userdata).takeUnretainedValue()
         DispatchQueue.main.async {
             MainActor.assumeIsolated {
                 runtime.tick()
@@ -154,7 +154,7 @@ final class LineyGhosttyRuntime: NSObject {
                     return false
                 }
                 let userdataAddress = pointerAddress(ghostty_surface_userdata(surface))
-                guard let controller = LineyGhosttyControllerRegistry.shared.controller(for: userdataAddress) else {
+                guard let controller = AiyuTermGhosttyControllerRegistry.shared.controller(for: userdataAddress) else {
                     return false
                 }
                 return controller.handleGhosttyAction(action, on: surface)
@@ -207,8 +207,8 @@ final class LineyGhosttyRuntime: NSObject {
         let stateAddress = pointerAddress(state)
         return onMainSync {
             guard let controller = controller(fromAddress: controllerAddress),
-                  let pasteboard = lineyGhosttyPasteboard(for: location),
-                  let value = pasteboard.lineyGhosttyBestString else {
+                  let pasteboard = aiyuTermGhosttyPasteboard(for: location),
+                  let value = pasteboard.aiyuTermGhosttyBestString else {
                 return false
             }
 
@@ -252,10 +252,10 @@ final class LineyGhosttyRuntime: NSObject {
     ) {
         guard let content, count > 0 else { return }
 
-        let items = (0..<count).compactMap { index -> LineyGhosttyClipboardPayload? in
+        let items = (0..<count).compactMap { index -> AiyuTermGhosttyClipboardPayload? in
             let entry = content[index]
             guard let mime = entry.mime, let data = entry.data else { return nil }
-            return LineyGhosttyClipboardPayload(mimeType: String(cString: mime), text: String(cString: data))
+            return AiyuTermGhosttyClipboardPayload(mimeType: String(cString: mime), text: String(cString: data))
         }
         guard !items.isEmpty else { return }
 
@@ -271,13 +271,13 @@ final class LineyGhosttyRuntime: NSObject {
         }
 
         onMainSync {
-            guard let pasteboard = lineyGhosttyPasteboard(for: location) else { return }
+            guard let pasteboard = aiyuTermGhosttyPasteboard(for: location) else { return }
             writeClipboard(items, to: pasteboard)
         }
     }
 
-    private static func writeClipboard(_ items: [LineyGhosttyClipboardPayload], to pasteboard: NSPasteboard) {
-        lineyGhosttyWriteClipboard(items, to: pasteboard)
+    private static func writeClipboard(_ items: [AiyuTermGhosttyClipboardPayload], to pasteboard: NSPasteboard) {
+        aiyuTermGhosttyWriteClipboard(items, to: pasteboard)
     }
 
     nonisolated fileprivate static func closeSurface(_ userdata: UnsafeMutableRawPointer?, processAlive: Bool) {
@@ -290,11 +290,11 @@ final class LineyGhosttyRuntime: NSObject {
         }
     }
 
-    private static func controller(from userdata: UnsafeMutableRawPointer?) -> LineyGhosttyController? {
-        LineyGhosttyControllerRegistry.shared.controller(for: pointerAddress(userdata))
+    private static func controller(from userdata: UnsafeMutableRawPointer?) -> AiyuTermGhosttyController? {
+        AiyuTermGhosttyControllerRegistry.shared.controller(for: pointerAddress(userdata))
     }
 
-    private static func controller(fromAddress address: UInt?) -> LineyGhosttyController? {
+    private static func controller(fromAddress address: UInt?) -> AiyuTermGhosttyController? {
         controller(from: pointer(from: address))
     }
 
@@ -334,45 +334,45 @@ final class LineyGhosttyRuntime: NSObject {
     }
 }
 
-nonisolated private func lineyGhosttyWakeupCallback(_ userdata: UnsafeMutableRawPointer?) {
-    LineyGhosttyRuntime.wakeup(userdata)
+nonisolated private func aiyuTermGhosttyWakeupCallback(_ userdata: UnsafeMutableRawPointer?) {
+    AiyuTermGhosttyRuntime.wakeup(userdata)
 }
 
-nonisolated private func lineyGhosttyActionCallback(
+nonisolated private func aiyuTermGhosttyActionCallback(
     _ app: ghostty_app_t?,
     _ target: ghostty_target_s,
     _ action: ghostty_action_s
 ) -> Bool {
-    LineyGhosttyRuntime.handleAction(app, target: target, action: action)
+    AiyuTermGhosttyRuntime.handleAction(app, target: target, action: action)
 }
 
-nonisolated private func lineyGhosttyReadClipboardCallback(
+nonisolated private func aiyuTermGhosttyReadClipboardCallback(
     _ userdata: UnsafeMutableRawPointer?,
     _ location: ghostty_clipboard_e,
     _ state: UnsafeMutableRawPointer?
 ) -> Bool {
-    LineyGhosttyRuntime.readClipboard(userdata, location: location, state: state)
+    AiyuTermGhosttyRuntime.readClipboard(userdata, location: location, state: state)
 }
 
-nonisolated private func lineyGhosttyConfirmReadClipboardCallback(
+nonisolated private func aiyuTermGhosttyConfirmReadClipboardCallback(
     _ userdata: UnsafeMutableRawPointer?,
     _ string: UnsafePointer<CChar>?,
     _ state: UnsafeMutableRawPointer?,
     _ request: ghostty_clipboard_request_e
 ) {
-    LineyGhosttyRuntime.confirmReadClipboard(userdata, string: string, state: state, request: request)
+    AiyuTermGhosttyRuntime.confirmReadClipboard(userdata, string: string, state: state, request: request)
 }
 
-nonisolated private func lineyGhosttyWriteClipboardCallback(
+nonisolated private func aiyuTermGhosttyWriteClipboardCallback(
     _ userdata: UnsafeMutableRawPointer?,
     _ location: ghostty_clipboard_e,
     _ content: UnsafePointer<ghostty_clipboard_content_s>?,
     _ count: Int,
     _ confirm: Bool
 ) {
-    LineyGhosttyRuntime.writeClipboard(userdata, location: location, content: content, count: count, confirm: confirm)
+    AiyuTermGhosttyRuntime.writeClipboard(userdata, location: location, content: content, count: count, confirm: confirm)
 }
 
-nonisolated private func lineyGhosttyCloseSurfaceCallback(_ userdata: UnsafeMutableRawPointer?, processAlive: Bool) {
-    LineyGhosttyRuntime.closeSurface(userdata, processAlive: processAlive)
+nonisolated private func aiyuTermGhosttyCloseSurfaceCallback(_ userdata: UnsafeMutableRawPointer?, processAlive: Bool) {
+    AiyuTermGhosttyRuntime.closeSurface(userdata, processAlive: processAlive)
 }

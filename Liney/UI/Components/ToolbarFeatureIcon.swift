@@ -1,6 +1,6 @@
 //
 //  ToolbarFeatureIcon.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //

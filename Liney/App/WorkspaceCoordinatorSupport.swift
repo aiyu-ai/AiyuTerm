@@ -1,6 +1,6 @@
 //
 //  WorkspaceCoordinatorSupport.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //

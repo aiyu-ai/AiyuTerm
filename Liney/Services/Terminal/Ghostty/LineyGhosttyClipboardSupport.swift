@@ -1,6 +1,6 @@
 //
-//  LineyGhosttyClipboardSupport.swift
-//  Liney
+//  AiyuTermGhosttyClipboardSupport.swift
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -10,18 +10,18 @@ import Foundation
 import GhosttyKit
 
 @MainActor
-func lineyGhosttyPasteboard(for location: ghostty_clipboard_e) -> NSPasteboard? {
+func aiyuTermGhosttyPasteboard(for location: ghostty_clipboard_e) -> NSPasteboard? {
     switch location {
     case GHOSTTY_CLIPBOARD_STANDARD:
         return .general
     case GHOSTTY_CLIPBOARD_SELECTION:
-        return NSPasteboard(name: NSPasteboard.Name("com.liney.selection"))
+        return NSPasteboard(name: NSPasteboard.Name("com.aiyuterm.selection"))
     default:
         return nil
     }
 }
 
-struct LineyGhosttyClipboardPayload: Sendable {
+struct AiyuTermGhosttyClipboardPayload: Sendable {
     let mimeType: String
     let text: String
 
@@ -41,7 +41,7 @@ struct LineyGhosttyClipboardPayload: Sendable {
 }
 
 @MainActor
-func lineyGhosttyWriteClipboard(_ items: [LineyGhosttyClipboardPayload], to pasteboard: NSPasteboard) {
+func aiyuTermGhosttyWriteClipboard(_ items: [AiyuTermGhosttyClipboardPayload], to pasteboard: NSPasteboard) {
     let supportedTypes = items.compactMap(\.pasteboardType)
     guard !supportedTypes.isEmpty else { return }
 
@@ -54,7 +54,7 @@ func lineyGhosttyWriteClipboard(_ items: [LineyGhosttyClipboardPayload], to past
 }
 
 extension NSPasteboard {
-    var lineyGhosttyBestString: String? {
+    var aiyuTermGhosttyBestString: String? {
         string(forType: .string)
             ?? string(forType: NSPasteboard.PasteboardType("public.utf8-plain-text"))
     }

@@ -1,6 +1,6 @@
 //
 //  TerminalHostView.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //

@@ -1,6 +1,6 @@
 //
 //  TmuxPanelView.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -25,13 +25,13 @@ struct TmuxPanelView: View {
                 } else if let error = store.errorMessage {
                     Text(error)
                         .font(.system(size: 10))
-                        .foregroundStyle(LineyTheme.danger)
+                        .foregroundStyle(AiyuTermTheme.danger)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                 } else if store.sessions.isEmpty && !store.isLoading {
                     Text("No sessions")
                         .font(.system(size: 10))
-                        .foregroundStyle(LineyTheme.mutedText)
+                        .foregroundStyle(AiyuTermTheme.mutedText)
                         .padding(.vertical, 12)
                         .frame(maxWidth: .infinity)
                 } else {
@@ -53,7 +53,7 @@ struct TmuxPanelView: View {
                 }
             }
         }
-        .background(LineyTheme.sidebarBackground)
+        .background(AiyuTermTheme.sidebarBackground)
         .onAppear {
             store.checkAvailabilityAndRefresh()
         }
@@ -173,10 +173,10 @@ private struct TmuxNotInstalledView: View {
         VStack(spacing: 4) {
             Text("tmux not installed")
                 .font(.system(size: 10))
-                .foregroundStyle(LineyTheme.mutedText)
+                .foregroundStyle(AiyuTermTheme.mutedText)
             Text("brew install tmux")
                 .font(.system(size: 9, design: .monospaced))
-                .foregroundStyle(LineyTheme.mutedText.opacity(0.6))
+                .foregroundStyle(AiyuTermTheme.mutedText.opacity(0.6))
         }
         .padding(.vertical, 16)
         .frame(maxWidth: .infinity)
@@ -222,7 +222,7 @@ private struct TmuxSessionRow: View {
 
                 Text("\(session.isAttached ? "attached" : "detached") \u{00B7} \(session.windowCount) win")
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundStyle(LineyTheme.mutedText)
+                    .foregroundStyle(AiyuTermTheme.mutedText)
                     .lineLimit(1)
             }
 
@@ -245,7 +245,7 @@ private struct TmuxSessionRow: View {
                 }
             } else {
                 Circle()
-                    .fill(session.isAttached ? LineyTheme.success : LineyTheme.mutedText.opacity(0.4))
+                    .fill(session.isAttached ? AiyuTermTheme.success : AiyuTermTheme.mutedText.opacity(0.4))
                     .frame(width: 6, height: 6)
             }
         }
@@ -285,9 +285,9 @@ private struct TmuxInlineButton: View {
                 .frame(width: 18, height: 18)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(isDanger ? LineyTheme.danger : LineyTheme.secondaryText)
+        .foregroundStyle(isDanger ? AiyuTermTheme.danger : AiyuTermTheme.secondaryText)
         .background(
-            (isDanger ? LineyTheme.danger.opacity(0.1) : Color.white.opacity(0.06)),
+            (isDanger ? AiyuTermTheme.danger.opacity(0.1) : Color.white.opacity(0.06)),
             in: RoundedRectangle(cornerRadius: 4, style: .continuous)
         )
     }

@@ -1,6 +1,6 @@
 //
 //  RenameWorkspaceSheet.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //

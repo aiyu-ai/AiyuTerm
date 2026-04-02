@@ -7,7 +7,7 @@ Scope: keep the current sheet-based file browser and improve reliability and cla
 ### 1. External change detection and reload flow
 
 Why:
-- Liney already supports opening files in an external editor.
+- AiyuTerm already supports opening files in an external editor.
 - The current sheet has no notion of "changed on disk after load", so users can end up looking at stale content or overwrite newer disk state.
 
 Todo:
@@ -26,7 +26,7 @@ Acceptance:
 
 Why:
 - The current unsupported path is functional, but it only tells the user that a file is large or binary.
-- For Liney, unsupported preview should still be a useful terminal point with clear next actions.
+- For AiyuTerm, unsupported preview should still be a useful terminal point with clear next actions.
 
 Todo:
 - Expand unsupported states to include more context such as file size and reason.

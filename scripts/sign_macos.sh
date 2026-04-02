@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
 PROJECT_PATH="${PROJECT_PATH:-$ROOT_DIR/Liney.xcodeproj}"
 SCHEME="${SCHEME:-Liney}"
-APP_NAME="${APP_NAME:-Liney}"
+APP_NAME="${APP_NAME:-AiyuTerm}"
 VERSION="${VERSION:-}"
 OUTPUT_DIR="${OUTPUT_DIR:-$ROOT_DIR/dist}"
 APP_BUNDLE_PATH="${APP_BUNDLE_PATH:-}"
@@ -15,7 +15,7 @@ BUILD_IF_MISSING="${BUILD_IF_MISSING:-1}"
 FORCE_REBUILD="${FORCE_REBUILD:-0}"
 NOTARIZE="${NOTARIZE:-0}"
 NOTARYTOOL_PROFILE="${NOTARYTOOL_PROFILE:-}"
-DEFAULT_NOTARYTOOL_PROFILE="${DEFAULT_NOTARYTOOL_PROFILE:-liney-notarytool}"
+DEFAULT_NOTARYTOOL_PROFILE="${DEFAULT_NOTARYTOOL_PROFILE:-aiyuterm-notarytool}"
 APPLE_ID="${APPLE_ID:-}"
 APPLE_TEAM_ID="${APPLE_TEAM_ID:-}"
 APPLE_APP_SPECIFIC_PASSWORD="${APPLE_APP_SPECIFIC_PASSWORD:-${APPLE_PASSWORD:-${APP_SPECIFIC_PASSWORD:-}}}"
@@ -45,7 +45,7 @@ Options:
   --version <version>    Override MARKETING_VERSION for the packaged DMG.
   --output-dir <path>    Release artifact directory. Default: dist.
   --app <path>           Existing .app bundle to sign.
-  --dmg <path>           Output DMG path. Default: dist/Liney-<version>.dmg.
+  --dmg <path>           Output DMG path. Default: dist/AiyuTerm-<version>.dmg.
   --release-archs <v>    Passed through to build_macos_app.sh when rebuilding.
   --no-build             Fail instead of building when the app bundle is missing.
   --force-rebuild        Rebuild the unsigned app before signing.

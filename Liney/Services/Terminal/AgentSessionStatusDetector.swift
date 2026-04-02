@@ -1,6 +1,6 @@
 //
 //  AgentSessionStatusDetector.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //

@@ -1,6 +1,6 @@
 //
 //  PathFormatting.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //

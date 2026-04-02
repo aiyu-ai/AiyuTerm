@@ -1,6 +1,6 @@
 //
 //  AppSettings.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -9,7 +9,7 @@ import AppKit
 import Carbon
 import Foundation
 
-nonisolated private func lineyLocalizedSettingsString(_ key: String) -> String {
+nonisolated private func aiyuTermLocalizedSettingsString(_ key: String) -> String {
     LocalizationManager.stringForCurrentLanguage(key)
 }
 
@@ -22,9 +22,9 @@ nonisolated enum SidebarIconFillStyle: String, Codable, Hashable, CaseIterable, 
     var title: String {
         switch self {
         case .solid:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.style.solid")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.style.solid")
         case .gradient:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.style.gradient")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.style.gradient")
         }
     }
 }
@@ -76,85 +76,85 @@ nonisolated enum SidebarIconPalette: String, Codable, Hashable, CaseIterable, Id
     var title: String {
         switch self {
         case .blue:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.blue")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.blue")
         case .cyan:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.cyan")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.cyan")
         case .aqua:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.aqua")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.aqua")
         case .ice:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.ice")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.ice")
         case .sky:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.sky")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.sky")
         case .teal:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.teal")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.teal")
         case .turquoise:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.turquoise")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.turquoise")
         case .mint:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.mint")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.mint")
         case .green:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.green")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.green")
         case .forest:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.forest")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.forest")
         case .lime:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.lime")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.lime")
         case .olive:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.olive")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.olive")
         case .gold:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.gold")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.gold")
         case .sand:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.sand")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.sand")
         case .bronze:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.bronze")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.bronze")
         case .amber:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.amber")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.amber")
         case .orange:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.orange")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.orange")
         case .copper:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.copper")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.copper")
         case .rust:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.rust")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.rust")
         case .coral:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.coral")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.coral")
         case .peach:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.peach")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.peach")
         case .brick:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.brick")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.brick")
         case .crimson:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.crimson")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.crimson")
         case .ruby:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.ruby")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.ruby")
         case .berry:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.berry")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.berry")
         case .rose:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.rose")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.rose")
         case .magenta:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.magenta")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.magenta")
         case .orchid:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.orchid")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.orchid")
         case .indigo:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.indigo")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.indigo")
         case .navy:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.navy")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.navy")
         case .steel:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.steel")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.steel")
         case .violet:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.violet")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.violet")
         case .iris:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.iris")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.iris")
         case .lavender:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.lavender")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.lavender")
         case .plum:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.plum")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.plum")
         case .slate:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.slate")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.slate")
         case .smoke:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.smoke")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.smoke")
         case .charcoal:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.charcoal")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.charcoal")
         case .graphite:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.graphite")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.graphite")
         case .mocha:
-            return lineyLocalizedSettingsString("settings.sidebarIcon.palette.mocha")
+            return aiyuTermLocalizedSettingsString("settings.sidebarIcon.palette.mocha")
         }
     }
 }
@@ -325,9 +325,9 @@ struct AppSettings: Codable, Hashable {
         workspaceGroups: [WorkspaceGroup] = [],
         keyboardShortcutOverrides: [String: KeyboardShortcutOverride] = [:]
     ) {
-        let normalizedKeyboardShortcutOverrides = LineyKeyboardShortcuts.normalizedOverrides(keyboardShortcutOverrides)
-        let normalizedAgentPresets = lineyNormalizedAgentPresets(agentPresets)
-        let normalizedSSHPresets = lineyNormalizedSSHPresets(sshPresets)
+        let normalizedKeyboardShortcutOverrides = AiyuTermKeyboardShortcuts.normalizedOverrides(keyboardShortcutOverrides)
+        let normalizedAgentPresets = aiyuTermNormalizedAgentPresets(agentPresets)
+        let normalizedSSHPresets = aiyuTermNormalizedSSHPresets(sshPresets)
 
         self.appLanguage = appLanguage
         self.autoRefreshEnabled = autoRefreshEnabled
@@ -362,7 +362,7 @@ struct AppSettings: Codable, Hashable {
         self.quickCommandPresets = QuickCommandCatalog.normalizedCommands(
             quickCommandPresets,
             categories: self.quickCommandCategories,
-            reservedShortcuts: LineyKeyboardShortcuts.effectiveShortcuts(using: normalizedKeyboardShortcutOverrides)
+            reservedShortcuts: AiyuTermKeyboardShortcuts.effectiveShortcuts(using: normalizedKeyboardShortcutOverrides)
         )
         self.quickCommandRecentIDs = QuickCommandCatalog.normalizedRecentCommandIDs(
             quickCommandRecentIDs,
@@ -481,7 +481,7 @@ extension AppSettings {
     }
 }
 
-private func lineyNormalizedAgentPresets(_ presets: [AgentPreset]) -> [AgentPreset] {
+private func aiyuTermNormalizedAgentPresets(_ presets: [AgentPreset]) -> [AgentPreset] {
     let builtInsByID = Dictionary(uniqueKeysWithValues: AgentPreset.builtInPresets.map { ($0.id, $0) })
     let filtered = presets
         .filter { $0.id != AgentPreset.deprecatedAiderPresetID }
@@ -496,7 +496,7 @@ private func lineyNormalizedAgentPresets(_ presets: [AgentPreset]) -> [AgentPres
     }
 }
 
-private func lineyNormalizedSSHPresets(_ presets: [SSHPreset]) -> [SSHPreset] {
+private func aiyuTermNormalizedSSHPresets(_ presets: [SSHPreset]) -> [SSHPreset] {
     let builtInsByID = Dictionary(uniqueKeysWithValues: SSHPreset.builtInPresets.map { ($0.id, $0) })
     let filtered = presets.map { builtInsByID[$0.id] ?? $0 }
 
@@ -718,7 +718,7 @@ struct KeyboardShortcutOverride: Codable, Hashable {
     var shortcut: StoredShortcut?
 }
 
-enum LineyShortcutCategory: String, CaseIterable, Hashable, Identifiable {
+enum AiyuTermShortcutCategory: String, CaseIterable, Hashable, Identifiable {
     case general
     case workspace
     case tabs
@@ -730,20 +730,20 @@ enum LineyShortcutCategory: String, CaseIterable, Hashable, Identifiable {
     var title: String {
         switch self {
         case .general:
-            return lineyLocalizedSettingsString("settings.shortcuts.category.general")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.category.general")
         case .workspace:
-            return lineyLocalizedSettingsString("settings.shortcuts.category.workspace")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.category.workspace")
         case .tabs:
-            return lineyLocalizedSettingsString("settings.shortcuts.category.tabs")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.category.tabs")
         case .panes:
-            return lineyLocalizedSettingsString("settings.shortcuts.category.panes")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.category.panes")
         case .window:
-            return lineyLocalizedSettingsString("settings.shortcuts.category.window")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.category.window")
         }
     }
 }
 
-enum LineyShortcutAction: String, CaseIterable, Hashable, Identifiable {
+enum AiyuTermShortcutAction: String, CaseIterable, Hashable, Identifiable {
     case hideApp
     case hideOtherApps
     case quitApp
@@ -785,7 +785,7 @@ enum LineyShortcutAction: String, CaseIterable, Hashable, Identifiable {
 
     var id: String { rawValue }
 
-    var category: LineyShortcutCategory {
+    var category: AiyuTermShortcutCategory {
         switch self {
         case .hideApp,
              .hideOtherApps,
@@ -836,162 +836,162 @@ enum LineyShortcutAction: String, CaseIterable, Hashable, Identifiable {
     var title: String {
         switch self {
         case .hideApp:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.hideApp.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.hideApp.title")
         case .hideOtherApps:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.hideOtherApps.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.hideOtherApps.title")
         case .quitApp:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.quitApp.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.quitApp.title")
         case .newWindow:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.newWindow.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.newWindow.title")
         case .openSettings:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.openSettings.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.openSettings.title")
         case .undo:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.undo.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.undo.title")
         case .redo:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.redo.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.redo.title")
         case .cut:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.cut.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.cut.title")
         case .copy:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.copy.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.copy.title")
         case .paste:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.paste.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.paste.title")
         case .selectAll:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.selectAll.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.selectAll.title")
         case .find:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.find.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.find.title")
         case .findNext:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.findNext.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.findNext.title")
         case .findPrevious:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.findPrevious.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.findPrevious.title")
         case .hideFind:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.hideFind.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.hideFind.title")
         case .toggleCommandPalette:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.toggleCommandPalette.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.toggleCommandPalette.title")
         case .toggleSidebar:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.toggleSidebar.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.toggleSidebar.title")
         case .toggleOverview:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.toggleOverview.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.toggleOverview.title")
         case .openDiff:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.openDiff.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.openDiff.title")
         case .refreshSelectedWorkspace:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.refreshSelectedWorkspace.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.refreshSelectedWorkspace.title")
         case .refreshAllRepositories:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.refreshAllRepositories.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.refreshAllRepositories.title")
         case .newTab:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.newTab.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.newTab.title")
         case .closeTab:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.closeTab.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.closeTab.title")
         case .nextTab:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.nextTab.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.nextTab.title")
         case .previousTab:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.previousTab.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.previousTab.title")
         case .selectTabByNumber:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.selectTabByNumber.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.selectTabByNumber.title")
         case .focusPaneLeft:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.focusPaneLeft.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.focusPaneLeft.title")
         case .focusPaneRight:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.focusPaneRight.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.focusPaneRight.title")
         case .focusPaneUp:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.focusPaneUp.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.focusPaneUp.title")
         case .focusPaneDown:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.focusPaneDown.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.focusPaneDown.title")
         case .splitRight:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.splitRight.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.splitRight.title")
         case .splitDown:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.splitDown.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.splitDown.title")
         case .duplicatePane:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.duplicatePane.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.duplicatePane.title")
         case .togglePaneZoom:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.togglePaneZoom.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.togglePaneZoom.title")
         case .closePane:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.closePane.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.closePane.title")
         case .minimizeWindow:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.minimizeWindow.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.minimizeWindow.title")
         case .closeWindow:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.closeWindow.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.closeWindow.title")
         case .enterFullScreen:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.enterFullScreen.title")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.enterFullScreen.title")
         }
     }
 
     var subtitle: String {
         switch self {
         case .hideApp:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.hideApp.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.hideApp.subtitle")
         case .hideOtherApps:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.hideOtherApps.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.hideOtherApps.subtitle")
         case .quitApp:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.quitApp.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.quitApp.subtitle")
         case .newWindow:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.newWindow.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.newWindow.subtitle")
         case .openSettings:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.openSettings.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.openSettings.subtitle")
         case .undo:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.undo.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.undo.subtitle")
         case .redo:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.redo.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.redo.subtitle")
         case .cut:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.cut.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.cut.subtitle")
         case .copy:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.copy.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.copy.subtitle")
         case .paste:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.paste.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.paste.subtitle")
         case .selectAll:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.selectAll.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.selectAll.subtitle")
         case .find:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.find.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.find.subtitle")
         case .findNext:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.findNext.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.findNext.subtitle")
         case .findPrevious:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.findPrevious.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.findPrevious.subtitle")
         case .hideFind:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.hideFind.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.hideFind.subtitle")
         case .toggleCommandPalette:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.toggleCommandPalette.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.toggleCommandPalette.subtitle")
         case .toggleSidebar:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.toggleSidebar.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.toggleSidebar.subtitle")
         case .toggleOverview:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.toggleOverview.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.toggleOverview.subtitle")
         case .openDiff:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.openDiff.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.openDiff.subtitle")
         case .refreshSelectedWorkspace:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.refreshSelectedWorkspace.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.refreshSelectedWorkspace.subtitle")
         case .refreshAllRepositories:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.refreshAllRepositories.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.refreshAllRepositories.subtitle")
         case .newTab:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.newTab.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.newTab.subtitle")
         case .closeTab:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.closeTab.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.closeTab.subtitle")
         case .nextTab:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.nextTab.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.nextTab.subtitle")
         case .previousTab:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.previousTab.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.previousTab.subtitle")
         case .selectTabByNumber:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.selectTabByNumber.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.selectTabByNumber.subtitle")
         case .focusPaneLeft:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.focusPaneLeft.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.focusPaneLeft.subtitle")
         case .focusPaneRight:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.focusPaneRight.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.focusPaneRight.subtitle")
         case .focusPaneUp:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.focusPaneUp.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.focusPaneUp.subtitle")
         case .focusPaneDown:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.focusPaneDown.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.focusPaneDown.subtitle")
         case .splitRight:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.splitRight.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.splitRight.subtitle")
         case .splitDown:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.splitDown.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.splitDown.subtitle")
         case .duplicatePane:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.duplicatePane.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.duplicatePane.subtitle")
         case .togglePaneZoom:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.togglePaneZoom.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.togglePaneZoom.subtitle")
         case .closePane:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.closePane.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.closePane.subtitle")
         case .minimizeWindow:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.minimizeWindow.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.minimizeWindow.subtitle")
         case .closeWindow:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.closeWindow.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.closeWindow.subtitle")
         case .enterFullScreen:
-            return lineyLocalizedSettingsString("settings.shortcuts.action.enterFullScreen.subtitle")
+            return aiyuTermLocalizedSettingsString("settings.shortcuts.action.enterFullScreen.subtitle")
         }
     }
 
@@ -1096,34 +1096,34 @@ enum LineyShortcutAction: String, CaseIterable, Hashable, Identifiable {
     }
 }
 
-enum LineyKeyboardShortcutState: Equatable {
+enum AiyuTermKeyboardShortcutState: Equatable {
     case `default`
     case custom
     case disabled
 }
 
-enum LineyKeyboardShortcuts {
+enum AiyuTermKeyboardShortcuts {
     private enum Candidate {
         case inheritDefault
         case custom(StoredShortcut)
         case disabled
     }
 
-    static func effectiveShortcut(for action: LineyShortcutAction, in settings: AppSettings) -> StoredShortcut? {
+    static func effectiveShortcut(for action: AiyuTermShortcutAction, in settings: AppSettings) -> StoredShortcut? {
         if let override = settings.keyboardShortcutOverrides[action.rawValue] {
             return override.shortcut
         }
         return action.defaultShortcut
     }
 
-    static func state(for action: LineyShortcutAction, in settings: AppSettings) -> LineyKeyboardShortcutState {
+    static func state(for action: AiyuTermShortcutAction, in settings: AppSettings) -> AiyuTermKeyboardShortcutState {
         guard let override = settings.keyboardShortcutOverrides[action.rawValue] else {
             return .default
         }
         return override.shortcut == nil ? .disabled : .custom
     }
 
-    static func displayString(for action: LineyShortcutAction, in settings: AppSettings) -> String {
+    static func displayString(for action: AiyuTermShortcutAction, in settings: AppSettings) -> String {
         guard let shortcut = effectiveShortcut(for: action, in: settings) else {
             return "Not Set"
         }
@@ -1136,7 +1136,7 @@ enum LineyKeyboardShortcuts {
 
     static func effectiveShortcuts(using overrides: [String: KeyboardShortcutOverride]) -> Set<StoredShortcut> {
         Set(
-            LineyShortcutAction.allCases.compactMap { action in
+            AiyuTermShortcutAction.allCases.compactMap { action in
                 if let override = overrides[action.rawValue] {
                     return override.shortcut
                 }
@@ -1145,10 +1145,10 @@ enum LineyKeyboardShortcuts {
         )
     }
 
-    static func setShortcut(_ shortcut: StoredShortcut, for action: LineyShortcutAction, in settings: inout AppSettings) {
+    static func setShortcut(_ shortcut: StoredShortcut, for action: AiyuTermShortcutAction, in settings: inout AppSettings) {
         guard let normalizedShortcut = action.normalizedRecordedShortcut(shortcut) else { return }
 
-        for otherAction in LineyShortcutAction.allCases where otherAction != action {
+        for otherAction in AiyuTermShortcutAction.allCases where otherAction != action {
             if effectiveShortcut(for: otherAction, in: settings) == normalizedShortcut {
                 settings.keyboardShortcutOverrides[otherAction.rawValue] = KeyboardShortcutOverride(shortcut: nil)
             }
@@ -1163,12 +1163,12 @@ enum LineyKeyboardShortcuts {
         settings.keyboardShortcutOverrides = normalizedOverrides(settings.keyboardShortcutOverrides)
     }
 
-    static func disableShortcut(for action: LineyShortcutAction, in settings: inout AppSettings) {
+    static func disableShortcut(for action: AiyuTermShortcutAction, in settings: inout AppSettings) {
         settings.keyboardShortcutOverrides[action.rawValue] = KeyboardShortcutOverride(shortcut: nil)
         settings.keyboardShortcutOverrides = normalizedOverrides(settings.keyboardShortcutOverrides)
     }
 
-    static func resetShortcut(for action: LineyShortcutAction, in settings: inout AppSettings) {
+    static func resetShortcut(for action: AiyuTermShortcutAction, in settings: inout AppSettings) {
         settings.keyboardShortcutOverrides.removeValue(forKey: action.rawValue)
         settings.keyboardShortcutOverrides = normalizedOverrides(settings.keyboardShortcutOverrides)
     }
@@ -1178,9 +1178,9 @@ enum LineyKeyboardShortcuts {
     }
 
     static func normalizedOverrides(_ overrides: [String: KeyboardShortcutOverride]) -> [String: KeyboardShortcutOverride] {
-        var candidates: [LineyShortcutAction: Candidate] = [:]
+        var candidates: [AiyuTermShortcutAction: Candidate] = [:]
 
-        for action in LineyShortcutAction.allCases {
+        for action in AiyuTermShortcutAction.allCases {
             guard let override = overrides[action.rawValue] else { continue }
 
             if let shortcut = override.shortcut {
@@ -1197,7 +1197,7 @@ enum LineyKeyboardShortcuts {
         var normalized: [String: KeyboardShortcutOverride] = [:]
         var seenShortcuts = Set<StoredShortcut>()
 
-        for action in LineyShortcutAction.allCases {
+        for action in AiyuTermShortcutAction.allCases {
             let candidate = candidates[action] ?? .inheritDefault
 
             let effectiveShortcut: StoredShortcut?
@@ -1229,16 +1229,16 @@ enum LineyKeyboardShortcuts {
     }
 }
 
-struct LineyShortcutMatch: Equatable {
-    var action: LineyShortcutAction
+struct AiyuTermShortcutMatch: Equatable {
+    var action: AiyuTermShortcutAction
     var tabNumber: Int?
 }
 
-func lineyShortcutMatch(for event: NSEvent, in settings: AppSettings) -> LineyShortcutMatch? {
+func aiyuTermShortcutMatch(for event: NSEvent, in settings: AppSettings) -> AiyuTermShortcutMatch? {
     guard let recordedShortcut = StoredShortcut.from(event: event) else { return nil }
 
-    for action in LineyShortcutAction.allCases {
-        guard let effectiveShortcut = LineyKeyboardShortcuts.effectiveShortcut(for: action, in: settings) else {
+    for action in AiyuTermShortcutAction.allCases {
+        guard let effectiveShortcut = AiyuTermKeyboardShortcuts.effectiveShortcut(for: action, in: settings) else {
             continue
         }
 
@@ -1248,11 +1248,11 @@ func lineyShortcutMatch(for event: NSEvent, in settings: AppSettings) -> LineySh
                   action.normalizedRecordedShortcut(recordedShortcut) == effectiveShortcut else {
                 continue
             }
-            return LineyShortcutMatch(action: action, tabNumber: tabNumber)
+            return AiyuTermShortcutMatch(action: action, tabNumber: tabNumber)
         }
 
         if recordedShortcut == effectiveShortcut {
-            return LineyShortcutMatch(action: action, tabNumber: nil)
+            return AiyuTermShortcutMatch(action: action, tabNumber: nil)
         }
     }
 

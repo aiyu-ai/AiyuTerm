@@ -1,6 +1,6 @@
 //
 //  OverviewView.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -113,7 +113,7 @@ struct OverviewView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(LineyTheme.appBackground)
+        .background(AiyuTermTheme.appBackground)
         .scaleEffect(uiScale)
     }
 
@@ -124,7 +124,7 @@ struct OverviewView: View {
                     .font(.system(size: 16, weight: .bold))
                 Text(localizedFormat("overview.header.sessionsAndDesksFormat", model.totalWorkspaces, model.totalSessions))
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(LineyTheme.mutedText)
+                    .foregroundStyle(AiyuTermTheme.mutedText)
             }
             Spacer()
             Button {
@@ -132,17 +132,17 @@ struct OverviewView: View {
             } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(LineyTheme.mutedText)
+                    .foregroundStyle(AiyuTermTheme.mutedText)
                     .frame(width: 24, height: 24)
-                    .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 6))
+                    .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 6))
             }
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
-        .background(LineyTheme.sidebarBackground)
+        .background(AiyuTermTheme.sidebarBackground)
         .overlay(alignment: .bottom) {
-            Rectangle().fill(LineyTheme.border).frame(height: 1)
+            Rectangle().fill(AiyuTermTheme.border).frame(height: 1)
         }
     }
 
@@ -220,13 +220,13 @@ private struct OverviewMetricCard: View {
     private var accent: Color {
         switch tone {
         case .neutral:
-            return LineyTheme.accent
+            return AiyuTermTheme.accent
         case .success:
-            return LineyTheme.success
+            return AiyuTermTheme.success
         case .warning:
-            return LineyTheme.warning
+            return AiyuTermTheme.warning
         case .danger:
-            return LineyTheme.danger
+            return AiyuTermTheme.danger
         }
     }
 
@@ -234,12 +234,12 @@ private struct OverviewMetricCard: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title.uppercased())
                 .font(.system(size: 10, weight: .bold, design: .monospaced))
-                .foregroundStyle(LineyTheme.mutedText)
+                .foregroundStyle(AiyuTermTheme.mutedText)
             Text(value)
                 .font(.system(size: 24, weight: .bold))
             Text(subtitle)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(LineyTheme.mutedText)
+                .foregroundStyle(AiyuTermTheme.mutedText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
@@ -276,11 +276,11 @@ private struct OverviewWorkflowStrip: View {
                                     .font(.system(size: 12, weight: .semibold))
                                 Text(item.workspaceName)
                                     .font(.system(size: 10, weight: .medium, design: .monospaced))
-                                    .foregroundStyle(LineyTheme.mutedText)
+                                    .foregroundStyle(AiyuTermTheme.mutedText)
                             }
                             .padding(.horizontal, 12)
                             .padding(.vertical, 10)
-                            .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }
                         .buttonStyle(.plain)
                     }
@@ -313,16 +313,16 @@ private struct OverviewTimelinePanel: View {
                         .font(.system(size: 13, weight: .semibold))
                     Text(localized("overview.timeline.subtitle"))
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(LineyTheme.mutedText)
+                        .foregroundStyle(AiyuTermTheme.mutedText)
                 }
                 Spacer()
                 Button(localized("overview.timeline.clear"), action: onClear)
                     .buttonStyle(.plain)
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(LineyTheme.danger)
+                    .foregroundStyle(AiyuTermTheme.danger)
                 Text(localizedFormat("overview.timeline.recentCountFormat", items.count))
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(LineyTheme.mutedText)
+                    .foregroundStyle(AiyuTermTheme.mutedText)
             }
 
             VStack(spacing: 8) {
@@ -336,10 +336,10 @@ private struct OverviewTimelinePanel: View {
             }
         }
         .padding(14)
-        .background(LineyTheme.panelBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(AiyuTermTheme.panelBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(LineyTheme.border, lineWidth: 1)
+                .stroke(AiyuTermTheme.border, lineWidth: 1)
         )
     }
 }
@@ -365,19 +365,19 @@ private struct OverviewWorktreePanel: View {
                         .font(.system(size: 13, weight: .semibold))
                     Text(localized("overview.worktrees.subtitle"))
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(LineyTheme.mutedText)
+                        .foregroundStyle(AiyuTermTheme.mutedText)
                 }
                 Spacer()
                 Text(localizedFormat("overview.worktrees.countFormat", items.count))
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(LineyTheme.mutedText)
+                    .foregroundStyle(AiyuTermTheme.mutedText)
             }
 
             VStack(spacing: 8) {
                 ForEach(items.prefix(8)) { item in
                     HStack(alignment: .top, spacing: 10) {
                         RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(item.isActive ? LineyTheme.accent : LineyTheme.border)
+                            .fill(item.isActive ? AiyuTermTheme.accent : AiyuTermTheme.border)
                             .frame(width: 6, height: 28)
 
                         VStack(alignment: .leading, spacing: 4) {
@@ -387,7 +387,7 @@ private struct OverviewWorktreePanel: View {
                                 if item.isActive {
                                     Text(localized("overview.worktrees.active"))
                                         .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(LineyTheme.accent)
+                                        .foregroundStyle(AiyuTermTheme.accent)
                                 }
                                 Spacer()
                                 Button(item.workspace.name) {
@@ -395,29 +395,29 @@ private struct OverviewWorktreePanel: View {
                                 }
                                 .buttonStyle(.plain)
                                 .font(.system(size: 10, weight: .medium, design: .monospaced))
-                                .foregroundStyle(LineyTheme.accent)
+                                .foregroundStyle(AiyuTermTheme.accent)
                             }
 
                             Text(item.statusSummary)
                                 .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(LineyTheme.secondaryText)
+                                .foregroundStyle(AiyuTermTheme.secondaryText)
 
                             Text(item.worktree.path)
                                 .font(.system(size: 10, weight: .medium, design: .monospaced))
-                                .foregroundStyle(LineyTheme.mutedText)
+                                .foregroundStyle(AiyuTermTheme.mutedText)
                                 .lineLimit(1)
                         }
                     }
                     .padding(10)
-                    .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
             }
         }
         .padding(14)
-        .background(LineyTheme.panelBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(AiyuTermTheme.panelBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(LineyTheme.border, lineWidth: 1)
+                .stroke(AiyuTermTheme.border, lineWidth: 1)
         )
     }
 }
@@ -444,19 +444,19 @@ private struct OverviewTodayFocusPanel: View {
                         .font(.system(size: 13, weight: .semibold))
                     Text(localized("overview.todayFocus.subtitle"))
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(LineyTheme.mutedText)
+                        .foregroundStyle(AiyuTermTheme.mutedText)
                 }
                 Spacer()
                 Text(localizedFormat("overview.todayFocus.activeCountFormat", items.count))
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(LineyTheme.mutedText)
+                    .foregroundStyle(AiyuTermTheme.mutedText)
             }
 
             VStack(spacing: 8) {
                 ForEach(items) { item in
                     HStack(alignment: .top, spacing: 10) {
                         Circle()
-                            .fill(LineyTheme.accent)
+                            .fill(AiyuTermTheme.accent)
                             .frame(width: 8, height: 8)
                             .padding(.top, 6)
 
@@ -470,31 +470,31 @@ private struct OverviewTodayFocusPanel: View {
                                 }
                                 .buttonStyle(.plain)
                                 .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(LineyTheme.accent)
+                                .foregroundStyle(AiyuTermTheme.accent)
                             }
 
                             Text(item.detail)
                                 .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(LineyTheme.secondaryText)
+                                .foregroundStyle(AiyuTermTheme.secondaryText)
 
                             Button(item.workspace.name) {
                                 onOpenWorkspace(item.workspace.id)
                             }
                             .buttonStyle(.plain)
                             .font(.system(size: 10, weight: .medium, design: .monospaced))
-                            .foregroundStyle(LineyTheme.mutedText)
+                            .foregroundStyle(AiyuTermTheme.mutedText)
                         }
                     }
                     .padding(10)
-                    .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
             }
         }
         .padding(14)
-        .background(LineyTheme.panelBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(AiyuTermTheme.panelBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(LineyTheme.border, lineWidth: 1)
+                .stroke(AiyuTermTheme.border, lineWidth: 1)
         )
     }
 }
@@ -516,7 +516,7 @@ private struct OverviewTaskBoard: View {
             OverviewTaskLane(
                 title: localized("overview.taskBoard.execute"),
                 systemName: "bolt.fill",
-                tint: LineyTheme.accent,
+                tint: AiyuTermTheme.accent,
                 items: executionCards,
                 emptyText: localized("overview.taskBoard.executeEmpty"),
                 onOpenWorkspace: onOpenWorkspace,
@@ -525,7 +525,7 @@ private struct OverviewTaskBoard: View {
             OverviewTaskLane(
                 title: localized("overview.taskBoard.waiting"),
                 systemName: "pause.circle.fill",
-                tint: LineyTheme.warning,
+                tint: AiyuTermTheme.warning,
                 items: waitingCards,
                 emptyText: localized("overview.taskBoard.waitingEmpty"),
                 onOpenWorkspace: onOpenWorkspace,
@@ -534,7 +534,7 @@ private struct OverviewTaskBoard: View {
             OverviewTaskLane(
                 title: localized("overview.taskBoard.ship"),
                 systemName: "paperplane.fill",
-                tint: LineyTheme.success,
+                tint: AiyuTermTheme.success,
                 items: shippingCards,
                 emptyText: localized("overview.taskBoard.shipEmpty"),
                 onOpenWorkspace: onOpenWorkspace,
@@ -581,23 +581,23 @@ private struct OverviewTaskLane: View {
 
                         Text(item.subtitle)
                             .font(.system(size: 10, weight: .medium, design: .monospaced))
-                            .foregroundStyle(LineyTheme.mutedText)
+                            .foregroundStyle(AiyuTermTheme.mutedText)
                         Text(item.detail)
                             .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(LineyTheme.secondaryText)
+                            .foregroundStyle(AiyuTermTheme.secondaryText)
                             .lineLimit(3)
                     }
                     .padding(10)
-                    .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .padding(14)
-        .background(LineyTheme.panelBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(AiyuTermTheme.panelBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(LineyTheme.border, lineWidth: 1)
+                .stroke(AiyuTermTheme.border, lineWidth: 1)
         )
     }
 }
@@ -627,12 +627,12 @@ private struct OverviewPullRequestInboxPanel: View {
                         .font(.system(size: 13, weight: .semibold))
                     Text(localized("overview.inbox.subtitle"))
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(LineyTheme.mutedText)
+                        .foregroundStyle(AiyuTermTheme.mutedText)
                 }
                 Spacer()
                 Text(localizedFormat("overview.inbox.openCountFormat", sections.reduce(0) { $0 + $1.items.count }))
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(LineyTheme.mutedText)
+                    .foregroundStyle(AiyuTermTheme.mutedText)
             }
 
             HStack(spacing: 10) {
@@ -685,19 +685,19 @@ private struct OverviewPullRequestInboxPanel: View {
                                 }
                                 .buttonStyle(.plain)
                                 .font(.system(size: 10, weight: .medium, design: .monospaced))
-                                .foregroundStyle(LineyTheme.accent)
+                                .foregroundStyle(AiyuTermTheme.accent)
 
                                 Text(item.subtitle)
                                     .font(.system(size: 10, weight: .medium, design: .monospaced))
-                                    .foregroundStyle(LineyTheme.mutedText)
+                                    .foregroundStyle(AiyuTermTheme.mutedText)
                                 Text(item.detail)
                                     .font(.system(size: 10, weight: .medium))
-                                    .foregroundStyle(LineyTheme.secondaryText)
+                                    .foregroundStyle(AiyuTermTheme.secondaryText)
                                     .lineLimit(2)
                                 if let reviewLine = item.reviewLine {
                                     Text(reviewLine)
                                         .font(.system(size: 10, weight: .medium))
-                                        .foregroundStyle(LineyTheme.mutedText)
+                                        .foregroundStyle(AiyuTermTheme.mutedText)
                                         .lineLimit(2)
                                 }
                             }
@@ -712,7 +712,7 @@ private struct OverviewPullRequestInboxPanel: View {
                             .foregroundStyle(section.category.tint)
                         }
                         .padding(10)
-                        .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                     }
                 }
                 .padding(12)
@@ -724,10 +724,10 @@ private struct OverviewPullRequestInboxPanel: View {
             }
         }
         .padding(14)
-        .background(LineyTheme.panelBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(AiyuTermTheme.panelBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(LineyTheme.border, lineWidth: 1)
+                .stroke(AiyuTermTheme.border, lineWidth: 1)
         )
     }
 }
@@ -754,12 +754,12 @@ private struct OverviewBlockerPanel: View {
                         .font(.system(size: 13, weight: .semibold))
                     Text(localized("overview.blockers.subtitle"))
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(LineyTheme.mutedText)
+                        .foregroundStyle(AiyuTermTheme.mutedText)
                 }
                 Spacer()
                 Text(localizedFormat("overview.blockers.countFormat", groups.reduce(0) { $0 + $1.count }))
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(LineyTheme.mutedText)
+                    .foregroundStyle(AiyuTermTheme.mutedText)
             }
 
             ForEach(groups) { group in
@@ -785,10 +785,10 @@ private struct OverviewBlockerPanel: View {
 
                                 Text(item.subtitle)
                                     .font(.system(size: 10, weight: .medium, design: .monospaced))
-                                    .foregroundStyle(LineyTheme.mutedText)
+                                    .foregroundStyle(AiyuTermTheme.mutedText)
                                 Text(item.detail)
                                     .font(.system(size: 10, weight: .medium))
-                                    .foregroundStyle(LineyTheme.secondaryText)
+                                    .foregroundStyle(AiyuTermTheme.secondaryText)
                             }
 
                             Spacer()
@@ -801,7 +801,7 @@ private struct OverviewBlockerPanel: View {
                             .foregroundStyle(group.tint)
                         }
                         .padding(10)
-                        .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                     }
                 }
                 .padding(12)
@@ -813,10 +813,10 @@ private struct OverviewBlockerPanel: View {
             }
         }
         .padding(14)
-        .background(LineyTheme.panelBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(AiyuTermTheme.panelBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(LineyTheme.border, lineWidth: 1)
+                .stroke(AiyuTermTheme.border, lineWidth: 1)
         )
     }
 }
@@ -840,17 +840,17 @@ private struct OverviewTimelineRow: View {
     private var accent: Color {
         switch item.entry.kind {
         case .workflow:
-            return LineyTheme.accent
+            return AiyuTermTheme.accent
         case .command:
-            return LineyTheme.warning
+            return AiyuTermTheme.warning
         case .agent:
-            return LineyTheme.localAccent
+            return AiyuTermTheme.localAccent
         case .remote:
-            return LineyTheme.secondaryText
+            return AiyuTermTheme.secondaryText
         case .github:
-            return LineyTheme.success
+            return AiyuTermTheme.success
         case .release:
-            return LineyTheme.danger
+            return AiyuTermTheme.danger
         }
     }
 
@@ -871,12 +871,12 @@ private struct OverviewTimelineRow: View {
                     Spacer()
                     Text(timestampLabel)
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(LineyTheme.mutedText)
+                        .foregroundStyle(AiyuTermTheme.mutedText)
                 }
 
                 Text(item.entry.detail)
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(LineyTheme.secondaryText)
+                    .foregroundStyle(AiyuTermTheme.secondaryText)
                     .lineLimit(2)
 
                 HStack(spacing: 10) {
@@ -885,12 +885,12 @@ private struct OverviewTimelineRow: View {
                             .font(.system(size: 10, weight: .semibold))
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(LineyTheme.accent)
+                    .foregroundStyle(AiyuTermTheme.accent)
 
                     if let worktreeName = item.worktreeName {
                         Text(worktreeName)
                             .font(.system(size: 10, weight: .medium, design: .monospaced))
-                            .foregroundStyle(LineyTheme.mutedText)
+                            .foregroundStyle(AiyuTermTheme.mutedText)
                     }
 
                     Spacer()
@@ -905,7 +905,7 @@ private struct OverviewTimelineRow: View {
             }
         }
         .padding(10)
-        .background(LineyTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(AiyuTermTheme.subtleFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }
 
@@ -915,7 +915,7 @@ private struct OverviewEmptyLine: View {
     var body: some View {
         Text(text)
             .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(LineyTheme.mutedText)
+            .foregroundStyle(AiyuTermTheme.mutedText)
     }
 }
 
@@ -923,13 +923,13 @@ private extension OverviewPullRequestInboxCategory {
     var tint: Color {
         switch self {
         case .failing:
-            return LineyTheme.danger
+            return AiyuTermTheme.danger
         case .behind:
-            return LineyTheme.warning
+            return AiyuTermTheme.warning
         case .review:
-            return LineyTheme.accent
+            return AiyuTermTheme.accent
         case .ready:
-            return LineyTheme.success
+            return AiyuTermTheme.success
         }
     }
 }
@@ -944,17 +944,17 @@ private extension OverviewBlockerGroupStyle {
     var tint: Color {
         switch self {
         case .failingChecks:
-            return LineyTheme.danger
+            return AiyuTermTheme.danger
         case .mergeReadiness(let readiness):
             switch readiness {
             case .behind, .draft:
-                return LineyTheme.warning
+                return AiyuTermTheme.warning
             case .changesRequested, .conflicted, .blocked:
-                return LineyTheme.danger
+                return AiyuTermTheme.danger
             case .ready:
-                return LineyTheme.success
+                return AiyuTermTheme.success
             case .checking, .closed:
-                return LineyTheme.secondaryText
+                return AiyuTermTheme.secondaryText
             }
         }
     }

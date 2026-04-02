@@ -1,6 +1,6 @@
 //
 //  DiffWindowContentView.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -17,7 +17,7 @@ struct DiffWindowContentView: View {
     @ObservedObject var state: DiffWindowState
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
     @State private var listSelection: String?
-    @AppStorage("liney.diff.viewStyle") private var diffStyleRaw = DiffPresentationStyle.split.rawValue
+    @AppStorage("aiyuterm.diff.viewStyle") private var diffStyleRaw = DiffPresentationStyle.split.rawValue
 
     private var diffStyle: DiffPresentationStyle {
         DiffPresentationStyle(rawValue: diffStyleRaw) ?? .split
@@ -35,7 +35,7 @@ struct DiffWindowContentView: View {
         } detail: {
             diffDetail
         }
-        .background(LineyTheme.appBackground)
+        .background(AiyuTermTheme.appBackground)
         .onChange(of: listSelection) { _, newValue in
             guard state.selectedFileID != newValue else { return }
             state.selectedFileID = newValue
@@ -133,7 +133,7 @@ struct DiffWindowContentView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(LineyTheme.appBackground)
+        .background(AiyuTermTheme.appBackground)
     }
 
     private func toggleSidebar() {
@@ -172,7 +172,7 @@ private struct DiffFileRow: View {
             if !file.directoryPath.isEmpty {
                 Text(file.directoryPath)
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundStyle(LineyTheme.mutedText)
+                    .foregroundStyle(AiyuTermTheme.mutedText)
                     .lineLimit(1)
                     .truncationMode(.head)
             }
@@ -180,7 +180,7 @@ private struct DiffFileRow: View {
             if let oldPath = file.oldPath, let newPath = file.newPath, oldPath != newPath {
                 Text("\(oldPath) -> \(newPath)")
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundStyle(LineyTheme.mutedText)
+                    .foregroundStyle(AiyuTermTheme.mutedText)
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
@@ -207,7 +207,7 @@ private struct DiffDocumentHeader: View {
                 if !file.directoryPath.isEmpty {
                     Text(file.directoryPath)
                         .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundStyle(LineyTheme.mutedText)
+                        .foregroundStyle(AiyuTermTheme.mutedText)
                 }
             }
 
@@ -215,10 +215,10 @@ private struct DiffDocumentHeader: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(LineyTheme.chromeBackground.opacity(0.96))
+        .background(AiyuTermTheme.chromeBackground.opacity(0.96))
         .overlay(alignment: .bottom) {
             Rectangle()
-                .fill(LineyTheme.border)
+                .fill(AiyuTermTheme.border)
                 .frame(height: 1)
         }
     }
@@ -234,7 +234,7 @@ private struct DiffYiTongDocumentView: View {
             configuration: yiTongConfiguration
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(LineyTheme.canvasBackground)
+        .background(AiyuTermTheme.canvasBackground)
     }
 
     private var yiTongDocument: DiffDocument {
@@ -263,15 +263,15 @@ private extension DiffFileStatus {
     var color: Color {
         switch self {
         case .modified:
-            return LineyTheme.warning
+            return AiyuTermTheme.warning
         case .added:
-            return LineyTheme.success
+            return AiyuTermTheme.success
         case .deleted:
-            return LineyTheme.danger
+            return AiyuTermTheme.danger
         case .renamed, .copied:
-            return LineyTheme.accent
+            return AiyuTermTheme.accent
         case .unknown:
-            return LineyTheme.mutedText
+            return AiyuTermTheme.mutedText
         }
     }
 }

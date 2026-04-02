@@ -1,6 +1,6 @@
 //
 //  GitRepositoryServiceTests.swift
-//  LineyTests
+//  AiyuTermTests
 //
 //  Author: wuwenrui
 //

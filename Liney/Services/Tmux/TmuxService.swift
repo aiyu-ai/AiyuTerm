@@ -1,6 +1,6 @@
 //
 //  TmuxService.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //

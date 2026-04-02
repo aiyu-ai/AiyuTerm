@@ -1,6 +1,6 @@
 //
 //  DiffWindowState.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //

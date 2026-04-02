@@ -1,24 +1,24 @@
 //
 //  FeatureExtensionRegistry.swift
-//  Liney
+//  AiyuTerm
 //
 
 import Foundation
 
-struct LineyExtensionContext {
+struct AiyuTermExtensionContext {
     let selectedWorkspace: WorkspaceModel?
     let workspaces: [WorkspaceModel]
 }
 
-protocol LineyFeatureExtension {
+protocol AiyuTermFeatureExtension {
     var id: String { get }
-    func commandPaletteItems(context: LineyExtensionContext) -> [CommandPaletteItem]
+    func commandPaletteItems(context: AiyuTermExtensionContext) -> [CommandPaletteItem]
 }
 
-struct SupportLinksExtension: LineyFeatureExtension {
+struct SupportLinksExtension: AiyuTermFeatureExtension {
     let id = "support-links"
 
-    func commandPaletteItems(context: LineyExtensionContext) -> [CommandPaletteItem] {
+    func commandPaletteItems(context: AiyuTermExtensionContext) -> [CommandPaletteItem] {
         _ = context
         return [
             CommandPaletteItem(
@@ -28,7 +28,7 @@ struct SupportLinksExtension: LineyFeatureExtension {
                 group: .navigation,
                 keywords: ["extension", "help", "website", "docs"],
                 isGlobal: true,
-                kind: .command(.openLineyWebsite)
+                kind: .command(.openAiyuTermWebsite)
             ),
             CommandPaletteItem(
                 id: "extension-support-feedback",
@@ -37,29 +37,29 @@ struct SupportLinksExtension: LineyFeatureExtension {
                 group: .navigation,
                 keywords: ["extension", "feedback", "issue", "bug"],
                 isGlobal: true,
-                kind: .command(.submitLineyFeedback)
+                kind: .command(.submitAiyuTermFeedback)
             )
         ]
     }
 }
 
-final class LineyFeatureRegistry {
-    static let shared = LineyFeatureRegistry(extensions: [
+final class AiyuTermFeatureRegistry {
+    static let shared = AiyuTermFeatureRegistry(extensions: [
         SupportLinksExtension()
     ])
 
-    private(set) var extensions: [any LineyFeatureExtension]
+    private(set) var extensions: [any AiyuTermFeatureExtension]
 
-    init(extensions: [any LineyFeatureExtension] = []) {
+    init(extensions: [any AiyuTermFeatureExtension] = []) {
         self.extensions = extensions
     }
 
-    func register(_ featureExtension: any LineyFeatureExtension) {
+    func register(_ featureExtension: any AiyuTermFeatureExtension) {
         guard !extensions.contains(where: { $0.id == featureExtension.id }) else { return }
         extensions.append(featureExtension)
     }
 
-    func commandPaletteItems(context: LineyExtensionContext) -> [CommandPaletteItem] {
+    func commandPaletteItems(context: AiyuTermExtensionContext) -> [CommandPaletteItem] {
         extensions.flatMap { $0.commandPaletteItems(context: context) }
     }
 }

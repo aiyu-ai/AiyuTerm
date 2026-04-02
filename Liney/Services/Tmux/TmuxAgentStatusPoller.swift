@@ -1,6 +1,6 @@
 //
 //  TmuxAgentStatusPoller.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -18,7 +18,7 @@ final class TmuxAgentStatusPoller {
         let sessionID: String
     }
 
-    private static let paneOptionKey = "liney_agent_status"
+    private static let paneOptionKey = "aiyuterm_agent_status"
 
     private static let permissionKeywords = [
         "Do you want to proceed?",

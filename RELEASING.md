@@ -1,4 +1,4 @@
-# Releasing Liney
+# Releasing AiyuTerm
 
 [中文版本](./RELEASING.zh-CN.md)
 
@@ -7,7 +7,7 @@
 - Clean git worktree
 - `gh auth login` completed
 - Developer ID signing identity available if signing/notarizing
-- Sparkle private key exported locally, usually at `~/.liney_release/sparkle_private_key`
+- Sparkle private key exported locally, usually at `.aiyuterm_release/sparkle_private_key`
 - Metal toolchain installed for Ghostty release builds:
 
 ```bash
@@ -37,9 +37,9 @@ Generate or restore the Sparkle signing key on the machine that will publish rel
 scripts/setup_sparkle_keys.sh
 ```
 
-The script prints the public key and exports the private key to `~/.liney_release/sparkle_private_key`. The public key must match `SUPublicEDKey` in the app target.
+The script prints the public key and exports the private key to `.aiyuterm_release/sparkle_private_key`. The public key must match `SUPublicEDKey` in the app target.
 
-Because Liney is open source, do not store this private key in the main repository. Prefer one of:
+Because AiyuTerm is open source, do not store this private key in the main repository. Prefer one of:
 
 - a private release-infra repository
 - a CI/CD secret manager
@@ -64,7 +64,7 @@ The default release bundle is now a universal macOS artifact that contains both 
 Recommended once per release machine:
 
 ```bash
-xcrun notarytool store-credentials liney-notarytool \
+xcrun notarytool store-credentials aiyuterm-notarytool \
   --apple-id "you@example.com" \
   --team-id "TEAMID" \
   --password "xxxx-xxxx-xxxx-xxxx" \
@@ -81,7 +81,7 @@ scripts/sign_macos.sh \
 
 Provide notarization credentials with either:
 
-- `NOTARYTOOL_PROFILE=liney-notarytool` (recommended)
+- `NOTARYTOOL_PROFILE=aiyuterm-notarytool` (recommended)
 - `APPLE_ID`, `APPLE_TEAM_ID`, and `APPLE_APP_SPECIFIC_PASSWORD`
 
 ## Publish
@@ -90,16 +90,16 @@ Provide notarization credentials with either:
 ./deploy.sh
 ```
 
-If the `liney-notarytool` profile exists in the current keychain, `scripts/sign_macos.sh` and `./deploy.sh` will use it automatically. You only need to pass `NOTARYTOOL_PROFILE` when you want to override that default.
+If the `aiyuterm-notarytool` profile exists in the current keychain, `scripts/sign_macos.sh` and `./deploy.sh` will use it automatically. You only need to pass `NOTARYTOOL_PROFILE` when you want to override that default.
 
 Default behavior:
 
 - bumps `MARKETING_VERSION` by patch and increments `CURRENT_PROJECT_VERSION` by 1 unless `SKIP_BUMP=1`
 - builds and signs the universal release DMG
-- archives `Liney.app.dSYM` to `dist/dSYMs/Liney-<version>.app.dSYM`
-- packages `dist/dSYMs/Liney-<version>.app.dSYM.zip`
-- uploads `Liney.app.dSYM` to Sentry using the default target `xnu/liney`
-- packages `Liney-<version>.app.zip` for Sparkle
+- archives `AiyuTerm.app.dSYM` to `dist/dSYMs/AiyuTerm-<version>.app.dSYM`
+- packages `dist/dSYMs/AiyuTerm-<version>.app.dSYM.zip`
+- uploads `AiyuTerm.app.dSYM` to Sentry using the default target `xnu/aiyuterm`
+- packages `AiyuTerm-<version>.app.zip` for Sparkle
 - notarizes unless `SKIP_NOTARIZE=1`
 - updates the repository `appcast.xml`
 - creates or updates the GitHub release, including the dSYM zip
@@ -120,7 +120,7 @@ Sentry dSYM upload uses `sentry-cli` authentication by default. `SENTRY_AUTH_TOK
 Optional Sentry environment:
 
 - `SENTRY_ORG` to override the default org `xnu`
-- `SENTRY_PROJECT` to override the default project `liney`
+- `SENTRY_PROJECT` to override the default project `aiyuterm`
 - `SENTRY_URL` for self-hosted Sentry
 - `SENTRY_INCLUDE_SOURCES=1` to upload source bundles together with the dSYM
 

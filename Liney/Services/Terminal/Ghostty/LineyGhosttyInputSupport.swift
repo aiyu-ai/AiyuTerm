@@ -1,6 +1,6 @@
 //
-//  LineyGhosttyInputSupport.swift
-//  Liney
+//  AiyuTermGhosttyInputSupport.swift
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
@@ -9,7 +9,7 @@ import AppKit
 import Carbon
 import GhosttyKit
 
-enum LineyGhosttyTextInputRouting {
+enum AiyuTermGhosttyTextInputRouting {
     private static let optionNavigationKeyCodes: Set<UInt16> = [
         UInt16(kVK_LeftArrow),
         UInt16(kVK_RightArrow),
@@ -20,7 +20,7 @@ enum LineyGhosttyTextInputRouting {
     ]
 
     static func shouldPreferRawKeyEvent(keyCode: UInt16, modifierFlags: NSEvent.ModifierFlags) -> Bool {
-        let relevantModifiers = lineyGhosttyRelevantModifierFlags(modifierFlags)
+        let relevantModifiers = aiyuTermGhosttyRelevantModifierFlags(modifierFlags)
 
         if keyCode == UInt16(kVK_Return) || keyCode == UInt16(kVK_ANSI_KeypadEnter) {
             return !relevantModifiers.intersection([.option, .command, .control]).isEmpty
@@ -81,7 +81,7 @@ enum LineyGhosttyTextInputRouting {
     }
 }
 
-enum LineyGhosttyTextInputCommandAction: Equatable {
+enum AiyuTermGhosttyTextInputCommandAction: Equatable {
     case none
     case scrollToTop
     case scrollToBottom
@@ -111,7 +111,7 @@ enum LineyGhosttyTextInputCommandAction: Equatable {
     }
 }
 
-func lineyGhosttyShouldEnableIMEDebugLogging(
+func aiyuTermGhosttyShouldEnableIMEDebugLogging(
     environment: [String: String]
 ) -> Bool {
     guard let rawValue = environment["LINEY_DEBUG_IME"]?
@@ -123,7 +123,7 @@ func lineyGhosttyShouldEnableIMEDebugLogging(
     return rawValue != "0" && rawValue != "false" && rawValue != "no"
 }
 
-struct LineyGhosttyMarkedTextState: Equatable {
+struct AiyuTermGhosttyMarkedTextState: Equatable {
     var text: String
     var selectedRange: NSRange
 
@@ -183,7 +183,7 @@ struct LineyGhosttyMarkedTextState: Equatable {
     }
 }
 
-struct LineyGhosttyEquivalentKeyResolution: Equatable {
+struct AiyuTermGhosttyEquivalentKeyResolution: Equatable {
     let equivalent: String?
     let nextLastPerformKeyEvent: TimeInterval?
 }
@@ -221,7 +221,7 @@ func appKitMods(_ mods: ghostty_input_mods_e, fallback: NSEvent.ModifierFlags = 
     return flags
 }
 
-func lineyGhosttyModifierAction(
+func aiyuTermGhosttyModifierAction(
     keyCode: UInt16,
     modifierFlags: NSEvent.ModifierFlags
 ) -> ghostty_input_action_e? {
@@ -301,7 +301,7 @@ func ghosttyShouldAttemptMenu(
     return !isAll && !isPerformable && isConsumed
 }
 
-func lineyGhosttyShouldAttemptMenuKeyEquivalent(
+func aiyuTermGhosttyShouldAttemptMenuKeyEquivalent(
     bindingFlags: ghostty_binding_flags_e?,
     modifierFlags: NSEvent.ModifierFlags,
     hasActiveKeySequence: Bool,
@@ -323,28 +323,28 @@ func lineyGhosttyShouldAttemptMenuKeyEquivalent(
     return relevantModifiers.intersection([.command, .control, .option]).isEmpty == false
 }
 
-func lineyGhosttyShouldDispatchWorkspaceSplitAction(
+func aiyuTermGhosttyShouldDispatchWorkspaceSplitAction(
     _ direction: ghostty_action_split_direction_e,
     settings: AppSettings
 ) -> Bool {
     switch direction {
     case GHOSTTY_SPLIT_DIRECTION_RIGHT:
-        return LineyKeyboardShortcuts.effectiveShortcut(for: .splitRight, in: settings) ==
-            LineyShortcutAction.splitRight.defaultShortcut
+        return AiyuTermKeyboardShortcuts.effectiveShortcut(for: .splitRight, in: settings) ==
+            AiyuTermShortcutAction.splitRight.defaultShortcut
     case GHOSTTY_SPLIT_DIRECTION_DOWN:
-        return LineyKeyboardShortcuts.effectiveShortcut(for: .splitDown, in: settings) ==
-            LineyShortcutAction.splitDown.defaultShortcut
+        return AiyuTermKeyboardShortcuts.effectiveShortcut(for: .splitDown, in: settings) ==
+            AiyuTermShortcutAction.splitDown.defaultShortcut
     default:
         return true
     }
 }
 
-func lineyGhosttySSHWordNavigationEscapeSequence(
+func aiyuTermGhosttySSHWordNavigationEscapeSequence(
     keyCode: UInt16,
     modifierFlags: NSEvent.ModifierFlags,
     backendConfiguration: SessionBackendConfiguration
 ) -> String? {
-    let relevantModifiers = lineyGhosttyRelevantModifierFlags(modifierFlags)
+    let relevantModifiers = aiyuTermGhosttyRelevantModifierFlags(modifierFlags)
     guard relevantModifiers.contains(.option),
           !relevantModifiers.contains(.command),
           !relevantModifiers.contains(.control),
@@ -362,7 +362,7 @@ func lineyGhosttySSHWordNavigationEscapeSequence(
     }
 }
 
-func lineyGhosttyRelevantModifierFlags(_ modifierFlags: NSEvent.ModifierFlags) -> NSEvent.ModifierFlags {
+func aiyuTermGhosttyRelevantModifierFlags(_ modifierFlags: NSEvent.ModifierFlags) -> NSEvent.ModifierFlags {
     var relevantModifiers = modifierFlags.intersection(.deviceIndependentFlagsMask)
     let rawFlags = modifierFlags.rawValue
 
@@ -379,38 +379,38 @@ func resolveGhosttyEquivalentKey(
     modifierFlags: NSEvent.ModifierFlags,
     eventTimestamp: TimeInterval,
     lastPerformKeyEvent: TimeInterval?
-) -> LineyGhosttyEquivalentKeyResolution {
+) -> AiyuTermGhosttyEquivalentKeyResolution {
     switch charactersIgnoringModifiers {
     case "\r":
         guard modifierFlags.contains(.control) else {
-            return LineyGhosttyEquivalentKeyResolution(equivalent: nil, nextLastPerformKeyEvent: lastPerformKeyEvent)
+            return AiyuTermGhosttyEquivalentKeyResolution(equivalent: nil, nextLastPerformKeyEvent: lastPerformKeyEvent)
         }
-        return LineyGhosttyEquivalentKeyResolution(equivalent: "\r", nextLastPerformKeyEvent: nil)
+        return AiyuTermGhosttyEquivalentKeyResolution(equivalent: "\r", nextLastPerformKeyEvent: nil)
 
     case "/":
         guard modifierFlags.contains(.control),
               modifierFlags.isDisjoint(with: [.shift, .command, .option]) else {
-            return LineyGhosttyEquivalentKeyResolution(equivalent: nil, nextLastPerformKeyEvent: lastPerformKeyEvent)
+            return AiyuTermGhosttyEquivalentKeyResolution(equivalent: nil, nextLastPerformKeyEvent: lastPerformKeyEvent)
         }
-        return LineyGhosttyEquivalentKeyResolution(equivalent: "_", nextLastPerformKeyEvent: nil)
+        return AiyuTermGhosttyEquivalentKeyResolution(equivalent: "_", nextLastPerformKeyEvent: nil)
 
     default:
         guard eventTimestamp != 0 else {
-            return LineyGhosttyEquivalentKeyResolution(equivalent: nil, nextLastPerformKeyEvent: lastPerformKeyEvent)
+            return AiyuTermGhosttyEquivalentKeyResolution(equivalent: nil, nextLastPerformKeyEvent: lastPerformKeyEvent)
         }
 
         guard modifierFlags.contains(.command) || modifierFlags.contains(.control) else {
-            return LineyGhosttyEquivalentKeyResolution(equivalent: nil, nextLastPerformKeyEvent: nil)
+            return AiyuTermGhosttyEquivalentKeyResolution(equivalent: nil, nextLastPerformKeyEvent: nil)
         }
 
         if let lastPerformKeyEvent, lastPerformKeyEvent == eventTimestamp {
-            return LineyGhosttyEquivalentKeyResolution(
+            return AiyuTermGhosttyEquivalentKeyResolution(
                 equivalent: characters ?? "",
                 nextLastPerformKeyEvent: nil
             )
         }
 
-        return LineyGhosttyEquivalentKeyResolution(equivalent: nil, nextLastPerformKeyEvent: eventTimestamp)
+        return AiyuTermGhosttyEquivalentKeyResolution(equivalent: nil, nextLastPerformKeyEvent: eventTimestamp)
     }
 }
 

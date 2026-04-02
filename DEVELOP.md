@@ -1,6 +1,6 @@
-# Develop Liney
+# Develop AiyuTerm
 
-This guide is for contributors and maintainers working on the Liney codebase.
+This guide is for contributors and maintainers working on the AiyuTerm codebase.
 
 ## Requirements
 
@@ -38,7 +38,7 @@ xcodebuild \
 ## Run The Debug Build
 
 ```bash
-open ~/Library/Developer/Xcode/DerivedData/Liney-*/Build/Products/Debug/Liney.app
+open ~/Library/Developer/Xcode/DerivedData/AiyuTerm-*/Build/Products/Debug/AiyuTerm.app
 ```
 
 ## Project Layout
@@ -70,7 +70,7 @@ Liney/
 
 ## Data
 
-Liney stores workspace state and app settings in `~/.liney/`, and still reads legacy state from `~/Library/Application Support/Liney/` when present.
+AiyuTerm stores workspace state and app settings in `~/.aiyuterm/`, and still reads legacy state from `~/Library/Application Support/AiyuTerm/` when present.
 
 ## Release Build
 

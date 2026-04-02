@@ -1,6 +1,6 @@
 <!--
   testing.md
-  Liney
+  AiyuTerm
 
   Author: wuwenrui
 -->
@@ -25,7 +25,7 @@ This repository leans on focused unit tests instead of broad integration fixture
   For split trees, pane movement, zoom state, and layout persistence rules.
 - `Tests/ShellSessionTests.swift`
   For session lifecycle, controller callbacks, and launch/restart behavior.
-- `Tests/LineyGhosttyInputSupportTests.swift`
+- `Tests/AiyuTermGhosttyInputSupportTests.swift`
   For keyboard routing, modifier translation, IME marked-text helpers, and other pure Ghostty adapter logic.
 
 ## Preferred Patterns
@@ -42,10 +42,10 @@ For git parsing logic, pass raw command output into pure helpers and assert the 
 
 The Ghostty adapter exposes several pure helpers such as:
 
-- `LineyGhosttyTextInputRouting.shouldPreferRawKeyEvent`
+- `AiyuTermGhosttyTextInputRouting.shouldPreferRawKeyEvent`
 - `ghosttyShouldAttemptMenu`
 - `resolveGhosttyEquivalentKey`
-- `LineyGhosttyMarkedTextState`
+- `AiyuTermGhosttyMarkedTextState`
 
 These are good candidates for direct unit tests because they encode tricky keyboard and IME rules without requiring a live `NSView`.
 
@@ -75,7 +75,7 @@ xcodebuild \
   -scheme Liney \
   -destination 'platform=macOS' \
   test \
-  -only-testing:LineyTests/LineyGhosttyInputSupportTests
+  -only-testing:LineyTests/AiyuTermGhosttyInputSupportTests
 ```
 
 ## Review Checklist

@@ -1,6 +1,6 @@
 //
 //  TmuxAttachCoordinator.swift
-//  Liney
+//  AiyuTerm
 //
 //  Author: wuwenrui
 //
