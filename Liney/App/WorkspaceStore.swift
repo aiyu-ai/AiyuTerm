@@ -51,6 +51,7 @@ final class WorkspaceStore: ObservableObject {
     private let updaterController = AppUpdaterController.shared
     private let remoteSessionCoordinator = RemoteSessionCoordinator()
     let tmuxPanelStore = TmuxPanelStore()
+    private let tmuxAgentPoller = TmuxAgentStatusPoller()
     private let metadataWatchService = WorkspaceMetadataWatchService.shared
     private let sleepPreventionController = SleepPreventionController()
     private var persistsWorkspaceState: Bool
@@ -704,6 +705,10 @@ final class WorkspaceStore: ObservableObject {
     }
 
     func removeWorkspace(_ workspace: WorkspaceModel) {
+        if let tmuxID = workspace.settings.tmuxSessionID {
+            tmuxAgentPoller.unregister(sessionID: tmuxID)
+            TmuxAttachCoordinator.shared.unregister(sessionID: tmuxID)
+        }
         workspace.sessionController.sessions.values.forEach { $0.terminate() }
         workspaces.removeAll(where: { $0.id == workspace.id })
         if selectedWorkspaceID == workspace.id {
@@ -718,6 +723,10 @@ final class WorkspaceStore: ObservableObject {
         let selectedIDs = Set(ids)
         let targets = workspaces.filter { selectedIDs.contains($0.id) }
         for workspace in targets {
+            if let tmuxID = workspace.settings.tmuxSessionID {
+                tmuxAgentPoller.unregister(sessionID: tmuxID)
+                TmuxAttachCoordinator.shared.unregister(sessionID: tmuxID)
+            }
             workspace.sessionController.sessions.values.forEach { $0.terminate() }
         }
         workspaces.removeAll { selectedIDs.contains($0.id) }
@@ -1216,24 +1225,51 @@ final class WorkspaceStore: ObservableObject {
 
     func attachTmuxSession(sessionID: String) {
         let coordinator = TmuxAttachCoordinator.shared
+        print("[TmuxAttach] attachTmuxSession called: sessionID=\(sessionID)")
+
+        // Ensure poller callback is wired (idempotent, set once)
+        if tmuxAgentPoller.onStatusChange == nil {
+            tmuxAgentPoller.onStatusChange = { [weak self] in
+                self?.tmuxPanelStore.objectWillChange.send()
+            }
+        }
 
         // Check coordinator for cross-window dedup
         if coordinator.isAttached(sessionID) {
             if let ownerStoreID = coordinator.storeID(for: sessionID), ownerStoreID != id {
+                print("[TmuxAttach] BLOCKED: already attached in another window")
                 tmuxPanelStore.errorMessage = "Already attached in another window"
                 return
             }
+            print("[TmuxAttach] coordinator says attached but same store, continuing")
         }
 
-        // Check local workspaces
+        // Check local workspaces — verify name matches to handle tmux server restart
+        // (session IDs like $0/$1 can be reassigned to different sessions after restart)
+        let sessionName = tmuxPanelStore.sessionName(for: sessionID) ?? sessionID
+        print("[TmuxAttach] sessionName=\(sessionName), workspaceCount=\(workspaces.count)")
         if let existing = workspaces.first(where: { $0.settings.tmuxSessionID == sessionID }) {
-            selectWorkspace(existing)
+            if existing.name == sessionName {
+                print("[TmuxAttach] reusing existing workspace: \(existing.name)")
+                selectWorkspace(existing)
+                tmuxAgentPoller.register(sessionID: sessionID, workspace: existing)
+                return
+            }
+            print("[TmuxAttach] stale workspace detected: expected=\(sessionName) found=\(existing.name), removing")
+            removeWorkspace(existing)
+        }
+
+        // Also remove any workspace that was previously for this session name but has a stale ID
+        if let stale = workspaces.first(where: { $0.name == sessionName && $0.settings.isTmuxManaged }) {
+            print("[TmuxAttach] removing stale workspace by name: \(stale.name)")
+            removeWorkspace(stale)
+        }
+
+        guard let config = tmuxPanelStore.attachConfiguration(sessionID: sessionID) else {
+            print("[TmuxAttach] FAILED: attachConfiguration returned nil for \(sessionID)")
             return
         }
-
-        guard let config = tmuxPanelStore.attachConfiguration(sessionID: sessionID) else { return }
-
-        let sessionName = tmuxPanelStore.sessionName(for: sessionID) ?? sessionID
+        print("[TmuxAttach] creating new workspace for \(sessionName) (sessionID=\(sessionID))")
         let cwd = NSHomeDirectory()
         let pane = PaneSnapshot(
             id: UUID(),
@@ -1273,14 +1309,15 @@ final class WorkspaceStore: ObservableObject {
         coordinator.register(sessionID: sessionID, storeID: id, shellSessionID: pane.id)
         selectWorkspace(workspace)
 
-        // Wire AFTER selectWorkspace (which calls wireWorkspaceActions and overwrites callbacks)
-        for session in workspace.sessionController.sessions.values {
-            let existingCallback = session.onAgentStatusChange
-            session.onAgentStatusChange = { [weak self] status in
-                existingCallback?(status)
-                self?.tmuxPanelStore.objectWillChange.send()
-            }
+        // Use the stable external callback on the workspace model.
+        // This survives wireWorkspaceActions() re-wiring (tab switches, pane operations, etc.)
+        workspace.onExternalAgentStatusChange = { [weak self] _ in
+            self?.tmuxPanelStore.objectWillChange.send()
         }
+
+        // OSC 9 notifications do not pass through tmux to Ghostty.
+        // Poll tmux pane content to detect Claude Code permission prompts.
+        tmuxAgentPoller.register(sessionID: sessionID, workspace: workspace)
     }
 
     func createSession(in workspace: WorkspaceModel, for worktree: WorktreeModel) {

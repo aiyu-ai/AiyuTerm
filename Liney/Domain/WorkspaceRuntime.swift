@@ -555,6 +555,10 @@ final class WorkspaceModel: ObservableObject, Identifiable {
         return AgentSessionStatus.highestPriority(in: statuses)
     }
 
+    /// External observer for agent status changes (e.g., TmuxPanelStore).
+    /// Survives wireWorkspaceActions() re-wiring because it lives on the model, not on individual sessions.
+    var onExternalAgentStatusChange: ((AgentSessionStatus) -> Void)?
+
     var aggregatedAgentStatus: AgentSessionStatus {
         let statuses = worktrees.map { agentStatus(forWorktreePath: $0.path) }
         return AgentSessionStatus.highestPriority(in: statuses)
@@ -866,8 +870,9 @@ final class WorkspaceModel: ObservableObject, Identifiable {
                 guard let self, self.sessionController.focusedPaneID != paneID else { return }
                 self.focusPane(paneID)
             }
-            session.onAgentStatusChange = { [weak self] _ in
+            session.onAgentStatusChange = { [weak self] status in
                 self?.objectWillChange.send()
+                self?.onExternalAgentStatusChange?(status)
             }
         }
     }
