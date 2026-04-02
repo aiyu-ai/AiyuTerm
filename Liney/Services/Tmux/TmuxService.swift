@@ -94,6 +94,22 @@ enum TmuxService {
         return result.stdout
     }
 
+    /// Reads a user-defined pane option set by Claude Code hooks.
+    static func paneOption(sessionID: String, option: String) async throws -> String? {
+        guard isValidSessionID(sessionID) else { return nil }
+        let result = try await runTmux(arguments: [
+            "display-message", "-p", "-t", sessionID, "#{@\(option)}"
+        ])
+        let value = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
+    }
+
+    /// Clears a user-defined pane option.
+    static func clearPaneOption(sessionID: String, option: String) async throws {
+        guard isValidSessionID(sessionID) else { return }
+        try await runTmux(arguments: ["set-option", "-up", "-t", sessionID, "@\(option)"])
+    }
+
     // MARK: - Internal
 
     @discardableResult
