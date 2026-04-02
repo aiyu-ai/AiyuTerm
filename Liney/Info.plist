@@ -24,9 +24,12 @@
 	<string>Copyright © 2026 wuwenrui. Released under the  Apache-2.0 license.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<!-- Sparkle auto-update disabled: no appcast feed for AiyuTerm yet -->
+	<!-- Uncomment and update when you have your own appcast:
 	<key>SUFeedURL</key>
-	<string>https://raw.githubusercontent.com/wuwenrui/liney/stable/appcast.xml</string>
+	<string>https://raw.githubusercontent.com/AiyuAI/AiyuTerm/stable/appcast.xml</string>
 	<key>SUPublicEDKey</key>
-	<string>jKDpjPRUtie2hpcz/ZI0tkh47l2DFJt3RaUE+UFydh8=</string>
+	<string>YOUR_PUBLIC_ED_KEY</string>
+	-->
 </dict>
 </plist>
