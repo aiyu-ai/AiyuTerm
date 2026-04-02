@@ -193,6 +193,12 @@ extension SidebarItemIcon {
         palette: .mint,
         fillStyle: .solid
     )
+
+    nonisolated static let groupDefault = SidebarItemIcon(
+        symbolName: "folder.fill",
+        palette: .slate,
+        fillStyle: .gradient
+    )
 }
 
 nonisolated enum ExternalEditor: String, Codable, Hashable, CaseIterable, Identifiable {
@@ -277,6 +283,7 @@ struct AppSettings: Codable, Hashable {
     var preferredAgentPresetID: UUID?
     var sshPresets: [SSHPreset]
     var preferredSSHPresetID: UUID?
+    var workspaceGroups: [WorkspaceGroup]
     var keyboardShortcutOverrides: [String: KeyboardShortcutOverride]
 
     init(
@@ -315,6 +322,7 @@ struct AppSettings: Codable, Hashable {
         preferredAgentPresetID: UUID? = AgentPreset.claudeCode.id,
         sshPresets: [SSHPreset] = SSHPreset.builtInPresets,
         preferredSSHPresetID: UUID? = nil,
+        workspaceGroups: [WorkspaceGroup] = [],
         keyboardShortcutOverrides: [String: KeyboardShortcutOverride] = [:]
     ) {
         let normalizedKeyboardShortcutOverrides = LineyKeyboardShortcuts.normalizedOverrides(keyboardShortcutOverrides)
@@ -376,6 +384,7 @@ struct AppSettings: Codable, Hashable {
         } else {
             self.preferredSSHPresetID = nil
         }
+        self.workspaceGroups = workspaceGroups
     }
 }
 
@@ -416,6 +425,7 @@ extension AppSettings {
         case preferredAgentPresetID
         case sshPresets
         case preferredSSHPresetID
+        case workspaceGroups
         case keyboardShortcutOverrides
     }
 
@@ -465,6 +475,7 @@ extension AppSettings {
             preferredAgentPresetID: try container.decodeIfPresent(UUID.self, forKey: .preferredAgentPresetID) ?? AgentPreset.claudeCode.id,
             sshPresets: try container.decodeIfPresent([SSHPreset].self, forKey: .sshPresets) ?? SSHPreset.builtInPresets,
             preferredSSHPresetID: try container.decodeIfPresent(UUID.self, forKey: .preferredSSHPresetID),
+            workspaceGroups: try container.decodeIfPresent([WorkspaceGroup].self, forKey: .workspaceGroups) ?? [],
             keyboardShortcutOverrides: try container.decodeIfPresent([String: KeyboardShortcutOverride].self, forKey: .keyboardShortcutOverrides) ?? [:]
         )
     }

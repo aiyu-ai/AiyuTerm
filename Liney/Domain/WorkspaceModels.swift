@@ -7,6 +7,43 @@
 
 import Foundation
 
+struct WorkspaceGroup: Codable, Hashable, Identifiable {
+    var id: UUID
+    var name: String
+    var icon: SidebarItemIcon
+    var workspaceIDs: [UUID]
+    var isExpanded: Bool
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        icon: SidebarItemIcon = .groupDefault,
+        workspaceIDs: [UUID] = [],
+        isExpanded: Bool = true
+    ) {
+        self.id = id
+        self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.icon = icon
+        self.workspaceIDs = workspaceIDs
+        self.isExpanded = isExpanded
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, icon, workspaceIDs, isExpanded
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            id: try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID(),
+            name: try container.decodeIfPresent(String.self, forKey: .name) ?? "",
+            icon: try container.decodeIfPresent(SidebarItemIcon.self, forKey: .icon) ?? .groupDefault,
+            workspaceIDs: try container.decodeIfPresent([UUID].self, forKey: .workspaceIDs) ?? [],
+            isExpanded: try container.decodeIfPresent(Bool.self, forKey: .isExpanded) ?? true
+        )
+    }
+}
+
 private func lineyLocalizedWorkflowString(_ key: String) -> String {
     LocalizationManager.shared.string(key)
 }

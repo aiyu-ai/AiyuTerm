@@ -30,6 +30,8 @@ final class WorkspaceStore: ObservableObject {
     @Published var selectedCommandPaletteItemID: String?
     @Published var settingsRequest: WorkspaceSettingsRequest?
     @Published var quickCommandEditorRequest: QuickCommandEditorRequest?
+
+    @Published var workspaceFileBrowserRequest: WorkspaceFileBrowserRequest?
     @Published var sidebarIconCustomizationRequest: SidebarIconCustomizationRequest?
     @Published var presentedError: PresentedError?
     @Published var renameWorkspaceRequest: RenameWorkspaceRequest?
@@ -774,6 +776,14 @@ final class WorkspaceStore: ObservableObject {
         persist()
     }
 
+    func presentWorkspaceFileBrowser(for workspace: WorkspaceModel) {
+        workspaceFileBrowserRequest = WorkspaceFileBrowserRequest(
+            workspaceID: workspace.id,
+            workspaceName: workspace.name,
+            rootPath: workspace.activeWorktreePath
+        )
+    }
+
     func presentSettings(for workspace: WorkspaceModel? = nil) {
         settingsRequest = WorkspaceSettingsRequest(workspaceID: workspace?.id)
     }
@@ -908,6 +918,8 @@ final class WorkspaceStore: ObservableObject {
                 return URL(fileURLWithPath: worktreePath).lastPathComponent
             }
             return "\(workspace.name) / \(worktree.displayName)"
+        case .workspaceGroup(let groupID):
+            return appSettings.workspaceGroups.first(where: { $0.id == groupID })?.name ?? "Group"
         case .appDefaultRepository:
             return localized("main.sidebarIcon.defaultRepository")
         case .appDefaultLocalTerminal:
@@ -931,6 +943,8 @@ final class WorkspaceStore: ObservableObject {
                 return appSettings.defaultWorktreeIcon
             }
             return sidebarIcon(for: worktree, in: workspace)
+        case .workspaceGroup(let groupID):
+            return appSettings.workspaceGroups.first(where: { $0.id == groupID })?.icon ?? .groupDefault
         case .appDefaultRepository:
             return appSettings.defaultRepositoryIcon
         case .appDefaultLocalTerminal:
@@ -952,6 +966,8 @@ final class WorkspaceStore: ObservableObject {
             var settings = workspace.settings
             settings.worktreeIconOverrides[worktreePath] = icon
             updateWorkspaceSettings(workspaceID: workspaceID, settings: settings)
+        case .workspaceGroup(let groupID):
+            setWorkspaceGroupIcon(groupID, icon: icon)
         case .appDefaultRepository:
             var settings = appSettings
             settings.defaultRepositoryIcon = icon
@@ -982,6 +998,8 @@ final class WorkspaceStore: ObservableObject {
             var settings = workspace.settings
             settings.worktreeIconOverrides[worktreePath] = nil
             updateWorkspaceSettings(workspaceID: workspaceID, settings: settings)
+        case .workspaceGroup(let groupID):
+            setWorkspaceGroupIcon(groupID, icon: .groupDefault)
         case .appDefaultRepository:
             var settings = appSettings
             settings.defaultRepositoryIcon = .repositoryDefault
@@ -1172,6 +1190,40 @@ final class WorkspaceStore: ObservableObject {
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
     }
 
+    func openWorkspaceFileInExternalEditor(_ path: String) {
+        guard let editor = effectiveExternalEditor else {
+            openInFinder(path: path)
+            return
+        }
+        ExternalEditorCatalog.open(URL(fileURLWithPath: path), in: editor) { [weak self] result in
+            guard let self else { return }
+            if case .failure(let error) = result {
+                self.presentError(
+                    title: self.localized("sheet.fileBrowser.openExternalErrorTitle"),
+                    message: self.localizedFormat("sheet.fileBrowser.openExternalErrorMessageFormat", URL(fileURLWithPath: path).lastPathComponent, error.localizedDescription)
+                )
+            }
+        }
+    }
+
+    func saveWorkspaceFileBrowserText(contents: String, to path: String) {
+        do {
+            try WorkspaceFileBrowserSupport.saveTextFile(contents: contents, to: path)
+            receive(
+                .statusMessage(
+                    localizedFormat("sheet.fileBrowser.savedFormat", URL(fileURLWithPath: path).lastPathComponent),
+                    .success,
+                    deliverSystemNotification: false
+                )
+            )
+        } catch {
+            presentError(
+                title: localized("sheet.fileBrowser.saveErrorTitle"),
+                message: localizedFormat("sheet.fileBrowser.saveErrorMessageFormat", URL(fileURLWithPath: path).lastPathComponent, error.localizedDescription)
+            )
+        }
+    }
+
     func copyPath(_ path: String) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
@@ -1200,6 +1252,115 @@ final class WorkspaceStore: ObservableObject {
         persist()
     }
 
+    // MARK: - Workspace Groups
+
+    func createWorkspaceGroup(named name: String, workspaceIDs: [UUID] = []) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let group = WorkspaceGroup(name: trimmed, workspaceIDs: workspaceIDs)
+        appSettings.workspaceGroups.append(group)
+        persistAppSettings()
+    }
+
+    func renameWorkspaceGroup(_ groupID: UUID, to newName: String) {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              let index = appSettings.workspaceGroups.firstIndex(where: { $0.id == groupID }) else { return }
+        appSettings.workspaceGroups[index].name = trimmed
+        persistAppSettings()
+    }
+
+    func removeWorkspaceGroup(_ groupID: UUID) {
+        appSettings.workspaceGroups.removeAll { $0.id == groupID }
+        persistAppSettings()
+    }
+
+    func setWorkspaceGroupIcon(_ groupID: UUID, icon: SidebarItemIcon) {
+        guard let index = appSettings.workspaceGroups.firstIndex(where: { $0.id == groupID }) else { return }
+        appSettings.workspaceGroups[index].icon = icon
+        persistAppSettings()
+    }
+
+    func assignWorkspaces(ids: [UUID], toGroup groupID: UUID) {
+        let idsToAssign = Set(ids)
+        for i in appSettings.workspaceGroups.indices {
+            appSettings.workspaceGroups[i].workspaceIDs.removeAll { idsToAssign.contains($0) }
+        }
+        guard let index = appSettings.workspaceGroups.firstIndex(where: { $0.id == groupID }) else { return }
+        appSettings.workspaceGroups[index].workspaceIDs.append(contentsOf: ids)
+        persistAppSettings()
+    }
+
+    func removeWorkspacesFromGroup(ids: [UUID], groupID: UUID) {
+        let idsToRemove = Set(ids)
+        guard let index = appSettings.workspaceGroups.firstIndex(where: { $0.id == groupID }) else { return }
+        appSettings.workspaceGroups[index].workspaceIDs.removeAll { idsToRemove.contains($0) }
+        persistAppSettings()
+    }
+
+    func removeWorkspacesFromAllGroups(ids: [UUID]) {
+        let idsToRemove = Set(ids)
+        for i in appSettings.workspaceGroups.indices {
+            appSettings.workspaceGroups[i].workspaceIDs.removeAll { idsToRemove.contains($0) }
+        }
+        persistAppSettings()
+    }
+
+    func isWorkspaceGroupExpanded(_ groupID: UUID) -> Bool {
+        appSettings.workspaceGroups.first(where: { $0.id == groupID })?.isExpanded ?? true
+    }
+
+    func setWorkspaceGroupExpanded(_ groupID: UUID, isExpanded: Bool) {
+        guard let index = appSettings.workspaceGroups.firstIndex(where: { $0.id == groupID }) else { return }
+        appSettings.workspaceGroups[index].isExpanded = isExpanded
+        persistAppSettings()
+    }
+
+    func moveWorkspaceGroup(_ groupID: UUID, toIndex destinationIndex: Int) {
+        guard let sourceIndex = appSettings.workspaceGroups.firstIndex(where: { $0.id == groupID }) else { return }
+        let groupCount = appSettings.workspaceGroups.count
+        let effectiveIndex = min(max(destinationIndex, 0), groupCount)
+        let group = appSettings.workspaceGroups.remove(at: sourceIndex)
+        let adjustedIndex = effectiveIndex > sourceIndex ? effectiveIndex - 1 : effectiveIndex
+        let clamped = min(max(adjustedIndex, 0), appSettings.workspaceGroups.count)
+        appSettings.workspaceGroups.insert(group, at: clamped)
+        persistAppSettings()
+    }
+
+    func refreshWorkspacesInGroup(_ groupID: UUID) {
+        guard let group = appSettings.workspaceGroups.first(where: { $0.id == groupID }) else { return }
+        refreshWorkspaces(ids: group.workspaceIDs)
+    }
+
+    func fetchWorkspacesInGroup(_ groupID: UUID) {
+        guard let group = appSettings.workspaceGroups.first(where: { $0.id == groupID }) else { return }
+        fetchWorkspaces(ids: group.workspaceIDs)
+    }
+
+    func workspaceGroupForWorkspace(_ workspaceID: UUID) -> WorkspaceGroup? {
+        appSettings.workspaceGroups.first { $0.workspaceIDs.contains(workspaceID) }
+    }
+
+    func requestCreateWorkspaceGroup(for workspaceIDs: [UUID] = []) {
+        renameWorkspaceRequest = RenameWorkspaceRequest(
+            workspaceID: UUID(),
+            currentName: "",
+            isGroupCreation: true,
+            groupWorkspaceIDs: workspaceIDs
+        )
+    }
+
+    func moveWorkspacesIntoGroup(ids: [UUID], groupID: UUID, atIndex: Int) {
+        let idsToMove = Set(ids)
+        for i in appSettings.workspaceGroups.indices {
+            appSettings.workspaceGroups[i].workspaceIDs.removeAll { idsToMove.contains($0) }
+        }
+        guard let index = appSettings.workspaceGroups.firstIndex(where: { $0.id == groupID }) else { return }
+        let clamped = min(max(atIndex, 0), appSettings.workspaceGroups[index].workspaceIDs.count)
+        appSettings.workspaceGroups[index].workspaceIDs.insert(contentsOf: ids, at: clamped)
+        persistAppSettings()
+    }
+
     func createSession(in workspace: WorkspaceModel) {
         workspace.createPane(splitAxis: workspace.layout == nil ? nil : .vertical)
         persist()
@@ -1210,6 +1371,20 @@ final class WorkspaceStore: ObservableObject {
         backendConfiguration: SessionBackendConfiguration,
         workingDirectory: String
     ) {
+        createSession(
+            in: workspace,
+            backendConfiguration: backendConfiguration,
+            workingDirectory: workingDirectory,
+            splitAxis: .vertical
+        )
+    }
+
+    func createSession(
+        in workspace: WorkspaceModel,
+        backendConfiguration: SessionBackendConfiguration,
+        workingDirectory: String,
+        splitAxis: PaneSplitAxis
+    ) {
         let snapshot = PaneSnapshot(
             id: UUID(),
             preferredWorkingDirectory: workingDirectory,
@@ -1217,7 +1392,7 @@ final class WorkspaceStore: ObservableObject {
             backendConfiguration: backendConfiguration
         )
         workspace.createPane(
-            splitAxis: workspace.layout == nil ? nil : .vertical,
+            splitAxis: workspace.layout == nil ? nil : splitAxis,
             snapshot: snapshot
         )
         persist()
@@ -1744,7 +1919,8 @@ final class WorkspaceStore: ObservableObject {
         createSession(
             in: workspace,
             backendConfiguration: .agent(configuration),
-            workingDirectory: workspace.activeWorktreePath
+            workingDirectory: workspace.activeWorktreePath,
+            splitAxis: .vertical
         )
         recordActivity(
             in: workspace,
@@ -1780,7 +1956,8 @@ final class WorkspaceStore: ObservableObject {
         createSession(
             in: workspace,
             backendConfiguration: .agent(configuration),
-            workingDirectory: workspace.activeWorktreePath
+            workingDirectory: workspace.activeWorktreePath,
+            splitAxis: .vertical
         )
         recordActivity(
             in: workspace,
@@ -1833,7 +2010,8 @@ final class WorkspaceStore: ObservableObject {
         createSession(
             in: workspace,
             backendConfiguration: .agent(configuration),
-            workingDirectory: workingDirectory
+            workingDirectory: workingDirectory,
+            splitAxis: .vertical
         )
         recordActivity(
             in: workspace,
@@ -1867,7 +2045,8 @@ final class WorkspaceStore: ObservableObject {
         createSession(
             in: workspace,
             backendConfiguration: .agent(configuration),
-            workingDirectory: workingDirectory
+            workingDirectory: workingDirectory,
+            splitAxis: .vertical
         )
         recordActivity(
             in: workspace,

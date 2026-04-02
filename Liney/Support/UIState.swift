@@ -38,9 +38,17 @@ struct QuickCommandEditorRequest: Identifiable {
     let id = UUID()
 }
 
+struct WorkspaceFileBrowserRequest: Identifiable {
+    let id = UUID()
+    let workspaceID: UUID
+    let workspaceName: String
+    let rootPath: String
+}
+
 enum SidebarIconCustomizationTarget: Hashable {
     case workspace(UUID)
     case worktree(workspaceID: UUID, worktreePath: String)
+    case workspaceGroup(UUID)
     case appDefaultRepository
     case appDefaultLocalTerminal
     case appDefaultWorktree
@@ -55,6 +63,10 @@ struct RenameWorkspaceRequest: Identifiable {
     let id = UUID()
     let workspaceID: UUID
     let currentName: String
+    var isGroupCreation: Bool = false
+    var isGroupRename: Bool = false
+    var groupID: UUID?
+    var groupWorkspaceIDs: [UUID] = []
 }
 
 struct CreateWorktreeSheetRequest: Identifiable {
