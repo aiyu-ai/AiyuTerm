@@ -1,6 +1,6 @@
 # Rebuild GhosttyKit.xcframework
 
-This note records the current manual process for rebuilding the vendored `Liney/Vendor/GhosttyKit.xcframework`.
+This note records the current manual process for rebuilding the vendored `AiyuTerm/Vendor/GhosttyKit.xcframework`.
 
 AiyuTerm does not currently generate this framework in-repo. The xcframework is vendored into source control and updated manually when the embedded Ghostty runtime needs to change.
 
@@ -93,8 +93,8 @@ Upstream currently writes the xcframework to `macos/GhosttyKit.xcframework` unde
 From the AiyuTerm repository root:
 
 ```bash
-rm -rf Liney/Vendor/GhosttyKit.xcframework
-cp -R /path/to/ghostty/zig-out/macos/GhosttyKit.xcframework Liney/Vendor/GhosttyKit.xcframework
+rm -rf AiyuTerm/Vendor/GhosttyKit.xcframework
+cp -R /path/to/ghostty/zig-out/macos/GhosttyKit.xcframework AiyuTerm/Vendor/GhosttyKit.xcframework
 ```
 
 ## Verify The Result
@@ -102,7 +102,7 @@ cp -R /path/to/ghostty/zig-out/macos/GhosttyKit.xcframework Liney/Vendor/Ghostty
 Confirm the macOS library is universal:
 
 ```bash
-lipo -archs Liney/Vendor/GhosttyKit.xcframework/macos-arm64_x86_64/libghostty.a
+lipo -archs AiyuTerm/Vendor/GhosttyKit.xcframework/macos-arm64_x86_64/libghostty.a
 ```
 
 Expected output:
@@ -114,7 +114,7 @@ x86_64 arm64
 Confirm the xcframework metadata advertises the same architecture set:
 
 ```bash
-plutil -p Liney/Vendor/GhosttyKit.xcframework/Info.plist
+plutil -p AiyuTerm/Vendor/GhosttyKit.xcframework/Info.plist
 ```
 
 Then verify AiyuTerm still builds:

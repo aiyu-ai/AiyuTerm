@@ -687,13 +687,13 @@ final class AiyuTermGhosttyInputSupportTests: XCTestCase {
 
     func testTerminalDropTextQuotesFilePathsForShells() {
         let fileURLs = [
-            URL(fileURLWithPath: "/tmp/liney screenshot.png"),
-            URL(fileURLWithPath: "/tmp/it's-liney.jpg"),
+            URL(fileURLWithPath: "/tmp/aiyuterm screenshot.png"),
+            URL(fileURLWithPath: "/tmp/it's-aiyuterm.jpg"),
         ]
 
         XCTAssertEqual(
             aiyuTermTerminalDropText(fileURLs: fileURLs, plainText: nil),
-            "'/tmp/liney screenshot.png' '/tmp/it'\\''s-liney.jpg'"
+            "'/tmp/aiyuterm screenshot.png' '/tmp/it'\\''s-liney.jpg'"
         )
     }
 

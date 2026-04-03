@@ -7,7 +7,7 @@
 
 AiyuTerm is a native macOS terminal workspace app for developers who work across repositories, worktrees, branches, and split panes. It supports local shell, SSH, tmux sessions, and AI agent-backed terminal sessions with real-time status badges.
 
-> AiyuTerm is forked from [Liney](https://github.com/wuwenrui/liney) by wuwenrui. Thanks to the original author for the excellent foundation.
+> AiyuTerm is forked from [Liney](https://github.com/wuwenrui/liney) by wuwenrui. Thanks to the original author for the excellent foundation. The project has been renamed from Liney to AiyuTerm.
 
 ![AiyuTerm app screenshot](./images/screenshot.png)
 

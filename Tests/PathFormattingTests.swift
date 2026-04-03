@@ -10,11 +10,11 @@ import XCTest
 
 final class PathFormattingTests: XCTestCase {
     func testShellQuotedEscapesSingleQuotes() {
-        XCTAssertEqual("/tmp/it's-liney".shellQuoted, "'/tmp/it'\\''s-liney'")
+        XCTAssertEqual("/tmp/it's-aiyuterm".shellQuoted, "'/tmp/it'\\''s-liney'")
     }
 
     func testAbbreviatedPathUsesTildeInsideHomeDirectory() {
         let home = NSHomeDirectory()
-        XCTAssertEqual("\(home)/src/liney".abbreviatedPath, "~/src/liney")
+        XCTAssertEqual("\(home)/src/aiyuterm".abbreviatedPath, "~/src/aiyuterm")
     }
 }
