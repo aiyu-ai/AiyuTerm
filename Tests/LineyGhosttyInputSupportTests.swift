@@ -693,7 +693,7 @@ final class AiyuTermGhosttyInputSupportTests: XCTestCase {
 
         XCTAssertEqual(
             aiyuTermTerminalDropText(fileURLs: fileURLs, plainText: nil),
-            "'/tmp/aiyuterm screenshot.png' '/tmp/it'\\''s-liney.jpg'"
+            "'/tmp/aiyuterm screenshot.png' '/tmp/it'\\''s-aiyuterm.jpg'"
         )
     }
 
