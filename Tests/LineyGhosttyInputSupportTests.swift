@@ -9,7 +9,7 @@ import AppKit
 import Carbon
 import GhosttyKit
 import XCTest
-@testable import Liney
+@testable import AiyuTerm
 
 final class AiyuTermGhosttyInputSupportTests: XCTestCase {
     private let returnKeyCode = UInt16(kVK_Return)

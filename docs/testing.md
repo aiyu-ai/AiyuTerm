@@ -61,8 +61,8 @@ Run the full test suite:
 
 ```bash
 xcodebuild \
-  -project Liney.xcodeproj \
-  -scheme Liney \
+  -project AiyuTerm.xcodeproj \
+  -scheme AiyuTerm \
   -destination 'platform=macOS' \
   test
 ```
@@ -71,11 +71,11 @@ Run just the Ghostty input-support tests:
 
 ```bash
 xcodebuild \
-  -project Liney.xcodeproj \
-  -scheme Liney \
+  -project AiyuTerm.xcodeproj \
+  -scheme AiyuTerm \
   -destination 'platform=macOS' \
   test \
-  -only-testing:LineyTests/AiyuTermGhosttyInputSupportTests
+  -only-testing:AiyuTermTests/AiyuTermGhosttyInputSupportTests
 ```
 
 ## Review Checklist

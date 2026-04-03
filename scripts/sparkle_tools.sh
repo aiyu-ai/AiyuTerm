@@ -20,8 +20,8 @@ sparkle_source_packages_dir() {
 
 sparkle_checkout_dir() {
   local root_dir="${1:-$(sparkle_repo_root)}"
-  local project_path="${2:-$root_dir/Liney.xcodeproj}"
-  local scheme="${3:-Liney}"
+  local project_path="${2:-$root_dir/AiyuTerm.xcodeproj}"
+  local scheme="${3:-AiyuTerm}"
   local source_packages_dir
   source_packages_dir="$(sparkle_source_packages_dir "$root_dir")"
 
@@ -45,8 +45,8 @@ sparkle_checkout_dir() {
 sparkle_tool_path() {
   local tool_name="$1"
   local root_dir="${2:-$(sparkle_repo_root)}"
-  local project_path="${3:-$root_dir/Liney.xcodeproj}"
-  local scheme="${4:-Liney}"
+  local project_path="${3:-$root_dir/AiyuTerm.xcodeproj}"
+  local scheme="${4:-AiyuTerm}"
 
   sparkle_require_cmd xcodebuild || return 1
   local checkout_dir
@@ -165,8 +165,8 @@ sparkle_generate_appcast() {
   local maximum_versions="${6:-10}"
   local channel="${7:-}"
   local root_dir="${8:-$(sparkle_repo_root)}"
-  local project_path="${9:-$root_dir/Liney.xcodeproj}"
-  local scheme="${10:-Liney}"
+  local project_path="${9:-$root_dir/AiyuTerm.xcodeproj}"
+  local scheme="${10:-AiyuTerm}"
 
   local tool_path
   tool_path="$(sparkle_tool_path generate_appcast "$root_dir" "$project_path" "$scheme")" || return 1

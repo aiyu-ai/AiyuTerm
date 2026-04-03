@@ -2,8 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
-PROJECT_PATH="${PROJECT_PATH:-$ROOT_DIR/Liney.xcodeproj}"
-SCHEME="${SCHEME:-Liney}"
+PROJECT_PATH="${PROJECT_PATH:-$ROOT_DIR/AiyuTerm.xcodeproj}"
+SCHEME="${SCHEME:-AiyuTerm}"
 APP_NAME="${APP_NAME:-AiyuTerm}"
 VERSION="${VERSION:-}"
 OUTPUT_DIR="${OUTPUT_DIR:-$ROOT_DIR/dist}"

@@ -6,8 +6,8 @@ cd "$ROOT_DIR"
 
 source "$ROOT_DIR/scripts/sparkle_tools.sh"
 
-PROJECT_PATH="${PROJECT_PATH:-$ROOT_DIR/Liney.xcodeproj}"
-SCHEME="${SCHEME:-Liney}"
+PROJECT_PATH="${PROJECT_PATH:-$ROOT_DIR/AiyuTerm.xcodeproj}"
+SCHEME="${SCHEME:-AiyuTerm}"
 SPARKLE_KEY_ACCOUNT="${SPARKLE_KEY_ACCOUNT:-aiyuterm}"
 AIYUTERM_RELEASE_HOME="${AIYUTERM_RELEASE_HOME:-$HOME/.aiyuterm_release}"
 SPARKLE_PRIVATE_KEY_FILE="${SPARKLE_PRIVATE_KEY_FILE:-$AIYUTERM_RELEASE_HOME/sparkle_private_key}"

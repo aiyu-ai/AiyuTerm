@@ -7,7 +7,7 @@
 
 import AppKit
 import XCTest
-@testable import Liney
+@testable import AiyuTerm
 
 final class ShellSessionTests: XCTestCase {
     func testGhosttyShellIntegrationInjectsZshEnvironmentFromBundledResources() {

@@ -18,8 +18,8 @@ xcodebuild -downloadComponent MetalToolchain
 
 ```bash
 xcodebuild \
-  -project Liney.xcodeproj \
-  -scheme Liney \
+  -project AiyuTerm.xcodeproj \
+  -scheme AiyuTerm \
   -configuration Debug \
   -destination 'platform=macOS' \
   build
@@ -29,8 +29,8 @@ xcodebuild \
 
 ```bash
 xcodebuild \
-  -project Liney.xcodeproj \
-  -scheme Liney \
+  -project AiyuTerm.xcodeproj \
+  -scheme AiyuTerm \
   -destination 'platform=macOS' \
   test
 ```
@@ -44,7 +44,7 @@ open ~/Library/Developer/Xcode/DerivedData/AiyuTerm-*/Build/Products/Debug/AiyuT
 ## Project Layout
 
 ```text
-Liney/
+AiyuTerm/
 ├─ App/
 ├─ Domain/
 ├─ Persistence/
@@ -76,7 +76,7 @@ AiyuTerm stores workspace state and app settings in `~/.aiyuterm/`, and still re
 
 ```bash
 scripts/build_macos_app.sh
-open dist/Liney.app
+open dist/AiyuTerm.app
 ```
 
 Optional variables:
@@ -91,12 +91,12 @@ If you need to rebuild the vendored Ghostty xcframework, see [`docs/build_ghostt
 
 The build script emits:
 
-- `dist/Liney.app`
-- `dist/Liney-<version>.dmg`
+- `dist/AiyuTerm.app`
+- `dist/AiyuTerm-<version>.dmg`
 
 ## Auto Updates
 
-Liney uses Sparkle for signed app updates.
+AiyuTerm uses Sparkle for signed app updates.
 
 To prepare the signing key on a release machine:
 

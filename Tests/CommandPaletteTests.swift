@@ -6,7 +6,7 @@
 //
 
 import XCTest
-@testable import Liney
+@testable import AiyuTerm
 
 final class CommandPaletteTests: XCTestCase {
     func testPrefixMatchBeatsSubtitleOnlyMatch() {

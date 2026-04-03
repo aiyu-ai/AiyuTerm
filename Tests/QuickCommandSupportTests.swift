@@ -7,7 +7,7 @@
 
 import Carbon
 import XCTest
-@testable import Liney
+@testable import AiyuTerm
 
 final class QuickCommandSupportTests: XCTestCase {
     func testLegacySettingsDecodeDefaultsQuickCommands() throws {

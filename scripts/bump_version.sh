@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
-PROJECT_FILE="${PROJECT_FILE:-$ROOT_DIR/Liney.xcodeproj/project.pbxproj}"
+PROJECT_FILE="${PROJECT_FILE:-$ROOT_DIR/AiyuTerm.xcodeproj/project.pbxproj}"
 PART="${1:-}"
 VALUE="${2:-}"
 NO_BUILD_BUMP="${NO_BUILD_BUMP:-0}"

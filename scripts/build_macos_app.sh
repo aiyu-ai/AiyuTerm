@@ -6,8 +6,8 @@ cd "$ROOT_DIR"
 
 source "$ROOT_DIR/scripts/sparkle_tools.sh"
 
-PROJECT_PATH="${PROJECT_PATH:-$ROOT_DIR/Liney.xcodeproj}"
-SCHEME="${SCHEME:-Liney}"
+PROJECT_PATH="${PROJECT_PATH:-$ROOT_DIR/AiyuTerm.xcodeproj}"
+SCHEME="${SCHEME:-AiyuTerm}"
 APP_NAME="${APP_NAME:-AiyuTerm}"
 EXECUTABLE_NAME="${EXECUTABLE_NAME:-AiyuTerm}"
 BUNDLE_IDENTIFIER="${BUNDLE_IDENTIFIER:-}"
@@ -93,7 +93,7 @@ EOF
   exit 1
 fi
 
-VENDORED_GHOSTTY_ARCHS="$(lipo -archs "$ROOT_DIR/Liney/Vendor/GhosttyKit.xcframework/macos-arm64_x86_64/libghostty.a" 2>/dev/null || true)"
+VENDORED_GHOSTTY_ARCHS="$(lipo -archs "$ROOT_DIR/AiyuTerm/Vendor/GhosttyKit.xcframework/macos-arm64_x86_64/libghostty.a" 2>/dev/null || true)"
 IFS=' ' read -r -a ARCHS <<< "$RELEASE_ARCHS"
 if [[ ${#ARCHS[@]} -eq 0 ]]; then
   echo "RELEASE_ARCHS must contain at least one architecture" >&2

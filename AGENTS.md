@@ -9,23 +9,23 @@ The repository now uses an Xcode project as the primary development entry point.
 
 ## Repository Layout
 
-- `Liney/`: Main application source root.
-- `Liney/App/`: App assembly and high-level state orchestration. Start with `WorkspaceStore.swift`, `AiyuTermDesktopApplication.swift`, and `WorkspaceGitHubCoordinator.swift`.
-- `Liney/Domain/`: Domain models for workspaces, pane layouts, tabs, and related state.
-- `Liney/Persistence/`: Workspace state, settings persistence, and migrations.
-- `Liney/Services/Git/`: Git repository inspection, worktree discovery, GitHub CLI integration, and metadata watching.
-- `Liney/Services/Process/`: Subprocess execution wrappers.
-- `Liney/Services/Terminal/`: Terminal sessions, Ghostty bridge code, and surface/controller lifecycle management.
-- `Liney/Services/Updates/`: Sparkle update checks and install flow entry points.
-- `Liney/Support/`: Menus, commands, path formatting, external editor support, sleep prevention, and shared UI state.
-- `Liney/UI/Sidebar/`: Left sidebar tree and bridge logic. The key file is `WorkspaceSidebarView.swift`.
-- `Liney/UI/Workspace/`: Workspace detail views, pane containers, and terminal pane UI.
-- `Liney/UI/Overview/`: Repository overview and desk views plus their view model.
-- `Liney/UI/Diff/`: Diff window state, rendering, and changed-file models.
-- `Liney/UI/Canvas/`: Global canvas-style UI.
-- `Liney/UI/Sheets/`: Sheets for creating worktrees, SSH sessions, agent sessions, settings, and related flows.
-- `Liney/UI/Components/`: Reusable UI components such as the command palette, terminal host, and toolbar icons.
-- `Liney/Vendor/`: Vendored `GhosttyKit.xcframework`. Do not modify this without explicit need.
+- `AiyuTerm/`: Main application source root.
+- `AiyuTerm/App/`: App assembly and high-level state orchestration. Start with `WorkspaceStore.swift`, `AiyuTermDesktopApplication.swift`, and `WorkspaceGitHubCoordinator.swift`.
+- `AiyuTerm/Domain/`: Domain models for workspaces, pane layouts, tabs, and related state.
+- `AiyuTerm/Persistence/`: Workspace state, settings persistence, and migrations.
+- `AiyuTerm/Services/Git/`: Git repository inspection, worktree discovery, GitHub CLI integration, and metadata watching.
+- `AiyuTerm/Services/Process/`: Subprocess execution wrappers.
+- `AiyuTerm/Services/Terminal/`: Terminal sessions, Ghostty bridge code, and surface/controller lifecycle management.
+- `AiyuTerm/Services/Updates/`: Sparkle update checks and install flow entry points.
+- `AiyuTerm/Support/`: Menus, commands, path formatting, external editor support, sleep prevention, and shared UI state.
+- `AiyuTerm/UI/Sidebar/`: Left sidebar tree and bridge logic. The key file is `WorkspaceSidebarView.swift`.
+- `AiyuTerm/UI/Workspace/`: Workspace detail views, pane containers, and terminal pane UI.
+- `AiyuTerm/UI/Overview/`: Repository overview and desk views plus their view model.
+- `AiyuTerm/UI/Diff/`: Diff window state, rendering, and changed-file models.
+- `AiyuTerm/UI/Canvas/`: Global canvas-style UI.
+- `AiyuTerm/UI/Sheets/`: Sheets for creating worktrees, SSH sessions, agent sessions, settings, and related flows.
+- `AiyuTerm/UI/Components/`: Reusable UI components such as the command palette, terminal host, and toolbar icons.
+- `AiyuTerm/Vendor/`: Vendored `GhosttyKit.xcframework`. Do not modify this without explicit need.
 - `Tests/`: Unit tests covering git parsing, pane layout, terminal sessions, Ghostty input support, overview, diff, workspace tabs and settings, and related logic.
 - `docs/`: Maintainer documentation such as testing and terminal architecture notes.
 - `scripts/`: Local build, signing, release, Sparkle, and Homebrew publishing scripts.
@@ -34,12 +34,12 @@ The repository now uses an Xcode project as the primary development entry point.
 
 ## Build And Test
 
-Use the root `Liney.xcodeproj` by default:
+Use the root `AiyuTerm.xcodeproj` by default:
 
 ```sh
 xcodebuild \
-  -project Liney.xcodeproj \
-  -scheme Liney \
+  -project AiyuTerm.xcodeproj \
+  -scheme AiyuTerm \
   -configuration Debug \
   -destination 'platform=macOS,arch=arm64' \
   build
@@ -49,15 +49,15 @@ Run tests with:
 
 ```sh
 xcodebuild \
-  -project Liney.xcodeproj \
-  -scheme Liney \
+  -project AiyuTerm.xcodeproj \
+  -scheme AiyuTerm \
   -destination 'platform=macOS,arch=arm64' \
   test
 ```
 
 Additional notes:
 
-- The current project targets are `Liney` and `LineyTests`, and the main scheme is `Liney`.
+- The current project targets are `AiyuTerm` and `AiyuTermTests`, and the main scheme is `AiyuTerm`.
 - Dependencies are resolved through Xcode. Current Swift packages include Sparkle and Sentry.
 - Release-oriented scripts include `scripts/build_macos_app.sh`, `scripts/release_macos.sh`, and the root `deploy.sh`. They depend on signing, notarization, or release credentials and are not the default verification path for routine changes.
 - Documentation, script, or website changes do not automatically require a full app build, but command examples, paths, and references must remain valid.
@@ -72,21 +72,21 @@ Additional notes:
 
 ## Code Hotspots
 
-- `Liney/App/WorkspaceStore.swift`: Main orchestration entry point for user actions, including repository refresh, worktree switching, and pane or tab management.
-- `Liney/UI/Sidebar/WorkspaceSidebarView.swift`: Sidebar tree, search, multi-selection, context menus, and drag reordering.
-- `Liney/UI/Workspace/WorkspaceDetailView.swift`: Main workspace detail view and pane container.
-- `Liney/Services/Git/GitRepositoryService.swift`: Git status parsing, branch information, and worktree inspection.
-- `Liney/Services/Terminal/`: Session launch, Ghostty runtime integration, and terminal surface/controller logic. Confirm AppKit integration is preserved before making changes here.
-- `Liney/UI/Overview/OverviewViewModel.swift`: Overview data shaping and derived state.
-- `Liney/UI/Diff/DiffRendering.swift`: Core diff rendering logic. Review diff-related tests when changing it.
-- `Liney/Services/Updates/AppUpdaterController.swift`: Sparkle update entry point.
-- `Liney/Support/QuickCommandSupport.swift` and `Liney/UI/Components/CommandPaletteView.swift`: Command palette and quick-command behavior.
+- `AiyuTerm/App/WorkspaceStore.swift`: Main orchestration entry point for user actions, including repository refresh, worktree switching, and pane or tab management.
+- `AiyuTerm/UI/Sidebar/WorkspaceSidebarView.swift`: Sidebar tree, search, multi-selection, context menus, and drag reordering.
+- `AiyuTerm/UI/Workspace/WorkspaceDetailView.swift`: Main workspace detail view and pane container.
+- `AiyuTerm/Services/Git/GitRepositoryService.swift`: Git status parsing, branch information, and worktree inspection.
+- `AiyuTerm/Services/Terminal/`: Session launch, Ghostty runtime integration, and terminal surface/controller logic. Confirm AppKit integration is preserved before making changes here.
+- `AiyuTerm/UI/Overview/OverviewViewModel.swift`: Overview data shaping and derived state.
+- `AiyuTerm/UI/Diff/DiffRendering.swift`: Core diff rendering logic. Review diff-related tests when changing it.
+- `AiyuTerm/Services/Updates/AppUpdaterController.swift`: Sparkle update entry point.
+- `AiyuTerm/Support/QuickCommandSupport.swift` and `AiyuTerm/UI/Components/CommandPaletteView.swift`: Command palette and quick-command behavior.
 
 ## Modification Conventions
 
 - Preserve the existing `AppKit container + SwiftUI content` architecture. Do not rewrite major UI sections for small changes.
 - The sidebar relies on a custom `NSOutlineView` bridge. Changes there must not break multi-selection, context menus, keyboard interaction, or drag reordering.
-- The terminal stack depends on the vendored Ghostty runtime and the adapters under `Liney/Services/Terminal/Ghostty/`. Do not introduce an alternate terminal implementation.
-- Unless explicitly required, do not modify binary dependencies under `Liney/Vendor/` or casually alter signing and notarization behavior in release scripts.
+- The terminal stack depends on the vendored Ghostty runtime and the adapters under `AiyuTerm/Services/Terminal/Ghostty/`. Do not introduce an alternate terminal implementation.
+- Unless explicitly required, do not modify binary dependencies under `AiyuTerm/Vendor/` or casually alter signing and notarization behavior in release scripts.
 - For GitHub CLI, Sparkle, Sentry, or external-editor-related work, prefer the existing service or support-layer entry points instead of scattering process execution logic into the UI layer.
 - If code changes invalidate directory descriptions, build commands, test entry points, or release paths, update `README.md`, `DEVELOP.md`, `docs/`, `RELEASING.md`, or nearby script comments so documentation does not drift.
