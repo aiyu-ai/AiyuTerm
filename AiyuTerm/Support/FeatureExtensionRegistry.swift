@@ -24,7 +24,7 @@ struct SupportLinksExtension: AiyuTermFeatureExtension {
             CommandPaletteItem(
                 id: "extension-support-website",
                 title: LocalizationManager.shared.string("extension.support.website"),
-                subtitle: "liney.dev",
+                subtitle: "github.com/aiyu-ai/AiyuTerm",
                 group: .navigation,
                 keywords: ["extension", "help", "website", "docs"],
                 isGlobal: true,
@@ -33,7 +33,7 @@ struct SupportLinksExtension: AiyuTermFeatureExtension {
             CommandPaletteItem(
                 id: "extension-support-feedback",
                 title: LocalizationManager.shared.string("extension.support.feedback"),
-                subtitle: "github.com/everettjf/liney/issues/new",
+                subtitle: "github.com/aiyu-ai/AiyuTerm/issues/new",
                 group: .navigation,
                 keywords: ["extension", "feedback", "issue", "bug"],
                 isGlobal: true,

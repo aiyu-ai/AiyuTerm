@@ -12,14 +12,13 @@ struct TmuxPanelView: View {
     let coordinator: TmuxAttachCoordinator
     let onAttachSession: (String) -> Void
     let agentStatusForSession: (String) -> AgentSessionStatus
-    @Binding var isCollapsed: Bool
     let onCollapseChange: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
-            TmuxHeaderView(store: store, isCollapsed: $isCollapsed, onCollapseChange: onCollapseChange)
+            TmuxHeaderView(store: store, onCollapseChange: onCollapseChange)
 
-            if !isCollapsed {
+            if !store.isCollapsed {
                 if !store.isAvailable {
                     TmuxNotInstalledView()
                 } else if let error = store.errorMessage {
@@ -57,6 +56,12 @@ struct TmuxPanelView: View {
         .onAppear {
             store.checkAvailabilityAndRefresh()
         }
+        .onChange(of: store.isAvailable) { _, available in
+            if !available && !store.isCollapsed {
+                store.isCollapsed = true
+                onCollapseChange()
+            }
+        }
     }
 }
 
@@ -65,7 +70,6 @@ struct TmuxPanelView: View {
 private struct TmuxHeaderView: View {
     @ObservedObject var store: TmuxPanelStore
     @ObservedObject private var localization = LocalizationManager.shared
-    @Binding var isCollapsed: Bool
     let onCollapseChange: () -> Void
     @State private var showNewSessionPrompt = false
     @State private var newSessionName = ""
@@ -77,7 +81,7 @@ private struct TmuxHeaderView: View {
         HStack(spacing: 6) {
             // Left side: tappable to toggle collapse
             HStack(spacing: 6) {
-                Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
+                Image(systemName: store.isCollapsed ? "chevron.right" : "chevron.down")
                     .font(.system(size: 8, weight: .bold))
                     .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
                     .frame(width: 12)
@@ -97,56 +101,54 @@ private struct TmuxHeaderView: View {
             }
             .contentShape(Rectangle())
             .onTapGesture {
-                withAnimation(.easeInOut(duration: 0.2)) { isCollapsed.toggle() }
+                withAnimation(.easeInOut(duration: 0.2)) { store.isCollapsed.toggle() }
                 onCollapseChange()
             }
 
             Spacer()
 
-            if !isCollapsed {
-                if store.isLoading {
-                    ProgressView()
-                        .scaleEffect(0.5)
-                        .frame(width: 16, height: 16)
-                } else {
-                    Button(action: { store.refresh() }) {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96).opacity(refreshHover ? 1 : 0.6))
-                    }
-                    .buttonStyle(.plain)
-                    .onHover { refreshHover = $0 }
-                }
-
-                Button(action: { showNewSessionPrompt = true }) {
-                    Image(systemName: "plus")
+            if store.isLoading {
+                ProgressView()
+                    .scaleEffect(0.5)
+                    .frame(width: 16, height: 16)
+            } else {
+                Button(action: { store.refresh() }) {
+                    Image(systemName: "arrow.clockwise")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96).opacity(plusHover ? 1 : 0.6))
+                        .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96).opacity(refreshHover ? 1 : 0.6))
                 }
                 .buttonStyle(.plain)
-                .onHover { plusHover = $0 }
-                .popover(isPresented: $showNewSessionPrompt) {
-                    VStack(spacing: 8) {
-                        Text(localized("tmux.newSession.title"))
-                            .font(.system(size: 11, weight: .semibold))
-                        TextField(localized("tmux.newSession.placeholder"), text: $newSessionName)
-                            .textFieldStyle(.roundedBorder)
-                            .font(.system(size: 11))
-                            .frame(width: 160)
-                            .onSubmit { submitNewSession() }
-                        HStack {
-                            Button(localized("common.cancel")) { showNewSessionPrompt = false }
-                                .buttonStyle(.plain)
-                                .font(.system(size: 10))
-                            Spacer()
-                            Button(localized("common.create")) { submitNewSession() }
-                                .buttonStyle(.plain)
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
-                        }
+                .onHover { refreshHover = $0 }
+            }
+
+            Button(action: { showNewSessionPrompt = true }) {
+                Image(systemName: "plus")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96).opacity(plusHover ? 1 : 0.6))
+            }
+            .buttonStyle(.plain)
+            .onHover { plusHover = $0 }
+            .popover(isPresented: $showNewSessionPrompt) {
+                VStack(spacing: 8) {
+                    Text(localized("tmux.newSession.title"))
+                        .font(.system(size: 11, weight: .semibold))
+                    TextField(localized("tmux.newSession.placeholder"), text: $newSessionName)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 11))
+                        .frame(width: 160)
+                        .onSubmit { submitNewSession() }
+                    HStack {
+                        Button(localized("common.cancel")) { showNewSessionPrompt = false }
+                            .buttonStyle(.plain)
+                            .font(.system(size: 10))
+                        Spacer()
+                        Button(localized("common.create")) { submitNewSession() }
+                            .buttonStyle(.plain)
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color(red: 0.55, green: 0.36, blue: 0.96))
                     }
-                    .padding(12)
                 }
+                .padding(12)
             }
         }
         .padding(.horizontal, 12)

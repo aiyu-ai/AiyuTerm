@@ -73,6 +73,7 @@ private struct WorkspaceOutlineSidebar: NSViewRepresentable {
         let container = SidebarOutlineContainerView()
         context.coordinator.attach(container)
         container.applySplitRatio(CGFloat(store.appSettings.tmuxSidebarSplitRatio))
+        store.tmuxPanelStore.isCollapsed = store.appSettings.tmuxPanelCollapsed
         container.setTmuxCollapsed(store.appSettings.tmuxPanelCollapsed)
         container.setTmuxPanelContent(AnyView(
             TmuxPanelView(
@@ -87,13 +88,10 @@ private struct WorkspaceOutlineSidebar: NSViewRepresentable {
                         .first(where: { $0.settings.tmuxSessionID == sessionID })?
                         .aggregatedAgentStatus ?? .none
                 },
-                isCollapsed: Binding(
-                    get: { [weak store] in store?.appSettings.tmuxPanelCollapsed ?? true },
-                    set: { [weak store] in store?.appSettings.tmuxPanelCollapsed = $0 }
-                ),
                 onCollapseChange: { [weak store, weak container] in
                     guard let store, let container else { return }
-                    let collapsed = store.appSettings.tmuxPanelCollapsed
+                    let collapsed = store.tmuxPanelStore.isCollapsed
+                    store.appSettings.tmuxPanelCollapsed = collapsed
                     container.setTmuxCollapsed(collapsed)
                     if !collapsed {
                         container.applySplitRatio(CGFloat(store.appSettings.tmuxSidebarSplitRatio))
@@ -107,7 +105,7 @@ private struct WorkspaceOutlineSidebar: NSViewRepresentable {
 
     func updateNSView(_ nsView: SidebarOutlineContainerView, context: Context) {
         context.coordinator.store = store
-        nsView.setOpenRepositoryAction(onOpenRepository)
+        nsView.setOpenRepositoryAction(onOpenRepository, store: store)
         context.coordinator.apply(
             workspaces: store.sidebarWorkspaces,
             selectedWorkspaceID: store.selectedWorkspaceID,
@@ -1412,8 +1410,11 @@ private final class SidebarOutlineContainerView: NSView {
         scrollView.reflectScrolledClipView(scrollView.contentView)
     }
 
-    func setOpenRepositoryAction(_ action: @escaping () -> Void) {
-        footerHostingView.rootView = AnyView(SidebarOpenRepositoryRow(action: action))
+    func setOpenRepositoryAction(_ action: @escaping () -> Void, store: WorkspaceStore) {
+        footerHostingView.rootView = AnyView(
+            SidebarOpenRepositoryRow(action: action)
+                .environmentObject(store)
+        )
     }
 
     func setTmuxPanelContent(_ view: AnyView) {

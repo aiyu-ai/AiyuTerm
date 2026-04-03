@@ -11,15 +11,36 @@ enum TmuxService {
 
     private static let runner = ShellCommandRunner()
 
+    private static let tmuxSearchPaths = [
+        "/opt/homebrew/bin/tmux",
+        "/usr/local/bin/tmux",
+        "/usr/bin/tmux",
+    ]
+
+    private static var resolvedTmuxPath: String?
+
     // MARK: - Query
 
     static func isTmuxAvailable() async -> Bool {
+        if resolvedTmuxPath != nil { return true }
+        for path in tmuxSearchPaths {
+            if FileManager.default.isExecutableFile(atPath: path) {
+                resolvedTmuxPath = path
+                return true
+            }
+        }
+        // Fallback: try shell lookup (works when launched from terminal)
         do {
             let result = try await runner.run(executable: "/usr/bin/env", arguments: ["which", "tmux"])
-            return result.exitCode == 0
-        } catch {
-            return false
-        }
+            if result.exitCode == 0 {
+                let path = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !path.isEmpty {
+                    resolvedTmuxPath = path
+                    return true
+                }
+            }
+        } catch {}
+        return false
     }
 
     static func listSessions() async throws -> [TmuxSession] {
@@ -60,8 +81,8 @@ enum TmuxService {
     // MARK: - Attach
 
     static func attachArguments(sessionID: String) -> [String]? {
-        guard isValidSessionID(sessionID) else { return nil }
-        return ["-lc", "tmux set-option -g allow-passthrough on \\; set-option -g mouse on \\; attach -t '\(sessionID)'"]
+        guard isValidSessionID(sessionID), let tmuxPath = resolvedTmuxPath else { return nil }
+        return ["-lc", "\(tmuxPath) set-option -g allow-passthrough on \\; set-option -g mouse on \\; attach -t '\(sessionID)'"]
     }
 
     static func isValidSessionID(_ id: String) -> Bool {
@@ -114,9 +135,12 @@ enum TmuxService {
 
     @discardableResult
     private static func runTmux(arguments: [String]) async throws -> ShellCommandResult {
+        guard let tmuxPath = resolvedTmuxPath else {
+            throw TmuxError.notInstalled
+        }
         let result: ShellCommandResult
         do {
-            result = try await runner.run(executable: "/usr/bin/env", arguments: ["tmux"] + arguments)
+            result = try await runner.run(executable: tmuxPath, arguments: arguments)
         } catch {
             throw TmuxError.commandFailed(error.localizedDescription)
         }

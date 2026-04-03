@@ -6,7 +6,7 @@
 //
 
 import XCTest
-@testable import Liney
+@testable import AiyuTerm
 
 final class ReleaseUpdateTests: XCTestCase {
     func testNewWindowShortcutDefaultsToCommandN() {
@@ -25,10 +25,10 @@ final class ReleaseUpdateTests: XCTestCase {
         XCTAssertFalse(aiyuTermShouldReopenMainWindow(hasVisibleWindows: true))
     }
 
-    func testAppUpdaterDefaultsToStableAppcastFeed() {
+    func testAppUpdaterDefaultsToEmptyFeedURL() {
         XCTAssertEqual(
             AppUpdaterController.defaultFeedURLString,
-            "https://raw.githubusercontent.com/everettjf/liney/stable/appcast.xml"
+            ""
         )
     }
 
