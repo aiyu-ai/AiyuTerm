@@ -104,9 +104,9 @@ To prepare the signing key on a release machine:
 scripts/setup_sparkle_keys.sh
 ```
 
-This exports the private key to `~/.liney_release/sparkle_private_key` and prints the public key that must stay in the app target's `SUPublicEDKey`.
+This exports the private key to `~/.aiyuterm_release/sparkle_private_key` and prints the public key that must stay in the app target's `SUPublicEDKey`.
 
-Because Liney is open source, keep the private key outside this repository. A private release-infra repo, CI secret store, or dedicated release machine is the right place for it.
+Because AiyuTerm is open source, keep the private key outside this repository. A private release-infra repo, CI secret store, or dedicated release machine is the right place for it.
 
 ## Publish
 
