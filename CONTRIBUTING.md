@@ -14,5 +14,5 @@ Build, test, run, and release documentation now lives in [`DEVELOP.md`](./DEVELO
 
 ## Discussions
 
-- Bug reports and feature requests: <https://github.com/wuwenrui/liney/issues>
+- Bug reports and feature requests: <https://github.com/aiyu-ai/AiyuTerm/issues>
 - Security reports: see `SECURITY.md`

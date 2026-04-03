@@ -1,0 +1,332 @@
+{
+  "timestamp": "2026-03-30T00:00:00Z",
+  "project": "Liney",
+  "description": "Native macOS terminal workspace app for multi-repo, worktree, and split-pane workflows",
+  "language": "Swift",
+  "buildSystem": "Xcode (xcodebuild)",
+  "packageManager": "Swift Package Manager (via Xcode)",
+  "root": {
+    "claudeMd": "CLAUDE.md",
+    "readme": "README.md",
+    "develop": "DEVELOP.md",
+    "agents": "AGENTS.md",
+    "contributing": "CONTRIBUTING.md",
+    "releasing": "RELEASING.md",
+    "security": "SECURITY.md"
+  },
+  "modules": [
+    {
+      "name": "App",
+      "path": "Liney/App/",
+      "language": "Swift",
+      "description": "App assembly, state orchestration, window management, GitHub coordination",
+      "entryFiles": [
+        "Liney/App/LineyDesktopApplication.swift",
+        "Liney/App/WorkspaceStore.swift"
+      ],
+      "keyFiles": [
+        "Liney/App/WorkspaceGitHubCoordinator.swift",
+        "Liney/App/RemoteSessionCoordinator.swift",
+        "Liney/App/WorkspaceCoordinatorSupport.swift"
+      ],
+      "tests": [
+        "Tests/WorkspaceStoreTests.swift",
+        "Tests/WorkspaceGitHubCoordinatorTests.swift",
+        "Tests/RemoteSessionCoordinatorTests.swift"
+      ],
+      "coverage": "high"
+    },
+    {
+      "name": "Domain",
+      "path": "Liney/Domain/",
+      "language": "Swift",
+      "description": "Domain models: workspaces, pane layouts, settings, sidebar icons, releases",
+      "entryFiles": [
+        "Liney/Domain/WorkspaceModels.swift",
+        "Liney/Domain/WorkspaceRuntime.swift"
+      ],
+      "keyFiles": [
+        "Liney/Domain/PaneLayout.swift",
+        "Liney/Domain/AppSettings.swift",
+        "Liney/Domain/ReleaseModels.swift",
+        "Liney/Domain/SidebarIconCatalog.swift"
+      ],
+      "tests": [
+        "Tests/PaneLayoutTests.swift",
+        "Tests/WorkspaceSettingsTests.swift",
+        "Tests/WorkspaceTabsTests.swift",
+        "Tests/WorkspaceRecordMigrationTests.swift",
+        "Tests/ReleaseUpdateTests.swift",
+        "Tests/AgentPresetTests.swift",
+        "Tests/PendingWorktreeRemovalTests.swift"
+      ],
+      "coverage": "high"
+    },
+    {
+      "name": "Persistence",
+      "path": "Liney/Persistence/",
+      "language": "Swift",
+      "description": "JSON-based workspace state and settings persistence to ~/.aiyuterm/",
+      "entryFiles": [
+        "Liney/Persistence/WorkspaceStatePersistence.swift",
+        "Liney/Persistence/AppSettingsPersistence.swift"
+      ],
+      "tests": [],
+      "coverage": "medium"
+    },
+    {
+      "name": "Services/Git",
+      "path": "Liney/Services/Git/",
+      "language": "Swift",
+      "description": "Git CLI wrapper, worktree discovery, branch parsing, metadata watching, GitHub CLI",
+      "entryFiles": [
+        "Liney/Services/Git/GitRepositoryService.swift"
+      ],
+      "keyFiles": [
+        "Liney/Services/Git/GitHubCLIService.swift",
+        "Liney/Services/Git/WorkspaceMetadataWatchService.swift"
+      ],
+      "tests": [
+        "Tests/GitRepositoryServiceTests.swift"
+      ],
+      "coverage": "high"
+    },
+    {
+      "name": "Services/Process",
+      "path": "Liney/Services/Process/",
+      "language": "Swift",
+      "description": "Subprocess execution wrapper (ShellCommandRunner)",
+      "entryFiles": [
+        "Liney/Services/Process/ShellCommandRunner.swift"
+      ],
+      "tests": [],
+      "coverage": "low"
+    },
+    {
+      "name": "Services/Terminal",
+      "path": "Liney/Services/Terminal/",
+      "language": "Swift",
+      "description": "Terminal session lifecycle, backend launch config, surface protocol abstraction",
+      "entryFiles": [
+        "Liney/Services/Terminal/ShellSession.swift",
+        "Liney/Services/Terminal/TerminalSurface.swift"
+      ],
+      "keyFiles": [
+        "Liney/Services/Terminal/WorkspaceSessionController.swift",
+        "Liney/Services/Terminal/SessionBackendLaunch.swift"
+      ],
+      "tests": [
+        "Tests/ShellSessionTests.swift"
+      ],
+      "coverage": "high"
+    },
+    {
+      "name": "Services/Terminal/Ghostty",
+      "path": "Liney/Services/Terminal/Ghostty/",
+      "language": "Swift",
+      "description": "Ghostty (libghostty) bridge: runtime, controller, config, input, clipboard, bootstrap, shell integration",
+      "entryFiles": [
+        "Liney/Services/Terminal/Ghostty/LineyGhosttyController.swift",
+        "Liney/Services/Terminal/Ghostty/LineyGhosttyRuntime.swift"
+      ],
+      "keyFiles": [
+        "Liney/Services/Terminal/Ghostty/LineyGhosttyBootstrap.swift",
+        "Liney/Services/Terminal/Ghostty/LineyGhosttyConfig.swift",
+        "Liney/Services/Terminal/Ghostty/LineyGhosttyInputSupport.swift",
+        "Liney/Services/Terminal/Ghostty/LineyGhosttyClipboardSupport.swift",
+        "Liney/Services/Terminal/Ghostty/LineyGhosttyShellIntegration.swift"
+      ],
+      "tests": [
+        "Tests/LineyGhosttyInputSupportTests.swift",
+        "Tests/LineyGhosttyControllerTests.swift",
+        "Tests/LineyGhosttyConfigTests.swift"
+      ],
+      "coverage": "high"
+    },
+    {
+      "name": "Services/Updates",
+      "path": "Liney/Services/Updates/",
+      "language": "Swift",
+      "description": "Sparkle auto-update integration",
+      "entryFiles": [
+        "Liney/Services/Updates/AppUpdaterController.swift"
+      ],
+      "tests": [
+        "Tests/ReleaseUpdateTests.swift"
+      ],
+      "coverage": "medium"
+    },
+    {
+      "name": "Support",
+      "path": "Liney/Support/",
+      "language": "Swift",
+      "description": "Menus, localization, theming, external editor, commands, path formatting, sleep prevention, HAPI, feature extensions",
+      "entryFiles": [
+        "Liney/Support/LocalizationManager.swift",
+        "Liney/Support/ApplicationMenuController.swift"
+      ],
+      "keyFiles": [
+        "Liney/Support/L10n.swift",
+        "Liney/Support/UIState.swift",
+        "Liney/Support/WorkspaceCommands.swift",
+        "Liney/Support/QuickCommandSupport.swift",
+        "Liney/Support/ExternalEditorSupport.swift",
+        "Liney/Support/LineyTheme.swift",
+        "Liney/Support/FeatureExtensionRegistry.swift",
+        "Liney/Support/HAPIIntegrationSupport.swift",
+        "Liney/Support/SleepPreventionSupport.swift",
+        "Liney/Support/PathFormatting.swift",
+        "Liney/Support/AppLanguage.swift",
+        "Liney/Support/CurrentUserLoginShell.swift",
+        "Liney/Support/String+Helpers.swift",
+        "Liney/Support/WorkspaceNotificationCenter.swift"
+      ],
+      "tests": [
+        "Tests/CommandPaletteTests.swift",
+        "Tests/QuickCommandSupportTests.swift",
+        "Tests/ExternalEditorSupportTests.swift",
+        "Tests/PathFormattingTests.swift",
+        "Tests/LocalizationManagerTests.swift",
+        "Tests/AppLanguageTests.swift",
+        "Tests/HAPIIntegrationSupportTests.swift",
+        "Tests/SleepPreventionSupportTests.swift"
+      ],
+      "coverage": "high"
+    },
+    {
+      "name": "UI",
+      "path": "Liney/UI/",
+      "language": "Swift",
+      "description": "All SwiftUI views: main window, sidebar, workspace detail, canvas, diff, overview, sheets, components",
+      "entryFiles": [
+        "Liney/UI/MainWindowView.swift"
+      ],
+      "keyFiles": [
+        "Liney/UI/Sidebar/WorkspaceSidebarView.swift",
+        "Liney/UI/Workspace/WorkspaceDetailView.swift",
+        "Liney/UI/Workspace/SplitNodeView.swift",
+        "Liney/UI/Workspace/TerminalPaneView.swift",
+        "Liney/UI/Components/CommandPaletteView.swift",
+        "Liney/UI/Components/TerminalHostView.swift",
+        "Liney/UI/Canvas/GlobalCanvasView.swift",
+        "Liney/UI/Diff/DiffWindowContentView.swift",
+        "Liney/UI/Diff/DiffRendering.swift",
+        "Liney/UI/Overview/OverviewView.swift",
+        "Liney/UI/Overview/OverviewViewModel.swift"
+      ],
+      "tests": [
+        "Tests/OverviewViewModelTests.swift",
+        "Tests/DiffChangedFileTests.swift",
+        "Tests/DiffRenderingEngineTests.swift"
+      ],
+      "coverage": "medium"
+    },
+    {
+      "name": "Vendor",
+      "path": "Liney/Vendor/",
+      "language": "C/Zig (precompiled)",
+      "description": "Vendored GhosttyKit.xcframework. Do NOT modify without explicit need.",
+      "entryFiles": [],
+      "tests": [],
+      "coverage": "not-applicable"
+    }
+  ],
+  "scanCoverage": {
+    "totalSwiftFiles": 93,
+    "scannedSwiftFiles": 68,
+    "coveragePercent": 73,
+    "totalTestFiles": 26,
+    "scannedTestFileList": true,
+    "totalScriptFiles": 12,
+    "scannedScriptFiles": 1,
+    "totalDocFiles": 14,
+    "scannedDocFiles": 10,
+    "truncated": false,
+    "notes": "All key entry points, domain models, services, and persistence files were read in full or in leading sections. Large files (WorkspaceStore.swift, AppSettings.swift, L10n.swift, WorkspaceModels.swift, MainWindowView.swift) were partially read due to token limits. UI view files were cataloged by path but not read in detail."
+  },
+  "gaps": [
+    {
+      "module": "App",
+      "file": "Liney/App/WorkspaceStore.swift",
+      "reason": "Large file (34k+ tokens), only first 100 lines read. Full action dispatch logic, persistence triggers, and auto-refresh not inspected."
+    },
+    {
+      "module": "Domain",
+      "file": "Liney/Domain/AppSettings.swift",
+      "reason": "Large file (17k+ tokens), only first 80 lines read. Full settings model with keyboard shortcuts, theme, font, and terminal preferences not inspected."
+    },
+    {
+      "module": "Domain",
+      "file": "Liney/Domain/WorkspaceModels.swift",
+      "reason": "Large file (13k+ tokens), only first 80 lines read. WorkspaceRecord, WorktreeModel, WorkspaceTabStateRecord, WorktreeSessionStateRecord not fully inspected."
+    },
+    {
+      "module": "Support",
+      "file": "Liney/Support/L10n.swift",
+      "reason": "Large file (43k+ tokens). Localization string table. Not read, structure inferred from LocalizationManager usage."
+    },
+    {
+      "module": "UI",
+      "file": "Liney/UI/MainWindowView.swift",
+      "reason": "Large file (10k+ tokens), not read. Window-level SwiftUI composition."
+    },
+    {
+      "module": "UI",
+      "files": "Liney/UI/Sidebar/WorkspaceSidebarView.swift, Liney/UI/Sheets/*.swift, Liney/UI/Canvas/GlobalCanvasView.swift",
+      "reason": "UI view files cataloged but not read in detail."
+    },
+    {
+      "module": "Scripts",
+      "files": "scripts/build_macos_app.sh, scripts/sign_macos.sh, etc.",
+      "reason": "Script files cataloged but not read. deploy.sh was read (6 lines, wrapper)."
+    },
+    {
+      "module": "Services/Git",
+      "file": "Liney/Services/Git/GitHubCLIService.swift",
+      "reason": "Not read. GitHub CLI integration service."
+    },
+    {
+      "module": "App",
+      "file": "Liney/App/WorkspaceCoordinatorSupport.swift",
+      "reason": "Not read. Support/helper code for workspace coordination."
+    }
+  ],
+  "ignoredPaths": [
+    ".git/**",
+    ".build/**",
+    ".swiftpm/**",
+    "dist/**",
+    "DerivedData/**",
+    "website/**",
+    "Liney/Vendor/GhosttyKit.xcframework/** (binary framework, headers only cataloged)",
+    "Liney/Assets.xcassets/** (image assets)",
+    "*.xcarchive",
+    "*.dSYM"
+  ],
+  "dependencies": [
+    {
+      "name": "Sparkle",
+      "version": "2.7.3",
+      "source": "https://github.com/sparkle-project/Sparkle",
+      "purpose": "Auto-update framework"
+    },
+    {
+      "name": "sentry-cocoa",
+      "version": "9.8.0",
+      "source": "https://github.com/getsentry/sentry-cocoa",
+      "purpose": "Crash reporting and session tracking"
+    },
+    {
+      "name": "YiTong",
+      "version": "0.2.0",
+      "source": "https://github.com/onevcat/YiTong.git",
+      "purpose": "Image/asset support"
+    },
+    {
+      "name": "GhosttyKit",
+      "version": "vendored",
+      "source": "Liney/Vendor/GhosttyKit.xcframework",
+      "purpose": "Terminal rendering engine (libghostty)"
+    }
+  ]
+}

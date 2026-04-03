@@ -226,7 +226,7 @@ RELEASE_NOTES_FILE="$(mktemp "${TMPDIR:-/tmp}/aiyuterm-release-notes.XXXXXX.md")
 cat > "$RELEASE_NOTES_FILE" <<EOF
 ## AiyuTerm $VERSION
 
-- GitHub release: https://github.com/wuwenrui/liney/releases/tag/$TAG
+- GitHub release: https://github.com/aiyu-ai/AiyuTerm/releases/tag/$TAG
 EOF
 
 APPCAST_STAGING_DIR="$(mktemp -d "${TMPDIR:-/tmp}/aiyuterm-appcast.XXXXXX")"
@@ -242,9 +242,9 @@ fi
 sparkle_generate_appcast \
   "$APPCAST_STAGING_DIR" \
   "$SPARKLE_PRIVATE_KEY_FILE" \
-  "https://github.com/wuwenrui/liney/releases/download/$TAG/" \
-  "https://github.com/wuwenrui/liney/releases/tag/$TAG" \
-  "https://github.com/wuwenrui/liney" \
+  "https://github.com/aiyu-ai/AiyuTerm/releases/download/$TAG/" \
+  "https://github.com/aiyu-ai/AiyuTerm/releases/tag/$TAG" \
+  "https://github.com/aiyu-ai/AiyuTerm" \
   "$SPARKLE_MAX_VERSIONS" \
   "$SPARKLE_CHANNEL" \
   "$ROOT_DIR" \
