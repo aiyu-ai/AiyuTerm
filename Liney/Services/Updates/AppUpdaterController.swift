@@ -32,10 +32,11 @@ private final class SparkleUpdaterDelegate: NSObject, SPUUpdaterDelegate {
 final class AppUpdaterController {
     static let shared = AppUpdaterController()
 
-    nonisolated static let repository = "wuwenrui/liney"
+    nonisolated static let repository = "AiyuAI/AiyuTerm"
     nonisolated static let releasesURL = URL(string: "https://github.com/\(repository)/releases")!
     nonisolated static let feedURLInfoPlistKey = "SUFeedURL"
-    nonisolated static let defaultFeedURLString = "https://raw.githubusercontent.com/\(repository)/stable/appcast.xml"
+    /// No appcast feed yet — return empty to disable auto-update checks.
+    nonisolated static let defaultFeedURLString = ""
     static let sparkleKeyAccount = "aiyuterm"
     static let defaultPrivateKeyPath: String = {
         let releaseHome = ProcessInfo.processInfo.environment["AIYUTERM_RELEASE_HOME"] ?? "\(NSHomeDirectory())/.aiyuterm_release"
@@ -44,7 +45,7 @@ final class AppUpdaterController {
 
     private let delegate = SparkleUpdaterDelegate()
     private lazy var controller = SPUStandardUpdaterController(
-        startingUpdater: true,
+        startingUpdater: !Self.defaultFeedURLString.isEmpty,
         updaterDelegate: delegate,
         userDriverDelegate: nil
     )
