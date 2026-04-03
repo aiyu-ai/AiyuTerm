@@ -12,7 +12,7 @@ AiyuTerm keeps terminal code split between a small set of abstractions and a ded
 ## Directory Layout
 
 ```text
-Liney/Services/Terminal/
+AiyuTerm/Services/Terminal/
 ├─ Ghostty/
 │  ├─ AiyuTermGhosttyBootstrap.swift
 │  ├─ AiyuTermGhosttyClipboardSupport.swift
@@ -80,11 +80,11 @@ Performs one-time `libghostty` global initialization before the app starts drivi
 
 ## Design Rules
 
-- Keep `libghostty` specifics inside `Liney/Services/Terminal/Ghostty/`.
+- Keep `libghostty` specifics inside `AiyuTerm/Services/Terminal/Ghostty/`.
 - Prefer pure helper functions for modifier translation, text routing, and selection rules when possible.
 - Let `ShellSession` observe controller callbacks rather than owning Ghostty state directly.
 - Avoid adding new terminal-engine abstractions unless the app genuinely supports another engine again.
-- Do not modify `Liney/Vendor/` unless the change explicitly requires a new Ghostty binary or header surface.
+- Do not modify `AiyuTerm/Vendor/` unless the change explicitly requires a new Ghostty binary or header surface.
 
 ## When To Add Tests
 

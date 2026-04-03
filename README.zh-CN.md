@@ -7,7 +7,7 @@
 
 AiyuTerm 是一款原生 macOS 终端工作区应用，面向需要频繁在多个仓库、worktree、分支和分屏之间切换的开发者。支持本地 shell、SSH、tmux 会话管理，以及 AI Agent 会话的实时状态提醒。
 
-> AiyuTerm 基于 [Liney](https://github.com/everettjf/liney)（作者 everettjf）fork 而来，感谢原作者提供的优秀基础。
+> AiyuTerm 基于 [Liney](https://github.com/everettjf/liney)（作者 everettjf）fork 而来，感谢原作者提供的优秀基础。项目已从 Liney 更名为 AiyuTerm。
 
 ![AiyuTerm 应用截图](./images/screenshot.png)
 
