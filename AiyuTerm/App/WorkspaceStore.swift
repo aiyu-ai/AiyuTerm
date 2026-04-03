@@ -2985,13 +2985,13 @@ final class WorkspaceStore: ObservableObject {
     }
 
     private func openAiyuTermWebsite() {
-        guard let url = URL(string: "https://liney.dev") else { return }
+        guard let url = URL(string: "https://github.com/aiyu-ai/AiyuTerm") else { return }
         NSWorkspace.shared.open(url)
         receive(.statusMessage(localized("extension.support.websiteOpened"), .neutral, deliverSystemNotification: false))
     }
 
     private func submitAiyuTermFeedback() {
-        guard let url = URL(string: "https://github.com/wuwenrui/liney/issues/new") else { return }
+        guard let url = URL(string: "https://github.com/aiyu-ai/AiyuTerm/issues/new") else { return }
         NSWorkspace.shared.open(url)
         receive(.statusMessage(localized("extension.support.feedbackOpened"), .neutral, deliverSystemNotification: false))
     }

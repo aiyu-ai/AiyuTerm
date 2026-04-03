@@ -14,13 +14,13 @@ AiyuTerm is a native macOS terminal workspace app (Swift, AppKit + SwiftUI) for 
 
 ```bash
 # Debug build
-xcodebuild -project Liney.xcodeproj -scheme Liney -configuration Debug -destination 'platform=macOS' build
+xcodebuild -project AiyuTerm.xcodeproj -scheme AiyuTerm -configuration Debug -destination 'platform=macOS' build
 
 # Run all tests
-xcodebuild -project Liney.xcodeproj -scheme Liney -destination 'platform=macOS' test
+xcodebuild -project AiyuTerm.xcodeproj -scheme AiyuTerm -destination 'platform=macOS' test
 
 # Run a specific test class
-xcodebuild -project Liney.xcodeproj -scheme Liney -destination 'platform=macOS' test -only-testing:LineyTests/<TestClassName>
+xcodebuild -project AiyuTerm.xcodeproj -scheme AiyuTerm -destination 'platform=macOS' test -only-testing:AiyuTermTests/<TestClassName>
 
 # Run debug build
 open ~/Library/Developer/Xcode/DerivedData/AiyuTerm-*/Build/Products/Debug/AiyuTerm.app
@@ -77,19 +77,31 @@ main.swift -> AppDelegate -> AiyuTermDesktopApplication -> WorkspaceStore -> Wor
 
 | File | Role |
 |------|------|
-| `Liney/App/WorkspaceStore.swift` | Main orchestration: repo refresh, worktree switching, pane/tab management, action dispatch |
-| `Liney/App/AiyuTermDesktopApplication.swift` | Window management, hot key window, app lifecycle |
-| `Liney/Domain/WorkspaceRuntime.swift` | `WorkspaceModel`: runtime state for workspace including worktrees, tabs, layout |
-| `Liney/Domain/PaneLayout.swift` | `SessionLayoutNode` recursive split tree |
-| `Liney/Domain/AppSettings.swift` | All app-level settings (keyboard shortcuts, themes, terminal prefs) |
-| `Liney/Services/Git/GitRepositoryService.swift` | Git status parsing, branch info, worktree inspection |
-| `Liney/Services/Terminal/ShellSession.swift` | Single terminal session lifecycle |
-| `Liney/Services/Terminal/Ghostty/AiyuTermGhosttyController.swift` | Ghostty surface bridge to AppKit |
-| `Liney/UI/Sidebar/WorkspaceSidebarView.swift` | Sidebar tree, search, multi-selection, context menus, drag reordering |
+| `AiyuTerm/App/WorkspaceStore.swift` | Main orchestration: repo refresh, worktree switching, pane/tab management, action dispatch |
+| `AiyuTerm/App/AiyuTermDesktopApplication.swift` | Window management, hot key window, app lifecycle |
+| `AiyuTerm/Domain/WorkspaceRuntime.swift` | `WorkspaceModel`: runtime state for workspace including worktrees, tabs, layout |
+| `AiyuTerm/Domain/PaneLayout.swift` | `SessionLayoutNode` recursive split tree |
+| `AiyuTerm/Domain/AppSettings.swift` | All app-level settings (keyboard shortcuts, themes, terminal prefs) |
+| `AiyuTerm/Services/Git/GitRepositoryService.swift` | Git status parsing, branch info, worktree inspection |
+| `AiyuTerm/Services/Terminal/ShellSession.swift` | Single terminal session lifecycle |
+| `AiyuTerm/Services/Terminal/Ghostty/AiyuTermGhosttyController.swift` | Ghostty surface bridge to AppKit |
+| `AiyuTerm/UI/Sidebar/WorkspaceSidebarView.swift` | Sidebar tree, search, multi-selection, context menus, drag reordering |
 
 ## Versioning
 
 Semantic versioning. The bump script (`scripts/bump_version.sh`) skips any version containing the digit 4 in any component. Build numbers follow the same rule.
+
+## Bug Fix Discipline
+
+1. **Diagnose before code** — When a bug is reported, the FIRST action must be a diagnostic tool call (Grep, Read, Bash to reproduce/verify), NOT an Edit. No exceptions.
+2. **Verify assumptions** — Never trust surface symptoms as root cause. "Screenshot says X is broken" -> run a command to verify X is actually broken vs something upstream causing X to appear broken.
+3. **Fix at the right layer** — Trace the data path from source to display. Fix the layer where the problem originates (data/service), not the layer where it manifests (UI). If a fix hides the failure rather than explaining why it failed, the fix is wrong.
+
+## macOS GUI App Considerations
+
+- GUI apps launched from Finder do NOT inherit the user's full shell PATH. `/opt/homebrew/bin` and `/usr/local/bin` are typically missing.
+- When locating external tools (tmux, git, etc.), check common absolute paths first, use `which`/`env` as fallback only.
+- Release builds use `CODE_SIGNING_ALLOWED=NO` by default. Ad-hoc sign (`codesign --force --deep --sign -`) before distributing to avoid repeated TCC permission dialogs.
 
 ## Related Documentation
 

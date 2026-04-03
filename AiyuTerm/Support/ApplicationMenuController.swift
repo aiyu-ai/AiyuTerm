@@ -9,9 +9,9 @@ import AppKit
 
 @MainActor
 final class ApplicationMenuController: NSObject {
-    private let websiteURL = URL(string: "https://liney.dev")!
-    private let feedbackURL = URL(string: "https://github.com/wuwenrui/liney/issues/new")!
-    private let repositoryURL = URL(string: "https://github.com/wuwenrui/liney")!
+    private let websiteURL = URL(string: "https://github.com/aiyu-ai/AiyuTerm")!
+    private let feedbackURL = URL(string: "https://github.com/aiyu-ai/AiyuTerm/issues/new")!
+    private let repositoryURL = URL(string: "https://github.com/aiyu-ai/AiyuTerm")!
 
     private var shortcutItemsByAction: [AiyuTermShortcutAction: [NSMenuItem]] = [:]
 

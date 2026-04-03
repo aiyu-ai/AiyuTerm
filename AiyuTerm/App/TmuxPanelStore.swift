@@ -14,6 +14,7 @@ final class TmuxPanelStore: ObservableObject {
     @Published var isAvailable: Bool = false
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
+    @Published var isCollapsed: Bool = true
 
     private let coordinator: TmuxAttachCoordinator
 

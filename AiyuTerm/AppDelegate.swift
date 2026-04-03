@@ -18,8 +18,8 @@ private func aiyuTermLocalizedAppFormat(_ key: String, _ arguments: CVarArg...) 
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
-    private let websiteURL = URL(string: "https://liney.dev")!
-    private let repositoryURL = URL(string: "https://github.com/wuwenrui/liney")!
+    private let websiteURL = URL(string: "https://github.com/aiyu-ai/AiyuTerm")!
+    private let repositoryURL = URL(string: "https://github.com/aiyu-ai/AiyuTerm")!
     private let quitConfirmationSuppressionInterval: TimeInterval = 0.5
 
     @MainActor private var desktopApplication: AiyuTermDesktopApplication?
