@@ -9,7 +9,9 @@ AiyuTerm 是一款原生 macOS 终端工作区应用，面向需要频繁在多�
 
 > AiyuTerm 基于 [Liney](https://github.com/wuwenrui/liney)（作者 wuwenrui）fork 而来，感谢原作者提供的优秀基础。项目已从 Liney 更名为 AiyuTerm。
 
-![AiyuTerm 应用截图](./images/screenshot.png)
+![AiyuTerm 应用截图 1](./images/screenshot1.png)
+
+![AiyuTerm 应用截图 2](./images/screenshot2.png)
 
 ## 功能特性
 

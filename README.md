@@ -9,7 +9,9 @@ AiyuTerm is a native macOS terminal workspace app for developers who work across
 
 > AiyuTerm is forked from [Liney](https://github.com/wuwenrui/liney) by wuwenrui. Thanks to the original author for the excellent foundation. The project has been renamed from Liney to AiyuTerm.
 
-![AiyuTerm app screenshot](./images/screenshot.png)
+![AiyuTerm app screenshot 1](./images/screenshot1.png)
+
+![AiyuTerm app screenshot 2](./images/screenshot2.png)
 
 ## Features
 
