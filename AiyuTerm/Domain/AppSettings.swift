@@ -287,7 +287,7 @@ struct AppSettings: Codable, Hashable {
     var keyboardShortcutOverrides: [String: KeyboardShortcutOverride]
 
     init(
-        appLanguage: AppLanguage = .automatic,
+        appLanguage: AppLanguage = .english,
         autoRefreshEnabled: Bool = true,
         autoRefreshIntervalSeconds: Int = 30,
         autoClosePaneOnProcessExit: Bool = true,
@@ -439,7 +439,7 @@ extension AppSettings {
             preferredExternalEditor = .cursor
         }
         self.init(
-            appLanguage: try container.decodeIfPresent(AppLanguage.self, forKey: .appLanguage) ?? .automatic,
+            appLanguage: try container.decodeIfPresent(AppLanguage.self, forKey: .appLanguage) ?? .english,
             autoRefreshEnabled: try container.decodeIfPresent(Bool.self, forKey: .autoRefreshEnabled) ?? true,
             autoRefreshIntervalSeconds: try container.decodeIfPresent(Int.self, forKey: .autoRefreshIntervalSeconds) ?? 30,
             autoClosePaneOnProcessExit: try container.decodeIfPresent(Bool.self, forKey: .autoClosePaneOnProcessExit) ?? true,

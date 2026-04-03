@@ -449,23 +449,20 @@ struct SettingsSheet: View {
             }
 
             GroupBox(localized("settings.claudeCode.title")) {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text(claudeCodeHooksConfigured
-                             ? localized("settings.claudeCode.configured")
-                             : localized("settings.claudeCode.notConfigured"))
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(claudeCodeHooksConfigured ? .secondary : .primary)
+                HStack {
+                    Text(claudeCodeHooksConfigured
+                         ? localized("settings.claudeCode.configured")
+                         : localized("settings.claudeCode.notConfigured"))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(claudeCodeHooksConfigured ? .secondary : .primary)
 
-                        Spacer()
+                    Spacer()
 
-                        Button(localized("settings.claudeCode.configure")) {
-                            showClaudeCodeConfirmation = true
-                        }
-                        .disabled(claudeCodeHooksConfigured)
+                    Button(localized("settings.claudeCode.configure")) {
+                        showClaudeCodeConfirmation = true
                     }
+                    .disabled(claudeCodeHooksConfigured)
                 }
-                .padding(.top, 8)
             }
             .alert(
                 localized("settings.claudeCode.confirmTitle"),

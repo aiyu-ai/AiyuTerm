@@ -2,12 +2,12 @@
 set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
-PROJECT_FILE="${PROJECT_FILE:-$ROOT_DIR/Liney.xcodeproj/project.pbxproj}"
+PROJECT_FILE="${PROJECT_FILE:-$ROOT_DIR/AiyuTerm.xcodeproj/project.pbxproj}"
 APP_NAME="${APP_NAME:-AiyuTerm}"
 APP_SLUG="${APP_SLUG:-aiyuterm}"
 APP_DESC="${APP_DESC:-Native macOS terminal workspace manager for git repositories, worktrees, and split panes.}"
-PROJECT_PATH="${PROJECT_PATH:-$ROOT_DIR/Liney.xcodeproj}"
-SCHEME="${SCHEME:-Liney}"
+PROJECT_PATH="${PROJECT_PATH:-$ROOT_DIR/AiyuTerm.xcodeproj}"
+SCHEME="${SCHEME:-AiyuTerm}"
 RELEASE_ARCHS="${RELEASE_ARCHS:-arm64 x86_64}"
 OUTPUT_DIR="${OUTPUT_DIR:-$ROOT_DIR/dist}"
 APPCAST_FILE="${APPCAST_FILE:-$ROOT_DIR/appcast.xml}"

@@ -19,35 +19,35 @@
 			containerPortal = 5A45CEF12F67D58F00861AB5 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 5A45CEF82F67D58F00861AB5;
-			remoteInfo = Liney;
+			remoteInfo = AiyuTerm;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		5A45CEF92F67D58F00861AB5 /* AiyuTerm.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AiyuTerm.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		5A45D2092F692B3200861AB5 /* Liney.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = Liney.xcodeproj; sourceTree = "<group>"; };
-		5A45D2732F692C4D00861AB5 /* Liney.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = Liney.xcodeproj; sourceTree = "<group>"; };
+		5A45D2092F692B3200861AB5 /* AiyuTerm.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = AiyuTerm.xcodeproj; sourceTree = "<group>"; };
+		5A45D2732F692C4D00861AB5 /* AiyuTerm.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = AiyuTerm.xcodeproj; sourceTree = "<group>"; };
 		8B1A2B3C4D5E6F708090A002 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
-		8B1A2B3C4D5E6F708090A004 /* LineyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LineyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8B1A2B3C4D5E6F708090A004 /* AiyuTermTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AiyuTermTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		5A45D3002F70000100861AB5 /* Exceptions for "Liney" folder in "Liney" target */ = {
+		5A45D3002F70000100861AB5 /* Exceptions for "AiyuTerm" folder in "AiyuTerm" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 5A45CEF82F67D58F00861AB5 /* Liney */;
+			target = 5A45CEF82F67D58F00861AB5 /* AiyuTerm */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		5A45CEFB2F67D58F00861AB5 /* Liney */ = {
+		5A45CEFB2F67D58F00861AB5 /* AiyuTerm */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				5A45D3002F70000100861AB5 /* Exceptions for "Liney" folder in "Liney" target */,
+				5A45D3002F70000100861AB5 /* Exceptions for "AiyuTerm" folder in "AiyuTerm" target */,
 			);
-			path = Liney;
+			path = AiyuTerm;
 			sourceTree = "<group>";
 		};
 		8B1A2B3C4D5E6F708090A005 /* Tests */ = {
@@ -82,7 +82,7 @@
 		5A45CEF02F67D58F00861AB5 = {
 			isa = PBXGroup;
 			children = (
-				5A45CEFB2F67D58F00861AB5 /* Liney */,
+				5A45CEFB2F67D58F00861AB5 /* AiyuTerm */,
 				8B1A2B3C4D5E6F708090A005 /* Tests */,
 				5A45D2A42F692C6D00861AB5 /* Frameworks */,
 				5A45CEFA2F67D58F00861AB5 /* Products */,
@@ -93,7 +93,7 @@
 			isa = PBXGroup;
 			children = (
 				5A45CEF92F67D58F00861AB5 /* AiyuTerm.app */,
-				8B1A2B3C4D5E6F708090A004 /* LineyTests.xctest */,
+				8B1A2B3C4D5E6F708090A004 /* AiyuTermTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -123,9 +123,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		5A45CEF82F67D58F00861AB5 /* Liney */ = {
+		5A45CEF82F67D58F00861AB5 /* AiyuTerm */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 5A45CF072F67D59100861AB5 /* Build configuration list for PBXNativeTarget "Liney" */;
+			buildConfigurationList = 5A45CF072F67D59100861AB5 /* Build configuration list for PBXNativeTarget "AiyuTerm" */;
 			buildPhases = (
 				5A45CEF52F67D58F00861AB5 /* Sources */,
 				5A45CEF62F67D58F00861AB5 /* Frameworks */,
@@ -137,9 +137,9 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				5A45CEFB2F67D58F00861AB5 /* Liney */,
+				5A45CEFB2F67D58F00861AB5 /* AiyuTerm */,
 			);
-			name = Liney;
+			name = AiyuTerm;
 			packageProductDependencies = (
 				9D1A2B3C4D5E6F708091A002 /* YiTong */,
 				7F0A1B2C3D4E5F6071829302 /* Sparkle */,
@@ -149,9 +149,9 @@
 			productReference = 5A45CEF92F67D58F00861AB5 /* AiyuTerm.app */;
 			productType = "com.apple.product-type.application";
 		};
-		8B1A2B3C4D5E6F708090A007 /* LineyTests */ = {
+		8B1A2B3C4D5E6F708090A007 /* AiyuTermTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 8B1A2B3C4D5E6F708090A00D /* Build configuration list for PBXNativeTarget "LineyTests" */;
+			buildConfigurationList = 8B1A2B3C4D5E6F708090A00D /* Build configuration list for PBXNativeTarget "AiyuTermTests" */;
 			buildPhases = (
 				8B1A2B3C4D5E6F708090A008 /* Sources */,
 				8B1A2B3C4D5E6F708090A006 /* Frameworks */,
@@ -165,9 +165,9 @@
 			fileSystemSynchronizedGroups = (
 				8B1A2B3C4D5E6F708090A005 /* Tests */,
 			);
-			name = LineyTests;
-			productName = LineyTests;
-			productReference = 8B1A2B3C4D5E6F708090A004 /* LineyTests.xctest */;
+			name = AiyuTermTests;
+			productName = AiyuTermTests;
+			productReference = 8B1A2B3C4D5E6F708090A004 /* AiyuTermTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -188,7 +188,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 5A45CEF42F67D58F00861AB5 /* Build configuration list for PBXProject "Liney" */;
+			buildConfigurationList = 5A45CEF42F67D58F00861AB5 /* Build configuration list for PBXProject "AiyuTerm" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -208,17 +208,17 @@
 			projectReferences = (
 				{
 					ProductGroup = 5A45D2752F692C4D00861AB5 /* Products */;
-					ProjectRef = 5A45D2732F692C4D00861AB5 /* Liney.xcodeproj */;
+					ProjectRef = 5A45D2732F692C4D00861AB5 /* AiyuTerm.xcodeproj */;
 				},
 				{
 					ProductGroup = 5A45D20B2F692B3200861AB5 /* Products */;
-					ProjectRef = 5A45D2092F692B3200861AB5 /* Liney.xcodeproj */;
+					ProjectRef = 5A45D2092F692B3200861AB5 /* AiyuTerm.xcodeproj */;
 				},
 			);
 			projectRoot = "";
 			targets = (
-				5A45CEF82F67D58F00861AB5 /* Liney */,
-				8B1A2B3C4D5E6F708090A007 /* LineyTests */,
+				5A45CEF82F67D58F00861AB5 /* AiyuTerm */,
+				8B1A2B3C4D5E6F708090A007 /* AiyuTermTests */,
 			);
 		};
 /* End PBXProject section */
@@ -258,7 +258,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\nRESOURCE_ROOT=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\"\nmkdir -p \"$RESOURCE_ROOT/ghostty\" \"$RESOURCE_ROOT/terminfo\"\nrsync -a \"$SRCROOT/Liney/ghostty/\" \"$RESOURCE_ROOT/ghostty/\"\nrsync -a \"$SRCROOT/Liney/terminfo/\" \"$RESOURCE_ROOT/terminfo/\"\n";
+			shellScript = "set -e\nRESOURCE_ROOT=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\"\nmkdir -p \"$RESOURCE_ROOT/ghostty\" \"$RESOURCE_ROOT/terminfo\"\nrsync -a \"$SRCROOT/AiyuTerm/ghostty/\" \"$RESOURCE_ROOT/ghostty/\"\nrsync -a \"$SRCROOT/AiyuTerm/terminfo/\" \"$RESOURCE_ROOT/terminfo/\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -282,7 +282,7 @@
 /* Begin PBXTargetDependency section */
 		8B1A2B3C4D5E6F708090A00A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 5A45CEF82F67D58F00861AB5 /* Liney */;
+			target = 5A45CEF82F67D58F00861AB5 /* AiyuTerm */;
 			targetProxy = 8B1A2B3C4D5E6F708090A003 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -422,7 +422,7 @@
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				INFOPLIST_FILE = Liney/Info.plist;
+				INFOPLIST_FILE = AiyuTerm/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -461,7 +461,7 @@
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				INFOPLIST_FILE = Liney/Info.plist;
+				INFOPLIST_FILE = AiyuTerm/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -551,7 +551,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 15.6;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aiyuai.aiyutermtests;
-				PRODUCT_NAME = AiyuTerm;
+				PRODUCT_NAME = AiyuTermTests;
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -618,7 +618,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.aiyuai.aiyutermtests;
-				PRODUCT_NAME = AiyuTerm;
+				PRODUCT_NAME = AiyuTermTests;
 				SDKROOT = macosx;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_VERSION = 5.0;
@@ -629,7 +629,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		5A45CEF42F67D58F00861AB5 /* Build configuration list for PBXProject "Liney" */ = {
+		5A45CEF42F67D58F00861AB5 /* Build configuration list for PBXProject "AiyuTerm" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				5A45CF052F67D59100861AB5 /* Debug */,
@@ -638,7 +638,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		5A45CF072F67D59100861AB5 /* Build configuration list for PBXNativeTarget "Liney" */ = {
+		5A45CF072F67D59100861AB5 /* Build configuration list for PBXNativeTarget "AiyuTerm" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				5A45CF082F67D59100861AB5 /* Debug */,
@@ -647,7 +647,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		8B1A2B3C4D5E6F708090A00D /* Build configuration list for PBXNativeTarget "LineyTests" */ = {
+		8B1A2B3C4D5E6F708090A00D /* Build configuration list for PBXNativeTarget "AiyuTermTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				8B1A2B3C4D5E6F708090A00B /* Debug */,

@@ -7,7 +7,7 @@
 
 import XCTest
 import GhosttyKit
-@testable import Liney
+@testable import AiyuTerm
 
 final class AiyuTermGhosttyControllerTests: XCTestCase {
     func testCommandFinishedDoesNotReportProcessExit() {

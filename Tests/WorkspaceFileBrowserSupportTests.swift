@@ -1,5 +1,5 @@
 import XCTest
-@testable import Liney
+@testable import AiyuTerm
 
 final class WorkspaceFileBrowserSupportTests: XCTestCase {
     func testEnumerateFilesSkipsGitDirectory() throws {
