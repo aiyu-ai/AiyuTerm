@@ -57,7 +57,7 @@ main.swift -> AppDelegate -> AiyuTermDesktopApplication -> WorkspaceStore -> Wor
 - **Action dispatch:** `WorkspaceStore.dispatch(_ action:)` handles command palette actions and UI events.
 - **Per-worktree session persistence:** Each worktree maintains independent tab states with layout trees and pane snapshots, enabling layout restoration on worktree switch or app relaunch.
 - **In-process localization:** No .lproj bundles. All strings in compile-time `L10n.swift` table, supporting English and Simplified Chinese.
-- **Data storage:** JSON in `~/.aiyuterm/` (debug: `~/.aiyuterm-debug/`). Legacy reads from `~/Library/Application Support/Liney/`.
+- **Data storage:** JSON in `~/.aiyuterm/` (debug: `~/.aiyuterm-debug/`).
 
 ## Tech Stack
 
