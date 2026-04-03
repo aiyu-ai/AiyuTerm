@@ -171,6 +171,7 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
     private var suppressSelectionSync = false
     private var pinnedSelectionNodeID: String?
     private var lastDataFingerprint: String = ""
+    private var hasScrolledToTopOnFirstLoad = false
 
     init(store: WorkspaceStore) {
         self.store = store
@@ -222,6 +223,10 @@ private final class WorkspaceSidebarCoordinator: NSObject, NSOutlineViewDataSour
             container?.relayout()
             isApplyingSelection = false
             synchronizeSelection(on: outlineView, selectedWorkspaceID: selectedWorkspaceID)
+            if !hasScrolledToTopOnFirstLoad {
+                hasScrolledToTopOnFirstLoad = true
+                container?.scrollToTop()
+            }
         } else {
             guard let outlineView = container?.outlineView else { return }
             synchronizeSelection(on: outlineView, selectedWorkspaceID: selectedWorkspaceID)
@@ -1402,6 +1407,11 @@ private final class SidebarOutlineContainerView: NSView {
         updateContentLayout()
     }
 
+    func scrollToTop() {
+        scrollView.contentView.scroll(to: .zero)
+        scrollView.reflectScrolledClipView(scrollView.contentView)
+    }
+
     func setOpenRepositoryAction(_ action: @escaping () -> Void) {
         footerHostingView.rootView = AnyView(SidebarOpenRepositoryRow(action: action))
     }
@@ -1422,7 +1432,7 @@ private final class SidebarOutlineContainerView: NSView {
         let requiredHeight = contentView.requiredHeight(forWidth: visibleWidth)
         contentView.frame = NSRect(
             x: 0,
-            y: max(0, visibleHeight - requiredHeight),
+            y: 0,
             width: visibleWidth,
             height: max(requiredHeight, visibleHeight)
         )
