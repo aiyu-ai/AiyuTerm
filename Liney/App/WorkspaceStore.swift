@@ -657,6 +657,7 @@ final class WorkspaceStore: ObservableObject {
         configureUpdater(checkInBackground: true)
         syncAutomationServices()
         ensureAgentFilePoller()
+        ClaudeCodeHooksService.ensureHookScript()
         persist()
     }
 
