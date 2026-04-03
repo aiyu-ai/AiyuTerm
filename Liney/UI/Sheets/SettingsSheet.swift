@@ -229,6 +229,8 @@ struct SettingsSheet: View {
     @State private var workspaceSettings = WorkspaceSettings()
     @State private var localizationVersion = 0
     @State private var originalAppLanguage: AppLanguage = .automatic
+    @State private var claudeCodeHooksConfigured = false
+    @State private var showClaudeCodeConfirmation = false
 
     private var availableExternalEditors: [ExternalEditorDescriptor] {
         store.availableExternalEditors
@@ -444,6 +446,41 @@ struct SettingsSheet: View {
                         .foregroundStyle(.secondary)
                 }
                 .padding(.top, 8)
+            }
+
+            GroupBox(localized("settings.claudeCode.title")) {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text(claudeCodeHooksConfigured
+                             ? localized("settings.claudeCode.configured")
+                             : localized("settings.claudeCode.notConfigured"))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(claudeCodeHooksConfigured ? .secondary : .primary)
+
+                        Spacer()
+
+                        Button(localized("settings.claudeCode.configure")) {
+                            showClaudeCodeConfirmation = true
+                        }
+                        .disabled(claudeCodeHooksConfigured)
+                    }
+                }
+                .padding(.top, 8)
+            }
+            .alert(
+                localized("settings.claudeCode.confirmTitle"),
+                isPresented: $showClaudeCodeConfirmation
+            ) {
+                Button(localized("settings.claudeCode.confirmButton")) {
+                    ClaudeCodeHooksService.ensureHookScript()
+                    let success = ClaudeCodeHooksService.injectHooks()
+                    if success {
+                        claudeCodeHooksConfigured = true
+                    }
+                }
+                Button(localized("settings.button.cancel"), role: .cancel) {}
+            } message: {
+                Text(localized("settings.claudeCode.confirmMessage"))
             }
         }
     }
@@ -1093,6 +1130,7 @@ struct SettingsSheet: View {
         originalAppLanguage = store.appSettings.appLanguage
         selectedWorkspaceID = request.workspaceID ?? store.selectedWorkspace?.id
         terminalFontSearchText = ""
+        claudeCodeHooksConfigured = ClaudeCodeHooksService.isConfigured()
         loadWorkspaceSettings()
     }
 

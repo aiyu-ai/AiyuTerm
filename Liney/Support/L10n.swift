@@ -1043,6 +1043,14 @@ enum L10nTable {
         "settings.shortcuts.action.closeWindow.subtitle": "Close the current AiyuTerm window.",
         "settings.shortcuts.action.enterFullScreen.title": "Enter Full Screen",
         "settings.shortcuts.action.enterFullScreen.subtitle": "Toggle macOS full screen for the current window.",
+
+        "settings.claudeCode.title": "Claude Code Integration",
+        "settings.claudeCode.configured": "Configured",
+        "settings.claudeCode.notConfigured": "Not Configured",
+        "settings.claudeCode.configure": "Configure",
+        "settings.claudeCode.confirmTitle": "Configure Claude Code Hooks?",
+        "settings.claudeCode.confirmMessage": "This will add AiyuTerm hooks to ~/.claude/settings.json to enable task completion notifications.",
+        "settings.claudeCode.confirmButton": "Configure",
     ]
     static let simplifiedChinese: [String: String] = [
         "language.automatic": "自动",
@@ -2072,6 +2080,14 @@ enum L10nTable {
         "settings.shortcuts.action.closeWindow.subtitle": "关闭当前 AiyuTerm 窗口。",
         "settings.shortcuts.action.enterFullScreen.title": "进入全屏",
         "settings.shortcuts.action.enterFullScreen.subtitle": "为当前窗口切换 macOS 全屏模式。",
+
+        "settings.claudeCode.title": "Claude Code 集成",
+        "settings.claudeCode.configured": "已配置",
+        "settings.claudeCode.notConfigured": "未配置",
+        "settings.claudeCode.configure": "配置",
+        "settings.claudeCode.confirmTitle": "配置 Claude Code Hooks？",
+        "settings.claudeCode.confirmMessage": "将向 ~/.claude/settings.json 添加 AiyuTerm hooks，以启用任务完成通知。",
+        "settings.claudeCode.confirmButton": "配置",
     ]
 
     static func string(for key: String, language: AppLanguage) -> String {
