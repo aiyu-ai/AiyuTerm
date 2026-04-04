@@ -141,7 +141,17 @@ fi
 
 if [[ -n "$SIGNING_IDENTITY" ]]; then
   /usr/bin/codesign --remove-signature "$APP_BUNDLE_PATH" >/dev/null 2>&1 || true
-  sparkle_codesign_app "$APP_BUNDLE_PATH" "$SIGNING_IDENTITY"
+  if [[ "$SIGNING_IDENTITY" == "-" ]]; then
+    # Ad-hoc signing: strip all existing signatures first, then re-sign
+    # everything with a single identity so Team IDs are consistent.
+    find "$APP_BUNDLE_PATH" -type f \( -name '*.dylib' -o -perm +111 \) -exec \
+      /usr/bin/codesign --remove-signature {} \; 2>/dev/null || true
+    find "$APP_BUNDLE_PATH/Contents/Frameworks" -mindepth 1 -maxdepth 1 -type d -name '*.framework' -exec \
+      /usr/bin/codesign --remove-signature {} \; 2>/dev/null || true
+    /usr/bin/codesign --force --deep --sign - "$APP_BUNDLE_PATH"
+  else
+    sparkle_codesign_app "$APP_BUNDLE_PATH" "$SIGNING_IDENTITY"
+  fi
   /usr/bin/codesign --verify --deep --strict "$APP_BUNDLE_PATH"
 fi
 
