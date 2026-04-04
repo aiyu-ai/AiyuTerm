@@ -437,7 +437,7 @@
 					"-framework",
 					Carbon,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.aiyuai.aiyuterm;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aiyuai.aiyuterm.debug;
 				PRODUCT_NAME = AiyuTerm;
 				REGISTER_APP_GROUPS = NO;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
