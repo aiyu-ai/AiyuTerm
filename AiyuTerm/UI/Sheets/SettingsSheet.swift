@@ -447,38 +447,6 @@ struct SettingsSheet: View {
                 }
                 .padding(.top, 8)
             }
-
-            GroupBox(localized("settings.claudeCode.title")) {
-                HStack {
-                    Text(claudeCodeHooksConfigured
-                         ? localized("settings.claudeCode.configured")
-                         : localized("settings.claudeCode.notConfigured"))
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(claudeCodeHooksConfigured ? .secondary : .primary)
-
-                    Spacer()
-
-                    Button(localized("settings.claudeCode.configure")) {
-                        showClaudeCodeConfirmation = true
-                    }
-                    .disabled(claudeCodeHooksConfigured)
-                }
-            }
-            .alert(
-                localized("settings.claudeCode.confirmTitle"),
-                isPresented: $showClaudeCodeConfirmation
-            ) {
-                Button(localized("settings.claudeCode.confirmButton")) {
-                    ClaudeCodeHooksService.ensureHookScript()
-                    let success = ClaudeCodeHooksService.injectHooks()
-                    if success {
-                        claudeCodeHooksConfigured = true
-                    }
-                }
-                Button(localized("settings.button.cancel"), role: .cancel) {}
-            } message: {
-                Text(localized("settings.claudeCode.confirmMessage"))
-            }
         }
     }
 
@@ -1015,50 +983,84 @@ struct SettingsSheet: View {
     }
 
     private var agentPresetsSettingsView: some View {
-        GroupBox(localized("settings.workspace.agentPresetsGroup")) {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(localized("settings.workspace.agentPresetsHint"))
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.secondary)
-
-                if !appSettings.agentPresets.isEmpty {
-                    Picker(localized("settings.workspace.agentPreset.default"), selection: Binding(
-                        get: { appSettings.preferredAgentPresetID ?? appSettings.agentPresets.first?.id },
-                        set: { appSettings.preferredAgentPresetID = $0 }
-                    )) {
-                        ForEach(appSettings.agentPresets) { preset in
-                            Text(preset.name).tag(Optional(preset.id))
-                        }
-                    }
-                }
-
-                HStack {
-                    Spacer()
-                    Button(localized("settings.workspace.addPreset")) {
-                        appSettings.agentPresets.append(
-                            AgentPreset(
-                                name: localized("defaults.agent.name"),
-                                launchPath: "/usr/bin/env",
-                                arguments: ["claude"]
-                            )
-                        )
-                        if appSettings.preferredAgentPresetID == nil {
-                            appSettings.preferredAgentPresetID = appSettings.agentPresets.last?.id
-                        }
-                    }
-                }
-
-                if appSettings.agentPresets.isEmpty {
-                    Text(localized("settings.workspace.agentPresetsEmpty"))
-                        .font(.system(size: 12, weight: .medium))
+        VStack(alignment: .leading, spacing: 18) {
+            GroupBox(localized("settings.workspace.agentPresetsGroup")) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(localized("settings.workspace.agentPresetsHint"))
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
-                }
 
-                ForEach(Array(appSettings.agentPresets.indices), id: \.self) { index in
-                    agentPresetCard(at: index)
+                    if !appSettings.agentPresets.isEmpty {
+                        Picker(localized("settings.workspace.agentPreset.default"), selection: Binding(
+                            get: { appSettings.preferredAgentPresetID ?? appSettings.agentPresets.first?.id },
+                            set: { appSettings.preferredAgentPresetID = $0 }
+                        )) {
+                            ForEach(appSettings.agentPresets) { preset in
+                                Text(preset.name).tag(Optional(preset.id))
+                            }
+                        }
+                    }
+
+                    HStack {
+                        Spacer()
+                        Button(localized("settings.workspace.addPreset")) {
+                            appSettings.agentPresets.append(
+                                AgentPreset(
+                                    name: localized("defaults.agent.name"),
+                                    launchPath: "/usr/bin/env",
+                                    arguments: ["claude"]
+                                )
+                            )
+                            if appSettings.preferredAgentPresetID == nil {
+                                appSettings.preferredAgentPresetID = appSettings.agentPresets.last?.id
+                            }
+                        }
+                    }
+
+                    if appSettings.agentPresets.isEmpty {
+                        Text(localized("settings.workspace.agentPresetsEmpty"))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    ForEach(Array(appSettings.agentPresets.indices), id: \.self) { index in
+                        agentPresetCard(at: index)
+                    }
+                }
+                .padding(.top, 8)
+            }
+
+            GroupBox(localized("settings.claudeCode.title")) {
+                HStack {
+                    Text(claudeCodeHooksConfigured
+                         ? localized("settings.claudeCode.configured")
+                         : localized("settings.claudeCode.notConfigured"))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(claudeCodeHooksConfigured ? .secondary : .primary)
+
+                    Spacer()
+
+                    Button(localized("settings.claudeCode.configure")) {
+                        showClaudeCodeConfirmation = true
+                    }
+                    .disabled(claudeCodeHooksConfigured)
                 }
             }
-            .padding(.top, 8)
+            .alert(
+                localized("settings.claudeCode.confirmTitle"),
+                isPresented: $showClaudeCodeConfirmation
+            ) {
+                Button(localized("settings.claudeCode.confirmButton")) {
+                    ClaudeCodeHooksService.ensureHookScript()
+                    let success = ClaudeCodeHooksService.injectHooks()
+                    if success {
+                        claudeCodeHooksConfigured = true
+                    }
+                }
+                Button(localized("settings.button.cancel"), role: .cancel) {}
+            } message: {
+                Text(localized("settings.claudeCode.confirmMessage"))
+            }
         }
     }
 
