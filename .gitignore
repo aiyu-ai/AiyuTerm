@@ -11,5 +11,6 @@ DerivedData/
 *.pkg
 AiyuTerm.xcodeproj/project.xcworkspace/xcuserdata/
 AiyuTerm.xcodeproj/xcuserdata/
+.superpowers/
 website/.superpowers/
 build_release/
