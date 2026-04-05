@@ -38,6 +38,14 @@ struct WorkspaceSidebarView: View {
                 }
                 .textFieldStyle(.plain)
                 .font(.system(size: 12 * uiScale, weight: .medium))
+
+                Button(action: store.addWorkspaceFromOpenPanel) {
+                    Image(systemName: "folder.badge.plus")
+                        .font(.system(size: 12 * uiScale, weight: .semibold))
+                        .foregroundStyle(AiyuTermTheme.mutedText)
+                }
+                .buttonStyle(.plain)
+                .help(localized("sidebar.openFolderHelp"))
             }
             .padding(.horizontal, 12 * uiScale)
             .padding(.vertical, 8 * uiScale)
@@ -52,7 +60,7 @@ struct WorkspaceSidebarView: View {
                     .frame(height: 1)
             }
 
-            WorkspaceOutlineSidebar(query: query, onOpenRepository: store.addWorkspaceFromOpenPanel)
+            WorkspaceOutlineSidebar(query: query)
                 .environmentObject(store)
         }
         .background(AiyuTermTheme.sidebarBackground)
@@ -63,7 +71,6 @@ private struct WorkspaceOutlineSidebar: NSViewRepresentable {
     @EnvironmentObject private var store: WorkspaceStore
 
     let query: String
-    let onOpenRepository: () -> Void
 
     func makeCoordinator() -> WorkspaceSidebarCoordinator {
         WorkspaceSidebarCoordinator(store: store)
@@ -105,50 +112,11 @@ private struct WorkspaceOutlineSidebar: NSViewRepresentable {
 
     func updateNSView(_ nsView: SidebarOutlineContainerView, context: Context) {
         context.coordinator.store = store
-        nsView.setOpenRepositoryAction(onOpenRepository, store: store)
         context.coordinator.apply(
             workspaces: store.sidebarWorkspaces,
             selectedWorkspaceID: store.selectedWorkspaceID,
             query: query
         )
-    }
-}
-
-private struct SidebarOpenRepositoryRow: View {
-    @ObservedObject private var localization = LocalizationManager.shared
-    @EnvironmentObject private var store: WorkspaceStore
-    let action: () -> Void
-
-    private func localized(_ key: String) -> String {
-        localization.string(key)
-    }
-
-    private var uiScale: CGFloat {
-        CGFloat(store.appSettings.uiScale)
-    }
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 5) {
-                Image(systemName: "folder.badge.plus")
-                    .font(.system(size: 11 * uiScale, weight: .semibold))
-                Text(localized("sidebar.openFolder"))
-                    .font(.system(size: 11 * uiScale, weight: .semibold))
-
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 10 * uiScale)
-            .frame(maxWidth: .infinity, minHeight: 30 * uiScale, alignment: .leading)
-            .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .background(
-            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
-                .foregroundStyle(AiyuTermTheme.border)
-        )
-        .foregroundStyle(AiyuTermTheme.secondaryText)
-        .help(localized("sidebar.openFolderHelp"))
     }
 }
 
@@ -1298,7 +1266,6 @@ private final class SidebarOutlineContainerView: NSView {
     let outlineView = SidebarOutlineView()
     private let scrollView = NSScrollView()
     private let contentView = SidebarScrollContentView()
-    private let footerHostingView = NSHostingView(rootView: AnyView(EmptyView()))
     private let tmuxPanelHostingView = NSHostingView(rootView: AnyView(EmptyView()))
     private var tmuxHeightConstraint: NSLayoutConstraint!
     private var tmuxExpandedHeight: CGFloat = 200
@@ -1311,8 +1278,7 @@ private final class SidebarOutlineContainerView: NSView {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.borderType = .noBorder
         scrollView.drawsBackground = false
-        scrollView.hasVerticalScroller = true
-        scrollView.autohidesScrollers = true
+        scrollView.hasVerticalScroller = false
 
         outlineView.headerView = nil
         outlineView.rowSizeStyle = .default
@@ -1339,14 +1305,6 @@ private final class SidebarOutlineContainerView: NSView {
         scrollView.documentView = contentView
         addSubview(scrollView)
 
-        footerHostingView.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(footerHostingView)
-
-        let footerSeparator = NSBox()
-        footerSeparator.boxType = .separator
-        footerSeparator.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(footerSeparator)
-
         tmuxPanelHostingView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(tmuxPanelHostingView)
 
@@ -1356,16 +1314,7 @@ private final class SidebarOutlineContainerView: NSView {
             scrollView.leadingAnchor.constraint(equalTo: leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: trailingAnchor),
             scrollView.topAnchor.constraint(equalTo: topAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: footerSeparator.topAnchor),
-
-            footerSeparator.leadingAnchor.constraint(equalTo: leadingAnchor),
-            footerSeparator.trailingAnchor.constraint(equalTo: trailingAnchor),
-            footerSeparator.bottomAnchor.constraint(equalTo: footerHostingView.topAnchor, constant: -4),
-
-            footerHostingView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
-            footerHostingView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
-            footerHostingView.bottomAnchor.constraint(equalTo: tmuxPanelHostingView.topAnchor, constant: -6),
-            footerHostingView.heightAnchor.constraint(equalToConstant: 34),
+            scrollView.bottomAnchor.constraint(equalTo: tmuxPanelHostingView.topAnchor),
 
             tmuxPanelHostingView.leadingAnchor.constraint(equalTo: leadingAnchor),
             tmuxPanelHostingView.trailingAnchor.constraint(equalTo: trailingAnchor),
@@ -1408,13 +1357,6 @@ private final class SidebarOutlineContainerView: NSView {
     func scrollToTop() {
         scrollView.contentView.scroll(to: .zero)
         scrollView.reflectScrolledClipView(scrollView.contentView)
-    }
-
-    func setOpenRepositoryAction(_ action: @escaping () -> Void, store: WorkspaceStore) {
-        footerHostingView.rootView = AnyView(
-            SidebarOpenRepositoryRow(action: action)
-                .environmentObject(store)
-        )
     }
 
     func setTmuxPanelContent(_ view: AnyView) {

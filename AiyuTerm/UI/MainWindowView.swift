@@ -186,17 +186,27 @@ struct MainWindowView: View {
         }
         .toolbar {
             ToolbarItem(placement: .navigation) {
-                Button {
-                    NSApp.keyWindow?.firstResponder?.tryToPerform(
-                        #selector(NSSplitViewController.toggleSidebar(_:)), with: nil
-                    )
-                } label: {
-                    Image(systemName: "sidebar.leading")
-                        .padding(4 * uiScale)
+                HStack(spacing: 8) {
+                    Button {
+                        NSApp.keyWindow?.firstResponder?.tryToPerform(
+                            #selector(NSSplitViewController.toggleSidebar(_:)), with: nil
+                        )
+                    } label: {
+                        Image(systemName: "sidebar.leading")
+                            .padding(4 * uiScale)
+                    }
+                    .scaleEffect(uiScale)
+                    .accessibilityLabel(localized("menu.view.toggleSidebar"))
+                    .help(localized("menu.view.toggleSidebar"))
+
+                    Text("AiyuTerm - \(store.currentReleaseVersion)")
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundStyle(.secondary)
                 }
-                .scaleEffect(uiScale)
-                .accessibilityLabel(localized("menu.view.toggleSidebar"))
-                .help(localized("menu.view.toggleSidebar"))
+            }
+
+            ToolbarItem(placement: .principal) {
+                Spacer()
             }
 
             ToolbarItemGroup(placement: .primaryAction) {

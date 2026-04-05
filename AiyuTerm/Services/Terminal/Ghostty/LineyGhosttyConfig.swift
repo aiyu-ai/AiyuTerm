@@ -43,7 +43,8 @@ enum AiyuTermGhosttyConfigManager {
 
     static func managedConfigContents(settings: AppSettings) -> String {
         var lines = [
-            "# Managed by AiyuTerm. Manual edits will be overwritten."
+            "# Managed by AiyuTerm. Manual edits will be overwritten.",
+            "scrollbar-visible = false"
         ]
 
         if let terminalFontFamily = settings.terminalFontFamily {

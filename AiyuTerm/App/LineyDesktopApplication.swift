@@ -37,14 +37,14 @@ public final class AiyuTermDesktopApplication: NSObject {
             )
 
             let window = NSWindow(contentViewController: host)
-            window.title = "AiyuTerm"
+            window.title = "AiyuTerm - \(store.currentReleaseVersion)"
             window.setContentSize(NSSize(width: 1440, height: 920))
             window.minSize = NSSize(width: 1120, height: 720)
             window.center()
             window.isOpaque = false
             window.backgroundColor = NSColor(calibratedRed: 0.055, green: 0.06, blue: 0.075, alpha: 1)
             window.styleMask.remove(.fullSizeContentView)
-            window.titleVisibility = .visible
+            window.titleVisibility = .hidden
             window.titlebarAppearsTransparent = false
             window.toolbarStyle = .unifiedCompact
             window.tabbingMode = .preferred

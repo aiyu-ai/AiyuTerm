@@ -34,7 +34,7 @@ struct TmuxPanelView: View {
                         .padding(.vertical, 12)
                         .frame(maxWidth: .infinity)
                 } else {
-                    ScrollView {
+                    ScrollView(showsIndicators: false) {
                         LazyVStack(spacing: 2) {
                             ForEach(store.sessions) { session in
                                 TmuxSessionRow(
