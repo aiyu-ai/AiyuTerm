@@ -1432,6 +1432,7 @@ private extension PersistedWorkspaceState {
 
 enum AgentSessionStatus: Equatable {
     case none
+    case working
     case permissionNeeded
     case taskCompleted
     case error
@@ -1440,11 +1441,26 @@ enum AgentSessionStatus: Equatable {
         self != .none
     }
 
+    /// Whether the badge should be displayed in the sidebar.
+    var isVisible: Bool {
+        self != .none
+    }
+
+    /// Whether user interaction (keyboard/notification) should auto-dismiss this status.
+    /// Working status must NOT be auto-dismissed by keyboard activity.
+    var isUserDismissible: Bool {
+        switch self {
+        case .permissionNeeded, .taskCompleted, .error: return true
+        case .none, .working: return false
+        }
+    }
+
     private var priority: Int {
         switch self {
-        case .permissionNeeded: return 3
-        case .error: return 2
-        case .taskCompleted: return 1
+        case .permissionNeeded: return 4
+        case .error: return 3
+        case .taskCompleted: return 2
+        case .working: return 1
         case .none: return 0
         }
     }
@@ -1452,4 +1468,23 @@ enum AgentSessionStatus: Equatable {
     static func highestPriority(in statuses: [AgentSessionStatus]) -> AgentSessionStatus {
         statuses.max(by: { $0.priority < $1.priority }) ?? .none
     }
+
+    func badgeDisplayState(isUnread: Bool) -> AgentBadgeDisplayState {
+        switch self {
+        case .none: return .hidden
+        case .working: return .spinner
+        case .taskCompleted: return isUnread ? .completedUnread : .completedRead
+        case .permissionNeeded: return .permissionNeeded
+        case .error: return .error
+        }
+    }
+}
+
+enum AgentBadgeDisplayState: Equatable {
+    case hidden
+    case spinner
+    case completedUnread
+    case completedRead
+    case error
+    case permissionNeeded
 }

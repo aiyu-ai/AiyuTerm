@@ -564,6 +564,8 @@ final class WorkspaceModel: ObservableObject, Identifiable {
         return AgentSessionStatus.highestPriority(in: statuses)
     }
 
+    @Published private(set) var unreadCompletedWorktrees: Set<String> = []
+
     func clearAgentStatus(forWorktreePath path: String) {
         worktreeControllers[path]?.values.forEach { controller in
             controller.clearAgentStatus(using: path)

@@ -1658,10 +1658,15 @@ private struct WorkspaceRowContent: View {
         workspace.aggregatedAgentStatus
     }
 
+    private var workspaceBadgeDisplayState: AgentBadgeDisplayState {
+        let hasUnread = workspace.worktrees.contains { workspace.unreadCompletedWorktrees.contains($0.path) }
+        return workspaceAgentStatus.badgeDisplayState(isUnread: hasUnread)
+    }
+
     var body: some View {
         HStack(spacing: 8 * uiScale) {
-            if workspaceAgentStatus.isActionable {
-                AgentStatusOverlayBadge(status: workspaceAgentStatus, size: 16 * uiScale)
+            if workspaceBadgeDisplayState != .hidden {
+                AgentStatusOverlayBadge(displayState: workspaceBadgeDisplayState, size: 16 * uiScale)
             }
 
             VStack(alignment: .leading, spacing: 2) {
@@ -1771,10 +1776,14 @@ private struct WorktreeRowContent: View {
         workspace.agentStatus(forWorktreePath: worktree.path)
     }
 
+    private var worktreeBadgeDisplayState: AgentBadgeDisplayState {
+        worktreeAgentStatus.badgeDisplayState(isUnread: workspace.unreadCompletedWorktrees.contains(worktree.path))
+    }
+
     var body: some View {
         HStack(spacing: 8 * uiScale) {
-            if worktreeAgentStatus.isActionable {
-                AgentStatusOverlayBadge(status: worktreeAgentStatus, size: 12 * uiScale)
+            if worktreeBadgeDisplayState != .hidden {
+                AgentStatusOverlayBadge(displayState: worktreeBadgeDisplayState, size: 12 * uiScale)
             }
             Text(worktree.displayName)
                 .font(.system(size: 10 * uiScale, weight: .medium))
@@ -1837,6 +1846,7 @@ struct SidebarItemIconView: View {
         case .permissionNeeded: return Color(red: 1.0, green: 0.18, blue: 0.57)
         case .taskCompleted: return Color(red: 0.19, green: 0.82, blue: 0.35)
         case .error: return Color(red: 1.0, green: 0.27, blue: 0.23)
+        case .working: return Color(red: 0.31, green: 0.63, blue: 1.0)
         case .none: return nil
         }
     }
@@ -1868,8 +1878,8 @@ struct SidebarItemIconView: View {
                     .offset(x: 2, y: 2)
             }
 
-            if agentStatus.isActionable {
-                AgentStatusOverlayBadge(status: agentStatus, size: size)
+            if agentStatus.isVisible {
+                AgentStatusOverlayBadge(displayState: agentStatus.badgeDisplayState(isUnread: true), size: size)
                     .offset(x: size * 0.15, y: size * 0.15)
             }
         }
@@ -1995,32 +2005,51 @@ struct SidebarIconActivityBadge: View {
 }
 
 struct AgentStatusOverlayBadge: View {
-    let status: AgentSessionStatus
+    let displayState: AgentBadgeDisplayState
     let size: CGFloat
-    @State private var isAnimating = false
+    @State private var isPulsing = false
+    @State private var rotation: Double = 0
 
     private var badgeSize: CGFloat {
+        max(10, size * 0.6)
+    }
+
+    private var spinnerSize: CGFloat {
         max(10, size * 0.48)
     }
 
+    private var badgeScale: CGFloat {
+        switch displayState {
+        case .completedRead: return 0.444
+        case .completedUnread: return isPulsing ? 1.25 : 1.0
+        case .permissionNeeded: return isPulsing ? 1.3 : 1.0
+        case .error: return isPulsing ? 1.2 : 1.0
+        case .spinner, .hidden: return 1.0
+        }
+    }
+
+    private var iconOpacity: Double {
+        displayState == .completedRead ? 0 : 1
+    }
+
     private var symbolName: String {
-        switch status {
+        switch displayState {
+        case .completedUnread, .completedRead: return "checkmark"
         case .permissionNeeded: return "exclamationmark"
-        case .taskCompleted: return "checkmark"
         case .error: return "xmark"
-        case .none: return ""
+        case .spinner, .hidden: return ""
         }
     }
 
     private var gradientColors: [Color] {
-        switch status {
+        switch displayState {
+        case .completedUnread, .completedRead:
+            return [Color(red: 0.19, green: 0.82, blue: 0.35), Color(red: 0.15, green: 0.66, blue: 0.27)]
         case .permissionNeeded:
             return [Color(red: 1.0, green: 0.18, blue: 0.57), Color(red: 0.90, green: 0.0, blue: 0.31)]
-        case .taskCompleted:
-            return [Color(red: 0.19, green: 0.82, blue: 0.35), Color(red: 0.15, green: 0.66, blue: 0.27)]
         case .error:
             return [Color(red: 1.0, green: 0.27, blue: 0.23), Color(red: 0.84, green: 0.18, blue: 0.13)]
-        case .none:
+        case .spinner, .hidden:
             return [.clear, .clear]
         }
     }
@@ -2029,59 +2058,109 @@ struct AgentStatusOverlayBadge: View {
         gradientColors[0]
     }
 
-    private var glowRadius: CGFloat {
-        switch status {
-        case .permissionNeeded: return isAnimating ? 12 : 6
-        case .taskCompleted, .error: return 8
-        case .none: return 0
+    private var glowOpacity: Double {
+        switch displayState {
+        case .completedUnread: return isPulsing ? 0.7 : 0.3
+        case .permissionNeeded: return isPulsing ? 0.8 : 0.3
+        case .error: return isPulsing ? 0.6 : 0.3
+        case .completedRead: return 0.3
+        case .spinner, .hidden: return 0
         }
     }
 
-    private var glowOpacity: Double {
-        switch status {
-        case .permissionNeeded: return isAnimating ? 0.7 : 0.35
-        case .taskCompleted, .error: return 0.4
-        case .none: return 0
-        }
+    private var spinnerColor: Color {
+        Color(red: 0.31, green: 0.63, blue: 1.0)
     }
 
     var body: some View {
-        Circle()
-            .fill(
-                LinearGradient(
-                    colors: gradientColors,
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
+        Group {
+            if displayState == .spinner {
+                spinnerBody
+            } else {
+                badgeBody
+            }
+        }
+        // .drawingGroup() flattens into Metal texture for animation perf in NSOutlineView
+        .drawingGroup()
+    }
+
+    private var spinnerBody: some View {
+        ZStack {
+            Circle()
+                .stroke(spinnerColor.opacity(0.25), lineWidth: 2)
+                .frame(width: spinnerSize, height: spinnerSize)
+            Circle()
+                .trim(from: 0, to: 0.65)
+                .stroke(spinnerColor, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                .frame(width: spinnerSize, height: spinnerSize)
+                .rotationEffect(Angle(degrees: rotation))
+        }
+        .onAppear {
+            rotation = 0
+            withAnimation(.linear(duration: 0.9).repeatForever(autoreverses: false)) {
+                rotation = 360
+            }
+        }
+        .onChange(of: displayState) { _, newValue in
+            guard newValue == .spinner else { return }
+            rotation = 0
+            withAnimation(.linear(duration: 0.9).repeatForever(autoreverses: false)) {
+                rotation = 360
+            }
+        }
+    }
+
+    private var badgeBody: some View {
+        ZStack {
+            // Glow layer: blurred circle behind badge (cheaper than .shadow)
+            Circle()
+                .fill(glowColor)
+                .frame(width: badgeSize, height: badgeSize)
+                .blur(radius: badgeSize * 0.4)
+                .opacity(glowOpacity)
+
+            // Badge circle
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: gradientColors,
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
                 )
-            )
-            .overlay(
-                Image(systemName: symbolName)
-                    .font(.system(size: max(5, badgeSize * 0.5), weight: .black))
-                    .foregroundStyle(.white)
-            )
-            .overlay(
-                Circle()
-                    .stroke(AiyuTermTheme.sidebarBackground, lineWidth: size > 18 ? 2 : 1.5)
-            )
-            .frame(width: badgeSize, height: badgeSize)
-            .shadow(color: glowColor.opacity(glowOpacity), radius: glowRadius / 2)
-            .scaleEffect(status == .permissionNeeded && isAnimating ? 1.2 : 1.0)
-            .onAppear {
-                guard status == .permissionNeeded else { return }
-                withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
-                    isAnimating = true
-                }
-            }
-            .onChange(of: status) { _, newValue in
-                if newValue == .permissionNeeded {
-                    isAnimating = false
-                    withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
-                        isAnimating = true
-                    }
-                } else {
-                    isAnimating = false
-                }
-            }
+                .overlay(
+                    Image(systemName: symbolName)
+                        .font(.system(size: max(5, badgeSize * 0.45), weight: .black))
+                        .foregroundStyle(.white)
+                        .opacity(iconOpacity)
+                )
+                .overlay(
+                    Circle()
+                        .stroke(AiyuTermTheme.sidebarBackground, lineWidth: size > 18 ? 2 : 1.5)
+                )
+                .frame(width: badgeSize, height: badgeSize)
+        }
+        .scaleEffect(badgeScale)
+        .onAppear {
+            startPulseIfNeeded()
+        }
+        .onChange(of: displayState) { _, _ in
+            isPulsing = false
+            startPulseIfNeeded()
+        }
+    }
+
+    private func startPulseIfNeeded() {
+        let duration: Double
+        switch displayState {
+        case .permissionNeeded: duration = 1.0
+        case .completedUnread: duration = 1.5
+        case .error: duration = 1.2
+        default: return
+        }
+        withAnimation(.easeInOut(duration: duration).repeatForever(autoreverses: true)) {
+            isPulsing = true
+        }
     }
 }
 

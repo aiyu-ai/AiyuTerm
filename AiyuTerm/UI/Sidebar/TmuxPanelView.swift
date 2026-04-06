@@ -200,8 +200,9 @@ private struct TmuxSessionRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            if agentStatus.isActionable {
-                AgentStatusOverlayBadge(status: agentStatus, size: 16)
+            let tmuxBadgeDisplayState = agentStatus.badgeDisplayState(isUnread: true)
+            if tmuxBadgeDisplayState != .hidden {
+                AgentStatusOverlayBadge(displayState: tmuxBadgeDisplayState, size: 16)
             }
 
             // Labels
