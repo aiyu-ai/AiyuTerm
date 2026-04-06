@@ -746,7 +746,8 @@ final class WorkspaceStore: ObservableObject {
     func selectWorkspace(_ workspace: WorkspaceModel) {
         selectedWorkspaceID = workspace.id
         workspace.bootstrapIfNeeded()
-        workspace.clearAgentStatus(forWorktreePath: workspace.activeWorktreePath)
+        workspace.markCompletionRead(forWorktreePath: workspace.activeWorktreePath)
+        workspace.clearErrorStatus(forWorktreePath: workspace.activeWorktreePath)
         ensureAgentFilePoller()
         persist()
     }
@@ -2140,7 +2141,6 @@ final class WorkspaceStore: ObservableObject {
         guard workspace.activeWorktreePath != worktree.path else {
             perform(requestedAction, in: workspace)
             selectWorkspace(workspace)
-            workspace.clearAgentStatus(forWorktreePath: worktree.path)
             return
         }
         activateWorktree(workspace: workspace, worktree: worktree, restartRunning: false, requestedAction: requestedAction)
