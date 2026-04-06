@@ -38,15 +38,23 @@ enum ClaudeCodeHooksService {
         }
     }
 
-    /// Returns true when both Stop and Notification hook arrays in
-    /// ~/.claude/settings.json contain an entry whose command references
-    /// "aiyuterm".
+    /// All Claude Code hook events that AiyuTerm needs to receive.
+    private static let requiredHookEvents = [
+        "UserPromptSubmit",  // -> working (agent starts processing)
+        "PostToolUse",       // -> working (tool finished, agent resumes; clears permission)
+        "Stop",              // -> completed (agent finished responding)
+        "StopFailure",       // -> error (agent encountered an error)
+        "Notification",      // -> permission (via notification_type: permission_prompt)
+    ]
+
+    /// Returns true when all required hook events in ~/.claude/settings.json
+    /// contain an entry whose command references "aiyuterm".
     static func isConfigured() -> Bool {
         guard let root = loadClaudeSettings() else { return false }
         guard let hooks = root["hooks"] as? [String: Any] else { return false }
-        let stopConfigured = arrayContainsAiyuTerm(hooks["Stop"] as? [[String: Any]])
-        let notificationConfigured = arrayContainsAiyuTerm(hooks["Notification"] as? [[String: Any]])
-        return stopConfigured && notificationConfigured
+        return requiredHookEvents.allSatisfy { event in
+            arrayContainsAiyuTerm(hooks[event] as? [[String: Any]])
+        }
     }
 
     /// Injects AiyuTerm hook entries into ~/.claude/settings.json.
@@ -88,7 +96,7 @@ enum ClaudeCodeHooksService {
             ]
         ]
 
-        for key in ["Stop", "Notification"] {
+        for key in requiredHookEvents {
             var arr = hooks[key] as? [[String: Any]] ?? []
             if !arrayContainsAiyuTerm(arr) {
                 arr.append(entry)
@@ -159,7 +167,10 @@ set -euo pipefail
 INPUT=$(cat)
 EVENT=$(echo "$INPUT" | grep -o '"hook_event_name":"[^"]*"' | cut -d'"' -f4 2>/dev/null || echo "")
 case "$EVENT" in
+  UserPromptSubmit) STATUS="working" ;;
+  PostToolUse) STATUS="working" ;;
   Stop) STATUS="completed" ;;
+  StopFailure) STATUS="error" ;;
   Notification)
     NTYPE=$(echo "$INPUT" | grep -o '"notification_type":"[^"]*"' | cut -d'"' -f4 2>/dev/null || echo "")
     case "$NTYPE" in
