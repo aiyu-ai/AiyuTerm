@@ -50,9 +50,16 @@ enum AgentSessionStatusDetector {
         return .none
     }
 
+    /// Claude Code terminal title prefixes:
+    /// - Busy (agent working): animated braille dots U+2802 / U+2810 alternating
+    /// - Idle: static U+2733 (eight-spoked asterisk)
+    /// Title format: "<prefix> <session title>"
     static func detectFromTitle(_ title: String) -> AgentSessionStatus {
         let trimmed = title.trimmingCharacters(in: .whitespaces)
-        if trimmed.hasPrefix("\u{2733}") { return .permissionNeeded }
+        // Busy: braille animation frames used by Claude Code when agent is thinking/executing
+        if trimmed.hasPrefix("\u{2802}") || trimmed.hasPrefix("\u{2810}") {
+            return .working
+        }
         return .none
     }
 }

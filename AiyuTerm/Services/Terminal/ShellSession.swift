@@ -156,6 +156,17 @@ final class ShellSession: ObservableObject, Identifiable {
         surfaceController.onTitleChange = { [weak self] title in
             guard let self, !title.isEmpty else { return }
             self.title = title
+            // Detect agent status from Claude Code terminal title prefix in real-time.
+            // This is faster than the 3s file-based poller and catches busy/idle transitions
+            // that hooks cannot provide (hooks only fire at discrete events, not continuously).
+            let titleStatus = AgentSessionStatusDetector.detectFromTitle(title)
+            if titleStatus != .none {
+                self.agentStatus = titleStatus
+            } else if self.agentStatus == .working {
+                // Title lost the busy prefix -- agent is no longer working.
+                // Don't clear other statuses (permission/completed/error) from title changes.
+                self.agentStatus = .none
+            }
         }
         surfaceController.onWorkingDirectoryChange = { [weak self] directory in
             self?.reportedWorkingDirectory = directory
