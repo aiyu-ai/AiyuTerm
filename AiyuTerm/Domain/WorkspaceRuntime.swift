@@ -412,7 +412,8 @@ final class WorkspaceModel: ObservableObject, Identifiable {
     func switchToWorktree(path: String, restartRunning: Bool) {
         saveActiveWorktreeState()
         activeWorktreePath = path
-        clearAgentStatus(forWorktreePath: path)
+        markCompletionRead(forWorktreePath: path)
+        clearErrorStatus(forWorktreePath: path)
         ensureActiveWorktreeState()
         loadActiveWorktreeState()
         if restartRunning {
@@ -565,6 +566,20 @@ final class WorkspaceModel: ObservableObject, Identifiable {
     }
 
     @Published private(set) var unreadCompletedWorktrees: Set<String> = []
+
+    func markCompletionUnread(forWorktreePath path: String) {
+        unreadCompletedWorktrees.insert(path)
+    }
+
+    func markCompletionRead(forWorktreePath path: String) {
+        unreadCompletedWorktrees.remove(path)
+    }
+
+    func clearErrorStatus(forWorktreePath path: String) {
+        worktreeControllers[path]?.values.forEach { controller in
+            controller.clearErrorStatus(using: path)
+        }
+    }
 
     func clearAgentStatus(forWorktreePath path: String) {
         worktreeControllers[path]?.values.forEach { controller in

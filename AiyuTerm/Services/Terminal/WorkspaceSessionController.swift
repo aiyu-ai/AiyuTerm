@@ -202,6 +202,12 @@ final class WorkspaceSessionController: ObservableObject {
         }
     }
 
+    func clearErrorStatus(using path: String) {
+        for session in sessions.values where session.isUsing(pathPrefix: path) && session.agentStatus == .error {
+            session.agentStatus = .none
+        }
+    }
+
     private func updateSessionFocusStates() {
         for (paneID, session) in sessions {
             session.setFocused(paneID == focusedPaneID)
