@@ -105,6 +105,7 @@ final class TmuxAgentStatusPoller {
         }
 
         switch statusString {
+        case "working": return .working
         case "permission": return .permissionNeeded
         case "completed": return .taskCompleted
         case "error": return .error

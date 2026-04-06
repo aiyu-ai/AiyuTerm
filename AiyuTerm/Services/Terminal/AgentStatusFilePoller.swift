@@ -46,6 +46,12 @@ final class AgentStatusFilePoller {
             try? FileManager.default.removeItem(atPath: path)
 
             guard status != .none else { continue }
+            if status == .taskCompleted {
+                workspace.markCompletionUnread(forWorktreePath: workspace.activeWorktreePath)
+            }
+            if status == .working {
+                workspace.markCompletionRead(forWorktreePath: workspace.activeWorktreePath)
+            }
             for session in workspace.sessionController.sessions.values where session.agentStatus != status {
                 session.agentStatus = status
             }
@@ -63,6 +69,7 @@ final class AgentStatusFilePoller {
         }
 
         switch statusString {
+        case "working": return .working
         case "permission": return .permissionNeeded
         case "completed": return .taskCompleted
         case "error": return .error
