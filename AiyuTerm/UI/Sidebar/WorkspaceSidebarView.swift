@@ -2007,8 +2007,6 @@ struct SidebarIconActivityBadge: View {
 struct AgentStatusOverlayBadge: View {
     let displayState: AgentBadgeDisplayState
     let size: CGFloat
-    @State private var isPulsing = false
-    @State private var rotation: Double = 0
 
     private var badgeSize: CGFloat {
         max(10, size * 0.6)
@@ -2016,20 +2014,6 @@ struct AgentStatusOverlayBadge: View {
 
     private var spinnerSize: CGFloat {
         max(12, size * 0.65)
-    }
-
-    private var badgeScale: CGFloat {
-        switch displayState {
-        case .completedRead: return 0.444
-        case .completedUnread: return isPulsing ? 1.25 : 1.0
-        case .permissionNeeded: return isPulsing ? 1.3 : 1.0
-        case .error: return isPulsing ? 1.2 : 1.0
-        case .spinner, .hidden: return 1.0
-        }
-    }
-
-    private var iconOpacity: Double {
-        displayState == .completedRead ? 0 : 1
     }
 
     private var symbolName: String {
@@ -2058,33 +2042,34 @@ struct AgentStatusOverlayBadge: View {
         gradientColors[0]
     }
 
-    private var glowOpacity: Double {
-        switch displayState {
-        case .completedUnread: return isPulsing ? 0.7 : 0.3
-        case .permissionNeeded: return isPulsing ? 0.8 : 0.3
-        case .error: return isPulsing ? 0.6 : 0.3
-        case .completedRead: return 0.3
-        case .spinner, .hidden: return 0
-        }
-    }
-
     private var spinnerColor: Color {
         Color(red: 0.31, green: 0.63, blue: 1.0)
+    }
+
+    /// Pulse duration per state. Returns nil for non-pulsing states.
+    private var pulseDuration: Double? {
+        switch displayState {
+        case .permissionNeeded: return 1.0
+        case .completedUnread: return 1.5
+        case .error: return 1.2
+        default: return nil
+        }
     }
 
     var body: some View {
         Group {
             if displayState == .spinner {
                 spinnerBody
+            } else if let duration = pulseDuration {
+                pulsingBadgeBody(duration: duration)
             } else {
-                badgeBody
+                staticBadgeBody
             }
         }
     }
 
-    // Spinner uses TimelineView for reliable continuous rotation in NSOutlineView.
-    // withAnimation(.repeatForever) stalls when cells are recycled; TimelineView
-    // drives from a single display-link callback and never loses state.
+    // -- Spinner: TimelineView drives continuous rotation reliably in NSOutlineView --
+
     private var spinnerBody: some View {
         TimelineView(.animation) { context in
             let angle = context.date.timeIntervalSinceReferenceDate.remainder(dividingBy: 0.9) / 0.9 * 360
@@ -2101,9 +2086,49 @@ struct AgentStatusOverlayBadge: View {
         }
     }
 
-    private var badgeBody: some View {
+    // -- Pulsing badge: TimelineView drives scale + glow to avoid repeatForever stalls --
+
+    private func pulsingBadgeBody(duration: Double) -> some View {
+        TimelineView(.animation) { context in
+            // Compute 0..1 pulse phase using sine wave for smooth easeInOut feel
+            let t = context.date.timeIntervalSinceReferenceDate
+            let phase = (sin(t * .pi / duration) + 1) / 2  // 0..1 oscillation
+
+            let scale: CGFloat = {
+                switch displayState {
+                case .permissionNeeded: return 1.0 + 0.3 * phase
+                case .completedUnread: return 1.0 + 0.25 * phase
+                case .error: return 1.0 + 0.2 * phase
+                default: return 1.0
+                }
+            }()
+
+            let glow: Double = {
+                switch displayState {
+                case .permissionNeeded: return 0.3 + 0.5 * phase
+                case .completedUnread: return 0.3 + 0.4 * phase
+                case .error: return 0.3 + 0.3 * phase
+                default: return 0
+                }
+            }()
+
+            badgeContent(scale: scale, glowOpacity: glow, iconOpacity: 1)
+        }
+    }
+
+    // -- Static badge: completedRead (small dot) or fallback --
+
+    private var staticBadgeBody: some View {
+        let scale: CGFloat = displayState == .completedRead ? 0.444 : 1.0
+        let iconOp: Double = displayState == .completedRead ? 0 : 1
+        return badgeContent(scale: scale, glowOpacity: 0.3, iconOpacity: iconOp)
+    }
+
+    // -- Shared badge rendering --
+
+    private func badgeContent(scale: CGFloat, glowOpacity: Double, iconOpacity: Double) -> some View {
         ZStack {
-            // Glow layer: blurred circle behind badge (cheaper than .shadow)
+            // Glow layer
             Circle()
                 .fill(glowColor)
                 .frame(width: badgeSize, height: badgeSize)
@@ -2131,27 +2156,7 @@ struct AgentStatusOverlayBadge: View {
                 )
                 .frame(width: badgeSize, height: badgeSize)
         }
-        .scaleEffect(badgeScale)
-        .onAppear {
-            startPulseIfNeeded()
-        }
-        .onChange(of: displayState) { _, _ in
-            isPulsing = false
-            startPulseIfNeeded()
-        }
-    }
-
-    private func startPulseIfNeeded() {
-        let duration: Double
-        switch displayState {
-        case .permissionNeeded: duration = 1.0
-        case .completedUnread: duration = 1.5
-        case .error: duration = 1.2
-        default: return
-        }
-        withAnimation(.easeInOut(duration: duration).repeatForever(autoreverses: true)) {
-            isPulsing = true
-        }
+        .scaleEffect(scale)
     }
 }
 
