@@ -156,17 +156,6 @@ final class ShellSession: ObservableObject, Identifiable {
         surfaceController.onTitleChange = { [weak self] title in
             guard let self, !title.isEmpty else { return }
             self.title = title
-            // Detect agent status from Claude Code terminal title prefix in real-time.
-            // This is faster than the 3s file-based poller and catches busy/idle transitions
-            // that hooks cannot provide (hooks only fire at discrete events, not continuously).
-            let titleStatus = AgentSessionStatusDetector.detectFromTitle(title)
-            if titleStatus != .none {
-                self.agentStatus = titleStatus
-            } else if self.agentStatus == .working {
-                // Title lost the busy prefix -- agent is no longer working.
-                // Don't clear other statuses (permission/completed/error) from title changes.
-                self.agentStatus = .none
-            }
         }
         surfaceController.onWorkingDirectoryChange = { [weak self] directory in
             self?.reportedWorkingDirectory = directory
@@ -186,24 +175,8 @@ final class ShellSession: ObservableObject, Identifiable {
             ghosttyController.onWorkspaceAction = { [weak self] action in
                 self?.onWorkspaceAction?(action)
             }
-            ghosttyController.onDesktopNotification = { [weak self] title, body in
-                guard let self else { return }
-                let detected = AgentSessionStatusDetector.detect(title: title, body: body)
-                if detected != .none {
-                    self.agentStatus = detected
-                } else if self.agentStatus.isUserDismissible && title.localizedCaseInsensitiveContains("claude") {
-                    self.agentStatus = .none
-                }
-            }
-            ghosttyController.onKeyboardActivity = { [weak self] in
-                guard let self, self.agentStatus.isUserDismissible else { return }
-                self.agentStatusClearTask?.cancel()
-                self.agentStatusClearTask = Task { @MainActor [weak self] in
-                    try? await Task.sleep(nanoseconds: 2_000_000_000)
-                    guard let self, self.agentStatus.isUserDismissible else { return }
-                    self.agentStatus = .none
-                }
-            }
+            // Agent status is now driven exclusively by hook files in /tmp/aiyuterm-agent-status/
+            // Desktop notifications are already delivered by LineyGhosttyController (line 190).
         }
     }
 

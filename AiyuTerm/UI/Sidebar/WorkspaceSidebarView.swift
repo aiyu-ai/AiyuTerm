@@ -2119,7 +2119,7 @@ struct AgentStatusOverlayBadge: View {
     // -- Static badge: completedRead (small dot) or fallback --
 
     private var staticBadgeBody: some View {
-        let scale: CGFloat = displayState == .completedRead ? 0.444 : 1.0
+        let scale: CGFloat = displayState == .completedRead ? 0.6 : 1.0
         let iconOp: Double = displayState == .completedRead ? 0 : 1
         return badgeContent(scale: scale, glowOpacity: 0.3, iconOpacity: iconOp)
     }
