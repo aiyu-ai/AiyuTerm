@@ -180,16 +180,16 @@ final class ShellSession: ObservableObject, Identifiable {
                 let detected = AgentSessionStatusDetector.detect(title: title, body: body)
                 if detected != .none {
                     self.agentStatus = detected
-                } else if self.agentStatus.isActionable && title.localizedCaseInsensitiveContains("claude") {
+                } else if self.agentStatus.isUserDismissible && title.localizedCaseInsensitiveContains("claude") {
                     self.agentStatus = .none
                 }
             }
             ghosttyController.onKeyboardActivity = { [weak self] in
-                guard let self, self.agentStatus.isActionable else { return }
+                guard let self, self.agentStatus.isUserDismissible else { return }
                 self.agentStatusClearTask?.cancel()
                 self.agentStatusClearTask = Task { @MainActor [weak self] in
                     try? await Task.sleep(nanoseconds: 2_000_000_000)
-                    guard let self, self.agentStatus.isActionable else { return }
+                    guard let self, self.agentStatus.isUserDismissible else { return }
                     self.agentStatus = .none
                 }
             }
