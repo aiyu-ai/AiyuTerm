@@ -8,8 +8,9 @@
 import CommonCrypto
 import Foundation
 
-/// Polls /tmp/aiyuterm-agent-status/<dir-hash> files written by Claude Code hooks.
-/// Matches status files to workspaces by hashing the working directory path.
+/// Watches /tmp/aiyuterm-agent-status/ for status files written by Claude Code hooks.
+/// Uses DispatchSource directory monitoring for near-instant (<100ms) detection,
+/// with a 3s timer as fallback in case FSEvents misses an event.
 @MainActor
 final class AgentStatusFilePoller {
 
@@ -17,10 +18,16 @@ final class AgentStatusFilePoller {
 
     /// Provide workspaces dynamically so we always scan current state.
     var workspacesProvider: (() -> [WorkspaceModel])?
+
     private var timer: Timer?
+    private var directorySource: DispatchSourceFileSystemObject?
+    private var directoryFD: Int32 = -1
 
     func startIfNeeded() {
         guard timer == nil else { return }
+        // Primary: directory monitor for near-instant detection
+        startDirectoryMonitor()
+        // Fallback: 3s timer in case FSEvents misses an event
         timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.poll()
@@ -31,7 +38,46 @@ final class AgentStatusFilePoller {
     func stop() {
         timer?.invalidate()
         timer = nil
+        stopDirectoryMonitor()
     }
+
+    // MARK: - Directory Monitor (DispatchSource)
+
+    private func startDirectoryMonitor() {
+        // Ensure directory exists
+        try? FileManager.default.createDirectory(
+            atPath: Self.statusDir,
+            withIntermediateDirectories: true
+        )
+
+        let fd = open(Self.statusDir, O_EVTONLY)
+        guard fd >= 0 else { return }
+        directoryFD = fd
+
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fd,
+            eventMask: .write,
+            queue: .main
+        )
+        source.setEventHandler { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.poll()
+            }
+        }
+        source.setCancelHandler {
+            close(fd)
+        }
+        source.resume()
+        directorySource = source
+    }
+
+    private func stopDirectoryMonitor() {
+        directorySource?.cancel()
+        directorySource = nil
+        directoryFD = -1
+    }
+
+    // MARK: - Poll (shared by monitor and timer)
 
     private func poll() {
         guard let workspaces = workspacesProvider?() else { return }
