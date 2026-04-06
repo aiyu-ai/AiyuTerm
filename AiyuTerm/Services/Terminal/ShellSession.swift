@@ -184,8 +184,15 @@ final class ShellSession: ObservableObject, Identifiable {
             ghosttyController.onWorkspaceAction = { [weak self] action in
                 self?.onWorkspaceAction?(action)
             }
-            // Agent status is now driven exclusively by hook files in /tmp/aiyuterm-agent-status/
-            // Desktop notifications are already delivered by LineyGhosttyController (line 190).
+            // Permission detection via desktop notification for instant feedback.
+            // Other statuses (working, completed, error) are driven by hook files.
+            ghosttyController.onDesktopNotification = { [weak self] title, body in
+                guard let self else { return }
+                let detected = AgentSessionStatusDetector.detect(title: title, body: body)
+                if detected == .permissionNeeded {
+                    self.agentStatus = .permissionNeeded
+                }
+            }
         }
     }
 
