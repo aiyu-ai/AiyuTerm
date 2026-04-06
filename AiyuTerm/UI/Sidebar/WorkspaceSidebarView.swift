@@ -2015,7 +2015,7 @@ struct AgentStatusOverlayBadge: View {
     }
 
     private var spinnerSize: CGFloat {
-        max(10, size * 0.48)
+        max(12, size * 0.65)
     }
 
     private var badgeScale: CGFloat {
@@ -2080,32 +2080,23 @@ struct AgentStatusOverlayBadge: View {
                 badgeBody
             }
         }
-        // .drawingGroup() flattens into Metal texture for animation perf in NSOutlineView
-        .drawingGroup()
     }
 
+    // Spinner uses TimelineView for reliable continuous rotation in NSOutlineView.
+    // withAnimation(.repeatForever) stalls when cells are recycled; TimelineView
+    // drives from a single display-link callback and never loses state.
     private var spinnerBody: some View {
-        ZStack {
-            Circle()
-                .stroke(spinnerColor.opacity(0.25), lineWidth: 2)
-                .frame(width: spinnerSize, height: spinnerSize)
-            Circle()
-                .trim(from: 0, to: 0.65)
-                .stroke(spinnerColor, style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                .frame(width: spinnerSize, height: spinnerSize)
-                .rotationEffect(Angle(degrees: rotation))
-        }
-        .onAppear {
-            rotation = 0
-            withAnimation(.linear(duration: 0.9).repeatForever(autoreverses: false)) {
-                rotation = 360
-            }
-        }
-        .onChange(of: displayState) { _, newValue in
-            guard newValue == .spinner else { return }
-            rotation = 0
-            withAnimation(.linear(duration: 0.9).repeatForever(autoreverses: false)) {
-                rotation = 360
+        TimelineView(.animation) { context in
+            let angle = context.date.timeIntervalSinceReferenceDate.remainder(dividingBy: 0.9) / 0.9 * 360
+            ZStack {
+                Circle()
+                    .stroke(spinnerColor.opacity(0.25), lineWidth: max(1.5, spinnerSize * 0.15))
+                    .frame(width: spinnerSize, height: spinnerSize)
+                Circle()
+                    .trim(from: 0, to: 0.7)
+                    .stroke(spinnerColor, style: StrokeStyle(lineWidth: max(1.5, spinnerSize * 0.15), lineCap: .round))
+                    .frame(width: spinnerSize, height: spinnerSize)
+                    .rotationEffect(Angle(degrees: angle))
             }
         }
     }
