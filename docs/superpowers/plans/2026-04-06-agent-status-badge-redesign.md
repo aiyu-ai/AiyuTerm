@@ -12,10 +12,16 @@
 
 ---
 
-### Task 1: Extend AgentSessionStatus enum and add AgentBadgeDisplayState
+### Task 1: Extend AgentSessionStatus enum, add AgentBadgeDisplayState, and update all badge UI
+
+> **IMPORTANT:** This task MUST be atomic -- the enum extension and ALL consuming switch
+> statements must be updated in a single commit. Adding `.working` to the enum without updating
+> the 5 exhaustive switch statements in WorkspaceSidebarView.swift causes immediate compile failure.
 
 **Files:**
 - Modify: `AiyuTerm/Domain/WorkspaceModels.swift:1433-1455`
+- Modify: `AiyuTerm/UI/Sidebar/WorkspaceSidebarView.swift:1893-1900,1715-1722,1828-1835,1929-1931,2055-2144`
+- Modify: `AiyuTerm/UI/Sidebar/TmuxPanelView.swift:203-205`
 - Test: `Tests/AgentSessionStatusAggregationTests.swift`
 
 - [ ] **Step 1: Write failing tests for new priority and properties**
@@ -94,12 +100,7 @@ Add to `Tests/AgentSessionStatusAggregationTests.swift` after line 41:
     }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
-
-Run: `xcodebuild -project AiyuTerm.xcodeproj -scheme AiyuTerm -destination 'platform=macOS' test -only-testing:AiyuTermTests/AgentSessionStatusAggregationTests 2>&1 | tail -20`
-Expected: FAIL -- `.working` does not exist
-
-- [ ] **Step 3: Implement the enum extension and new types**
+- [ ] **Step 2: Implement the enum extension and new types (must be done with Step 3-8 atomically)**
 
 Replace the entire `AgentSessionStatus` enum in `AiyuTerm/Domain/WorkspaceModels.swift:1433-1455` with:
 
@@ -164,30 +165,7 @@ enum AgentBadgeDisplayState: Equatable {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
-
-Run: `xcodebuild -project AiyuTerm.xcodeproj -scheme AiyuTerm -destination 'platform=macOS' test -only-testing:AiyuTermTests/AgentSessionStatusAggregationTests 2>&1 | tail -20`
-Expected: All PASS
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add AiyuTerm/Domain/WorkspaceModels.swift Tests/AgentSessionStatusAggregationTests.swift
-git commit -m "feat: add .working status, AgentBadgeDisplayState, isUserDismissible property"
-```
-
----
-
-### Task 2: Add agentGlowColor .working case and rewrite AgentStatusOverlayBadge
-
-**Files:**
-- Modify: `AiyuTerm/UI/Sidebar/WorkspaceSidebarView.swift:1893-1900` (agentGlowColor)
-- Modify: `AiyuTerm/UI/Sidebar/WorkspaceSidebarView.swift:1929-1931` (badge call site in SidebarItemIconView)
-- Modify: `AiyuTerm/UI/Sidebar/WorkspaceSidebarView.swift:2055-2144` (AgentStatusOverlayBadge rewrite)
-- Modify: `AiyuTerm/UI/Sidebar/WorkspaceSidebarView.swift:1721-1722` (WorkspaceRowContent badge call)
-- Modify: `AiyuTerm/UI/Sidebar/WorkspaceSidebarView.swift:1834-1835` (WorktreeRowContent badge call)
-
-- [ ] **Step 1: Add .working case to agentGlowColor**
+- [ ] **Step 3: Add .working case to agentGlowColor**
 
 In `WorkspaceSidebarView.swift`, replace lines 1893-1900:
 
@@ -203,7 +181,7 @@ In `WorkspaceSidebarView.swift`, replace lines 1893-1900:
     }
 ```
 
-- [ ] **Step 2: Rewrite AgentStatusOverlayBadge**
+- [ ] **Step 4: Rewrite AgentStatusOverlayBadge**
 
 Replace the entire `AgentStatusOverlayBadge` struct (lines 2055-2144) with:
 
@@ -369,7 +347,7 @@ struct AgentStatusOverlayBadge: View {
 }
 ```
 
-- [ ] **Step 3: Update WorkspaceRowContent badge call (line 1715-1722)**
+- [ ] **Step 5: Update WorkspaceRowContent badge call (line 1715-1722)**
 
 Replace `WorkspaceSidebarView.swift` lines 1715-1722:
 
@@ -390,7 +368,7 @@ Replace `WorkspaceSidebarView.swift` lines 1715-1722:
             }
 ```
 
-- [ ] **Step 4: Update WorktreeRowContent badge call (lines 1828-1835)**
+- [ ] **Step 6: Update WorktreeRowContent badge call (lines 1828-1835)**
 
 Replace lines 1828-1835:
 
@@ -410,7 +388,7 @@ Replace lines 1828-1835:
             }
 ```
 
-- [ ] **Step 5: Update SidebarItemIconView badge call (lines 1929-1931)**
+- [ ] **Step 7: Update SidebarItemIconView badge call (lines 1929-1931)**
 
 Replace lines 1929-1931:
 
@@ -421,21 +399,37 @@ Replace lines 1929-1931:
             }
 ```
 
-- [ ] **Step 6: Build to verify compilation**
+- [ ] **Step 8: Update TmuxPanelView badge call (lines 203-205)**
+
+Replace `TmuxPanelView.swift` lines 203-205:
+
+```swift
+            let tmuxBadgeDisplayState = agentStatus.badgeDisplayState(isUnread: true)
+            if tmuxBadgeDisplayState != .hidden {
+                AgentStatusOverlayBadge(displayState: tmuxBadgeDisplayState, size: 16)
+            }
+```
+
+- [ ] **Step 9: Build to verify compilation**
 
 Run: `xcodebuild -project AiyuTerm.xcodeproj -scheme AiyuTerm -configuration Debug -destination 'platform=macOS' build 2>&1 | tail -20`
 Expected: BUILD SUCCEEDED
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 10: Run tests to verify they pass**
+
+Run: `xcodebuild -project AiyuTerm.xcodeproj -scheme AiyuTerm -destination 'platform=macOS' test -only-testing:AiyuTermTests/AgentSessionStatusAggregationTests 2>&1 | tail -20`
+Expected: All PASS
+
+- [ ] **Step 11: Commit (single atomic commit for enum + all UI consumers)**
 
 ```bash
-git add AiyuTerm/UI/Sidebar/WorkspaceSidebarView.swift
-git commit -m "feat: rewrite AgentStatusOverlayBadge with spinner, pulse, and spring-shrink animations"
+git add AiyuTerm/Domain/WorkspaceModels.swift AiyuTerm/UI/Sidebar/WorkspaceSidebarView.swift AiyuTerm/UI/Sidebar/TmuxPanelView.swift Tests/AgentSessionStatusAggregationTests.swift
+git commit -m "feat: add .working status, AgentBadgeDisplayState, rewrite badge UI with spinner/pulse/shrink animations"
 ```
 
 ---
 
-### Task 3: Add clearErrorStatus and unread tracking to runtime layer
+### Task 2: Add clearErrorStatus and unread tracking to runtime layer
 
 **Files:**
 - Modify: `AiyuTerm/Services/Terminal/WorkspaceSessionController.swift:199-203`
@@ -498,7 +492,7 @@ git commit -m "feat: add clearErrorStatus, unread tracking, and selective clear 
 
 ---
 
-### Task 4: Update status parsers to handle "working"
+### Task 3: Update status parsers to handle "working"
 
 **Files:**
 - Modify: `AiyuTerm/Services/Terminal/AgentStatusFilePoller.swift:56-69`
@@ -563,7 +557,7 @@ git commit -m "feat: parse 'working' status in file poller and tmux poller, trac
 
 ---
 
-### Task 5: Fix ShellSession auto-clear to use isUserDismissible
+### Task 4: Fix ShellSession auto-clear to use isUserDismissible
 
 **Files:**
 - Modify: `AiyuTerm/Services/Terminal/ShellSession.swift:183,188,192`
@@ -622,7 +616,7 @@ git commit -m "fix: use isUserDismissible to prevent keyboard activity clearing 
 
 ---
 
-### Task 6: Update WorkspaceStore select/open logic
+### Task 5: Update WorkspaceStore select/open logic
 
 **Files:**
 - Modify: `AiyuTerm/App/WorkspaceStore.swift:746-752,2139-2147`
@@ -671,37 +665,7 @@ git commit -m "feat: selective clear on workspace select - mark completion read,
 
 ---
 
-### Task 7: Update TmuxPanelView badge call
-
-**Files:**
-- Modify: `AiyuTerm/UI/Sidebar/TmuxPanelView.swift:203-205`
-
-- [ ] **Step 1: Update TmuxSessionRow badge**
-
-Replace `TmuxPanelView.swift` lines 203-205:
-
-```swift
-            let tmuxBadgeDisplayState = agentStatus.badgeDisplayState(isUnread: true)
-            if tmuxBadgeDisplayState != .hidden {
-                AgentStatusOverlayBadge(displayState: tmuxBadgeDisplayState, size: 16)
-            }
-```
-
-- [ ] **Step 2: Build full project**
-
-Run: `xcodebuild -project AiyuTerm.xcodeproj -scheme AiyuTerm -configuration Debug -destination 'platform=macOS' build 2>&1 | tail -20`
-Expected: BUILD SUCCEEDED
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add AiyuTerm/UI/Sidebar/TmuxPanelView.swift
-git commit -m "feat: update TmuxPanelView badge to use AgentBadgeDisplayState"
-```
-
----
-
-### Task 8: Run all tests and build debug app
+### Task 6: Run all tests and build debug app
 
 **Files:** None (verification only)
 
