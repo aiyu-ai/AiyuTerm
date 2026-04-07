@@ -137,7 +137,7 @@ AiyuTerm 以 JSON 文件存储工作区数据和设置：
 
 ## 致谢
 
-- [Liney](https://github.com/wuwenrui/liney)（作者 wuwenrui）-- 本项目 fork 自该开源终端工作区应用
+- [Liney](https://github.com/AiyuLabs/liney)（作者 wuwenrui）-- 本项目 fork 自该开源终端工作区应用
 - [Ghostty](https://ghostty.org/) -- AiyuTerm 使用的终端引擎
 - [Sparkle](https://sparkle-project.org/) -- 自动更新框架
 

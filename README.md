@@ -137,7 +137,7 @@ Development setup, build commands, testing, and release docs: [`DEVELOP.md`](./D
 
 ## Acknowledgments
 
-- [Liney](https://github.com/wuwenrui/liney) by wuwenrui -- the original open-source terminal workspace app this project is forked from
+- [Liney](https://github.com/AiyuLabs/liney) by wuwenrui -- the original open-source terminal workspace app this project is forked from
 - [Ghostty](https://ghostty.org/) -- the terminal engine powering AiyuTerm
 - [Sparkle](https://sparkle-project.org/) -- auto-update framework
 

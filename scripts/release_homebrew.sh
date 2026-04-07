@@ -14,7 +14,7 @@ APPCAST_FILE="${APPCAST_FILE:-$ROOT_DIR/appcast.xml}"
 SIGN_SCRIPT="${SIGN_SCRIPT:-$ROOT_DIR/scripts/sign_macos.sh}"
 ARCHIVE_DSYM_SCRIPT="${ARCHIVE_DSYM_SCRIPT:-$ROOT_DIR/scripts/archive_dsym.sh}"
 UPLOAD_DSYM_SCRIPT="${UPLOAD_DSYM_SCRIPT:-$ROOT_DIR/scripts/upload_dsym_to_sentry.sh}"
-TAP_REPO="${TAP_REPO:-wuwenrui/homebrew-tap}"
+TAP_REPO="${TAP_REPO:-aiyu-ai/homebrew-tap}"
 TAP_DIR_DEFAULT="$ROOT_DIR/tmp/homebrew-tap"
 TAP_DIR="${TAP_DIR:-$TAP_DIR_DEFAULT}"
 CASK_PATH="${CASK_PATH:-Casks/${APP_SLUG}.rb}"
@@ -53,7 +53,7 @@ Environment:
   SKIP_NOTARIZE=1        Skip notarization in sign_macos.sh.
   SKIP_CASK_UPDATE=1     Skip updating the Homebrew tap repository.
   SKIP_SENTRY_DSYM_UPLOAD=1  Skip uploading the release dSYM to Sentry.
-  TAP_REPO=owner/repo    Override the tap repo. Default: wuwenrui/homebrew-tap.
+  TAP_REPO=owner/repo    Override the tap repo. Default: aiyu-ai/homebrew-tap.
   AIYUTERM_RELEASE_HOME=dir Release-only secret directory. Default: ~/.aiyuterm_release.
   DEFAULT_NOTARYTOOL_PROFILE=name  Auto-detected notarytool profile. Default: aiyuterm-notarytool.
   SPARKLE_PRIVATE_KEY_FILE=path  Private key used for Sparkle appcast signing.
