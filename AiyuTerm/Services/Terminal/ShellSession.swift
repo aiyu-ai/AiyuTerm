@@ -193,6 +193,14 @@ final class ShellSession: ObservableObject, Identifiable {
                     self.agentStatus = .permissionNeeded
                 }
             }
+            // Keyboard activity clears user-dismissible statuses (permission, completed, error).
+            // When user presses a key while a permission prompt is showing, it means
+            // they responded (approved or denied). Clear the badge immediately rather
+            // than waiting for a hook event that may never arrive after denial.
+            ghosttyController.onKeyboardActivity = { [weak self] in
+                guard let self, self.agentStatus.isUserDismissible else { return }
+                self.agentStatus = .none
+            }
         }
     }
 
