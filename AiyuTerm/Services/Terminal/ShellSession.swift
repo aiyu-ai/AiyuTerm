@@ -109,7 +109,7 @@ final class ShellSession: ObservableObject, Identifiable {
     var onWorkspaceAction: ((TerminalWorkspaceAction) -> Void)?
     var onFocus: (() -> Void)?
     var onAgentStatusChange: ((AgentSessionStatus) -> Void)?
-    var onPermissionRead: (() -> Void)?
+    var onStatusRead: (() -> Void)?
 
     private let surfaceController: ManagedTerminalSessionSurfaceController
     private let processReaper: @Sendable (TerminalLaunchConfiguration) -> Void
@@ -224,7 +224,7 @@ final class ShellSession: ObservableObject, Identifiable {
             ghosttyController.onKeyboardActivity = { [weak self] in
                 guard let self else { return }
                 if self.agentStatus.isReadableOnInteraction {
-                    self.onPermissionRead?()
+                    self.onStatusRead?()
                 } else if self.agentStatus.isUserDismissible {
                     self.agentStatus = .none
                 }

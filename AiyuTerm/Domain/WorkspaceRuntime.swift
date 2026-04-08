@@ -909,9 +909,10 @@ final class WorkspaceModel: ObservableObject, Identifiable {
                 self?.objectWillChange.send()
                 self?.onExternalAgentStatusChange?(status)
             }
-            session.onPermissionRead = { [weak self] in
+            session.onStatusRead = { [weak self] in
                 guard let self else { return }
                 self.markPermissionRead(forWorktreePath: self.activeWorktreePath)
+                self.markCompletionRead(forWorktreePath: self.activeWorktreePath)
                 self.objectWillChange.send()
             }
         }

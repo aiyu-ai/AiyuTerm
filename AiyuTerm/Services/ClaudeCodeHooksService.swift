@@ -41,7 +41,6 @@ enum ClaudeCodeHooksService {
     /// All Claude Code hook events that AiyuTerm needs to receive.
     private static let requiredHookEvents = [
         "UserPromptSubmit",  // -> working (agent starts processing)
-        "PostToolUse",       // -> working (tool finished, agent resumes; clears permission)
         "Stop",              // -> completed (agent finished responding)
         "StopFailure",       // -> error (agent encountered an error)
         "Notification",      // -> permission (via notification_type: permission_prompt)
@@ -168,7 +167,6 @@ INPUT=$(cat)
 EVENT=$(echo "$INPUT" | grep -o '"hook_event_name":"[^"]*"' | cut -d'"' -f4 2>/dev/null || echo "")
 case "$EVENT" in
   UserPromptSubmit) STATUS="working" ;;
-  PostToolUse) STATUS="working" ;;
   Stop) STATUS="completed" ;;
   StopFailure) STATUS="error" ;;
   Notification)

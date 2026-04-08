@@ -1447,17 +1447,14 @@ enum AgentSessionStatus: Equatable {
     }
 
     /// Whether user interaction (keyboard) should fully dismiss this status to .none.
-    /// Permission status transitions to "read" (small badge) instead of disappearing.
     var isUserDismissible: Bool {
-        switch self {
-        case .taskCompleted, .error: return true
-        case .none, .working, .permissionNeeded: return false
-        }
+        self == .error
     }
 
     /// Whether keyboard activity should mark this status as "read" (shrink badge).
+    /// Both permission and completed shrink on keyboard, clear only when working resumes.
     var isReadableOnInteraction: Bool {
-        self == .permissionNeeded
+        self == .permissionNeeded || self == .taskCompleted
     }
 
     private var priority: Int {
