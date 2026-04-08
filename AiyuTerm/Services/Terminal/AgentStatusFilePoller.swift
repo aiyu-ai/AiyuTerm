@@ -82,24 +82,23 @@ final class AgentStatusFilePoller {
     private func poll() {
         guard let workspaces = workspacesProvider?() else { return }
         for workspace in workspaces where !workspace.settings.isTmuxManaged {
-            let dirHash = Self.md5Prefix(workspace.activeWorktreePath, length: 16)
-            let path = "\(Self.statusDir)/\(dirHash)"
-            guard let content = try? String(contentsOfFile: path, encoding: .utf8)
-                .trimmingCharacters(in: .whitespacesAndNewlines) else { continue }
+            for worktree in workspace.worktrees {
+                let dirHash = Self.md5Prefix(worktree.path, length: 16)
+                let path = "\(Self.statusDir)/\(dirHash)"
+                guard let content = try? String(contentsOfFile: path, encoding: .utf8)
+                    .trimmingCharacters(in: .whitespacesAndNewlines) else { continue }
 
-            let status = Self.parseStatusValue(content)
-            // Remove file after reading to avoid stale re-reads
-            try? FileManager.default.removeItem(atPath: path)
+                let status = Self.parseStatusValue(content)
+                try? FileManager.default.removeItem(atPath: path)
 
-            guard status != .none else { continue }
-            if status == .taskCompleted {
-                workspace.markCompletionUnread(forWorktreePath: workspace.activeWorktreePath)
-            }
-            if status == .working {
-                workspace.markCompletionRead(forWorktreePath: workspace.activeWorktreePath)
-            }
-            for session in workspace.sessionController.sessions.values where session.agentStatus != status {
-                session.agentStatus = status
+                guard status != .none else { continue }
+                if status == .taskCompleted {
+                    workspace.markCompletionUnread(forWorktreePath: worktree.path)
+                }
+                if status == .working {
+                    workspace.markCompletionRead(forWorktreePath: worktree.path)
+                }
+                workspace.setAgentStatus(status, forWorktreePath: worktree.path)
             }
         }
     }

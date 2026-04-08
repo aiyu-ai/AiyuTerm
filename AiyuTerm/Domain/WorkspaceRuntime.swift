@@ -587,6 +587,15 @@ final class WorkspaceModel: ObservableObject, Identifiable {
         }
     }
 
+    func setAgentStatus(_ status: AgentSessionStatus, forWorktreePath path: String) {
+        guard let controllers = worktreeControllers[path] else { return }
+        for controller in controllers.values {
+            for session in controller.sessions.values where session.agentStatus != status {
+                session.agentStatus = status
+            }
+        }
+    }
+
     func createTab() {
         saveActiveWorktreeState()
         var state = activeWorktreeState
