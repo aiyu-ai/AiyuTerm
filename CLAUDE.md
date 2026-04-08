@@ -103,6 +103,82 @@ Semantic versioning. The bump script (`scripts/bump_version.sh`) skips any versi
 - When locating external tools (tmux, git, etc.), check common absolute paths first, use `which`/`env` as fallback only.
 - Release builds use `CODE_SIGNING_ALLOWED=NO` by default. Ad-hoc sign (`codesign --force --deep --sign -`) before distributing to avoid repeated TCC permission dialogs.
 
+## Agent Status Badge System
+
+Sidebar badges show the real-time status of Claude Code agent sessions. **Read this section before modifying any agent status code.**
+
+### Status Lifecycle
+
+```
+AgentSessionStatus: .none -> .working -> .permissionNeeded / .taskCompleted / .error -> .none
+```
+
+### Badge Display States
+
+| AgentSessionStatus | Unread (isUnread=true) | Read (isUnread=false) | Cleared by |
+|--------------------|----------------------|----------------------|------------|
+| `.working` | spinner (rotating) | spinner | title idle + 1s debounce, or poller delivers new status |
+| `.permissionNeeded` | large pulsing pink badge | small pink dot (0.6x, no icon) | `.working` resumes (user approved) or `Stop` hook |
+| `.taskCompleted` | large pulsing green badge | small green dot (0.6x, no icon) | `.working` resumes (new prompt) |
+| `.error` | pulsing red badge | -- | keyboard activity dismisses to `.none` |
+
+### Key Design Rules
+
+1. **Only `UserPromptSubmit` writes "working"** -- `PostToolUse` was removed from the hook script because Claude Code's "dreaming" background process fires `PostToolUse` events that cause false working spinners after task completion.
+
+2. **Permission prompt has idle title** -- When Claude Code shows "Do you want to proceed?", the terminal title prefix is `✳` (idle), NOT braille animation. Therefore `onTitleChange` must NEVER clear `.permissionNeeded` based on idle title detection. Only `.working` can be cleared this way.
+
+3. **Keyboard activity behavior by status:**
+   - `.permissionNeeded` / `.taskCompleted` -> mark as "read" (shrink badge), do NOT dismiss
+   - `.error` -> dismiss to `.none`
+   - `.working` / `.none` -> no action
+
+4. **Unread/read tracking** -- Two separate `Set<String>` on `WorkspaceModel`:
+   - `unreadCompletedWorktrees` -- set when poller reads "completed", cleared when `.working` resumes
+   - `unreadPermissionWorktrees` -- set when poller reads "permission", cleared when `.working` resumes
+   - Both cleared by `onStatusRead` callback on keyboard activity (shrinks badge)
+
+5. **Stale working detection** -- Two mechanisms:
+   - `onTitleChange`: when `.working` + title goes idle -> 1s debounce then clear (gives poller time to deliver `.taskCompleted`)
+   - `agentStatus.didSet`: when `.working` is set -> 2s delayed check if title is still busy; clears if idle (handles poller setting `.working` after agent already stopped)
+
+6. **Poller iterates ALL worktrees** -- `AgentStatusFilePoller.poll()` iterates `workspace.worktrees` (not just `activeWorktreePath`) and updates sessions via `setAgentStatus(_:forWorktreePath:)` which reaches all controllers in `worktreeControllers[path]`.
+
+### Data Flow
+
+```
+Hook script (bash)                    Terminal title (Ghostty)
+    |                                       |
+    v                                       v
+/tmp/aiyuterm-agent-status/{md5}     onTitleChange callback
+    |                                       |
+    v                                       v
+AgentStatusFilePoller.poll()         ShellSession.agentStatus
+    |                                       |
+    v                                       v
+WorkspaceModel.setAgentStatus()      AgentSessionStatusDetector
+    |                                       |
+    +--------->  ShellSession.agentStatus  <+
+                         |
+                         v
+                onAgentStatusChange -> WorkspaceModel.objectWillChange
+                         |
+                         v
+                Sidebar badge (SwiftUI)
+```
+
+### Key Files for Agent Status
+
+| File | Role |
+|------|------|
+| `ClaudeCodeHooksService.swift` | Hook script content and settings.json injection |
+| `AgentStatusFilePoller.swift` | Reads status files, updates sessions per worktree |
+| `AgentSessionStatusDetector.swift` | Title prefix detection (braille=working) and notification keyword matching |
+| `ShellSession.swift` | `agentStatus` property with didSet verification, `onTitleChange`/`onKeyboardActivity` handlers |
+| `WorkspaceRuntime.swift` | `unreadCompletedWorktrees`/`unreadPermissionWorktrees` tracking, `setAgentStatus` |
+| `WorkspaceModels.swift` | `AgentSessionStatus` enum, `AgentBadgeDisplayState` enum, `isUserDismissible`/`isReadableOnInteraction` |
+| `WorkspaceSidebarView.swift` | `AgentStatusOverlayBadge` view, badge rendering and animation |
+
 ## Related Documentation
 
 - `AGENTS.md` -- AI collaboration guide with layout, hotspots, conventions (read before making changes)
