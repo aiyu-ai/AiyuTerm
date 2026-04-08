@@ -169,18 +169,14 @@ final class ShellSession: ObservableObject, Identifiable {
         surfaceController.onTitleChange = { [weak self] title in
             guard let self, !title.isEmpty else { return }
             self.title = title
-            let titleStatus = AgentSessionStatusDetector.detectFromTitle(title)
-            if self.agentStatus == .permissionNeeded && titleStatus == .working {
-                // Fast path: when permission badge is showing and terminal title switches
-                // to busy prefix, immediately transition to working. This avoids waiting
-                // for PostToolUse hook (which only fires after the tool finishes executing).
-                self.agentStatus = .working
-            } else if self.agentStatus == .working && titleStatus == .none {
-                // When agent was working but terminal title no longer shows busy prefix,
-                // the agent has stopped (e.g. user pressed Escape to interrupt).
-                // Clear the stale working status since no Stop/StopFailure hook fires
-                // on user-initiated interruption.
-                self.agentStatus = .none
+            // Fast path: when permission badge is showing and terminal title switches
+            // to busy prefix, immediately transition to working. This avoids waiting
+            // for PostToolUse hook (which only fires after the tool finishes executing).
+            if self.agentStatus == .permissionNeeded {
+                let titleStatus = AgentSessionStatusDetector.detectFromTitle(title)
+                if titleStatus == .working {
+                    self.agentStatus = .working
+                }
             }
         }
         surfaceController.onWorkingDirectoryChange = { [weak self] directory in
