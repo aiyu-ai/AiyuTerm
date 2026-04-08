@@ -343,6 +343,7 @@ struct WorkspaceSettings: Codable, Hashable {
     var workflows: [WorkspaceWorkflow]
     var preferredWorkflowID: UUID?
     var tmuxSessionID: String?
+    var todoLists: [String: WorkspaceTodoList]
 
     var isTmuxManaged: Bool { tmuxSessionID != nil }
 
@@ -358,7 +359,8 @@ struct WorkspaceSettings: Codable, Hashable {
         remoteTargets: [RemoteWorkspaceTarget] = [],
         workflows: [WorkspaceWorkflow] = [],
         preferredWorkflowID: UUID? = nil,
-        tmuxSessionID: String? = nil
+        tmuxSessionID: String? = nil,
+        todoLists: [String: WorkspaceTodoList] = [:]
     ) {
         self.isPinned = isPinned
         self.isArchived = isArchived
@@ -372,6 +374,7 @@ struct WorkspaceSettings: Codable, Hashable {
         self.workflows = workflows
         self.preferredWorkflowID = preferredWorkflowID
         self.tmuxSessionID = tmuxSessionID
+        self.todoLists = todoLists
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -387,6 +390,7 @@ struct WorkspaceSettings: Codable, Hashable {
         case workflows
         case preferredWorkflowID
         case tmuxSessionID
+        case todoLists
     }
 
     init(from decoder: Decoder) throws {
@@ -403,7 +407,8 @@ struct WorkspaceSettings: Codable, Hashable {
             remoteTargets: try container.decodeIfPresent([RemoteWorkspaceTarget].self, forKey: .remoteTargets) ?? [],
             workflows: try container.decodeIfPresent([WorkspaceWorkflow].self, forKey: .workflows) ?? [],
             preferredWorkflowID: try container.decodeIfPresent(UUID.self, forKey: .preferredWorkflowID),
-            tmuxSessionID: try container.decodeIfPresent(String.self, forKey: .tmuxSessionID)
+            tmuxSessionID: try container.decodeIfPresent(String.self, forKey: .tmuxSessionID),
+            todoLists: try container.decodeIfPresent([String: WorkspaceTodoList].self, forKey: .todoLists) ?? [:]
         )
     }
 }

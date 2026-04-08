@@ -28,6 +28,7 @@ final class WorkspaceModel: ObservableObject, Identifiable {
     @Published var worktreeStatuses: [String: RepositoryStatusSnapshot]
     @Published var gitHubStatuses: [String: GitHubWorktreeStatus]
     @Published var activeTabID: UUID?
+    @Published var isTodoPanelVisible: Bool = false
     @Published var layout: SessionLayoutNode?
     @Published var isSidebarExpanded: Bool
     @Published var settings: WorkspaceSettings
@@ -358,6 +359,9 @@ final class WorkspaceModel: ObservableObject, Identifiable {
 
     func focusPane(_ paneID: UUID) {
         sessionController.focus(paneID)
+        if isTodoPanelVisible {
+            isTodoPanelVisible = false
+        }
         saveActiveWorktreeState()
     }
 

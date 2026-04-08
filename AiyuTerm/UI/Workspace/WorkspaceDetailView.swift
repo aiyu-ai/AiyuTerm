@@ -49,28 +49,39 @@ private struct WorkspaceSessionDetailView: View {
     }
 
     var body: some View {
-        VStack(spacing: 8) {
-            if workspace.tabs.count > 1 {
-                WorkspaceTabBarView(workspace: workspace)
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 8) {
+                if workspace.tabs.count > 1 {
+                    WorkspaceTabBarView(workspace: workspace)
+                }
+
+                Group {
+                    if let layout = workspace.layout {
+                        SplitNodeView(workspace: workspace, sessionController: workspace.sessionController, node: layout)
+                    } else {
+                        VStack(spacing: 14) {
+                            Image(systemName: "terminal")
+                                .font(.system(size: 22, weight: .semibold))
+                                .foregroundStyle(AiyuTermTheme.mutedText)
+                            Text(localized("main.workspace.noTerminalOpen"))
+                                .font(.system(size: 14, weight: .semibold))
+                            Button(localized("main.workspace.newSession")) {
+                                store.createSession(in: workspace)
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
             }
 
-            Group {
-                if let layout = workspace.layout {
-                    SplitNodeView(workspace: workspace, sessionController: workspace.sessionController, node: layout)
-                } else {
-                    VStack(spacing: 14) {
-                        Image(systemName: "terminal")
-                            .font(.system(size: 22, weight: .semibold))
-                            .foregroundStyle(AiyuTermTheme.mutedText)
-                        Text(localized("main.workspace.noTerminalOpen"))
-                            .font(.system(size: 14, weight: .semibold))
-                        Button(localized("main.workspace.newSession")) {
-                            store.createSession(in: workspace)
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
+            // Todo Card overlay (badge is in pane header)
+            if workspace.isTodoPanelVisible {
+                TodoCardView(workspace: workspace)
+                    .padding(.top, workspace.tabs.count > 1 ? 48 : 38)
+                    .padding(.trailing, 8)
+                    .transition(.opacity.combined(with: .scale(scale: 0.92, anchor: .topTrailing)))
+                    .animation(.easeInOut(duration: 0.2), value: workspace.isTodoPanelVisible)
             }
         }
     }

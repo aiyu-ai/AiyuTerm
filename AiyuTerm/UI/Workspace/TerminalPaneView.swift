@@ -231,6 +231,12 @@ struct TerminalPaneView: View {
             Spacer(minLength: 6)
 
             HStack(spacing: 6) {
+                TodoCardBadge(count: (workspace.settings.todoLists[workspace.activeWorktreePath] ?? WorkspaceTodoList()).incompleteCount) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        workspace.isTodoPanelVisible.toggle()
+                    }
+                }
+
                 PaneHeaderButton(systemName: "magnifyingglass") {
                     workspace.focusPane(paneID)
                     presentSearch()
