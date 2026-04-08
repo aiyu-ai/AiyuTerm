@@ -6,6 +6,25 @@
         <description>Signed Sparkle updates for AiyuTerm.</description>
         <language>en</language>
         <item>
+            <title>v1.0.9</title>
+            <link>https://github.com/aiyu-ai/AiyuTerm/releases/tag/v1.0.9</link>
+            <sparkle:version>12</sparkle:version>
+            <sparkle:shortVersionString>1.0.9</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.6</sparkle:minimumSystemVersion>
+            <pubDate>Tue, 08 Apr 2026 20:00:00 +0800</pubDate>
+            <enclosure url="https://github.com/aiyu-ai/AiyuTerm/releases/download/v1.0.9/AiyuTerm-1.0.9.app.zip"
+                       length="27114604"
+                       type="application/octet-stream"
+                       sparkle:edSignature="L68UtijBYxQ2oG2h2/iBFNPy4/kBDGpoxDy5cfvY4ESRPLMZ+h2kGsKV3CV9TO6U2xfjt2z/sXI2eMN7e6UHCQ==" />
+            <description><![CDATA[
+                <h2>Improvements</h2>
+                <ul>
+                    <li>Enable Sparkle auto-update notifications</li>
+                    <li>Version bump for update verification</li>
+                </ul>
+            ]]></description>
+        </item>
+        <item>
             <title>v1.0.8</title>
             <link>https://github.com/aiyu-ai/AiyuTerm/releases/tag/v1.0.8</link>
             <sparkle:version>11</sparkle:version>
