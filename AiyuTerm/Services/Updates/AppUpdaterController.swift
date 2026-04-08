@@ -35,8 +35,7 @@ final class AppUpdaterController {
     nonisolated static let repository = "AiyuAI/AiyuTerm"
     nonisolated static let releasesURL = URL(string: "https://github.com/\(repository)/releases")!
     nonisolated static let feedURLInfoPlistKey = "SUFeedURL"
-    /// No appcast feed yet — return empty to disable auto-update checks.
-    nonisolated static let defaultFeedURLString = ""
+    nonisolated static let defaultFeedURLString = "https://raw.githubusercontent.com/aiyu-ai/AiyuTerm/main/appcast.xml"
     static let sparkleKeyAccount = "aiyuterm"
     static let defaultPrivateKeyPath: String = {
         let releaseHome = ProcessInfo.processInfo.environment["AIYUTERM_RELEASE_HOME"] ?? "\(NSHomeDirectory())/.aiyuterm_release"
