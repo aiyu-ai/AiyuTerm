@@ -32,9 +32,9 @@
             <sparkle:minimumSystemVersion>14.6</sparkle:minimumSystemVersion>
             <pubDate>Tue, 08 Apr 2026 18:00:00 +0800</pubDate>
             <enclosure url="https://github.com/aiyu-ai/AiyuTerm/releases/download/v1.0.8/AiyuTerm-1.0.8.app.zip"
-                       length="27114539"
+                       length="27114610"
                        type="application/octet-stream"
-                       sparkle:edSignature="2kfIfmGTLKFkiy3AEU3Isno2KBfp/d7io2jpLE0bKO1dQN7leUTyelC9zcpEe72oBxam8XPzK8c/3samTXnHCQ==" />
+                       sparkle:edSignature="kh0kHPTkF4lUy3Be/sBHfriyDZenN0FKHFZ4FogKkVyZQjfl/XJpTIrfRGN/eTj0wdtU83HaR4k+rLUQ8Dp0Aw==" />
             <description><![CDATA[
                 <h2>New Features</h2>
                 <ul>
