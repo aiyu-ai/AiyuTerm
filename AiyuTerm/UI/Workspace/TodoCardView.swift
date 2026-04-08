@@ -323,7 +323,7 @@ struct TodoItemRow: View {
     }
 }
 
-// MARK: - NSTextField wrapper for reliable focus in AppKit hybrid
+// MARK: - Auto-growing NSTextView wrapper for reliable focus in AppKit hybrid
 
 struct TodoInputField: NSViewRepresentable {
     @Binding var text: String
@@ -331,57 +331,118 @@ struct TodoInputField: NSViewRepresentable {
     var focusTrigger: Int
     var onSubmit: () -> Void
 
-    func makeNSView(context: Context) -> NSTextField {
-        let field = NSTextField()
-        field.isBordered = false
-        field.drawsBackground = false
-        field.font = .systemFont(ofSize: 12)
-        field.placeholderString = placeholder
-        field.focusRingType = .none
-        field.delegate = context.coordinator
-        field.lineBreakMode = .byTruncatingTail
-        field.cell?.wraps = false
-        field.cell?.isScrollable = true
-        return field
+    func makeNSView(context: Context) -> TodoInputScrollView {
+        let scrollView = TodoInputScrollView()
+        let textView = scrollView.textView
+
+        textView.font = .systemFont(ofSize: 12)
+        textView.textColor = .labelColor
+        textView.insertionPointColor = .labelColor
+        textView.isRichText = false
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticDashSubstitutionEnabled = false
+        textView.allowsUndo = true
+        textView.delegate = context.coordinator
+        textView.textContainer?.lineFragmentPadding = 0
+        textView.textContainerInset = .zero
+
+        scrollView.hasVerticalScroller = false
+        scrollView.hasHorizontalScroller = false
+        scrollView.drawsBackground = false
+        scrollView.borderType = .noBorder
+
+        context.coordinator.textView = textView
+        context.coordinator.scrollView = scrollView
+        return scrollView
     }
 
-    func updateNSView(_ nsView: NSTextField, context: Context) {
-        if nsView.stringValue != text {
-            nsView.stringValue = text
+    func updateNSView(_ nsView: TodoInputScrollView, context: Context) {
+        let textView = nsView.textView
+        if textView.string != text {
+            textView.string = text
+            nsView.invalidateIntrinsicContentSize()
         }
         context.coordinator.onSubmit = onSubmit
         if context.coordinator.lastFocusTrigger != focusTrigger {
             context.coordinator.lastFocusTrigger = focusTrigger
             DispatchQueue.main.async {
-                nsView.window?.makeFirstResponder(nsView)
+                nsView.window?.makeFirstResponder(textView)
             }
         }
+        nsView.updatePlaceholder(show: text.isEmpty)
     }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
 
-    class Coordinator: NSObject, NSTextFieldDelegate {
+    class Coordinator: NSObject, NSTextViewDelegate {
         var parent: TodoInputField
         var onSubmit: () -> Void = {}
         var lastFocusTrigger: Int = 0
+        weak var textView: NSTextView?
+        weak var scrollView: TodoInputScrollView?
 
         init(_ parent: TodoInputField) {
             self.parent = parent
         }
 
-        func controlTextDidChange(_ obj: Notification) {
-            guard let field = obj.object as? NSTextField else { return }
-            parent.text = field.stringValue
+        func textDidChange(_ notification: Notification) {
+            guard let textView else { return }
+            parent.text = textView.string
+            scrollView?.invalidateIntrinsicContentSize()
         }
 
-        func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
             if commandSelector == #selector(NSResponder.insertNewline(_:)) {
                 onSubmit()
                 return true
             }
             return false
         }
+    }
+}
+
+final class TodoInputScrollView: NSScrollView {
+    let textView: NSTextView
+    private let placeholderField = NSTextField(labelWithString: "")
+
+    override init(frame: NSRect) {
+        let textView = NSTextView(frame: .zero)
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = [.width]
+        textView.textContainer?.widthTracksTextView = true
+        self.textView = textView
+        super.init(frame: frame)
+        documentView = textView
+
+        placeholderField.font = .systemFont(ofSize: 12)
+        placeholderField.textColor = .placeholderTextColor
+        placeholderField.isBordered = false
+        placeholderField.drawsBackground = false
+        placeholderField.isEditable = false
+        placeholderField.isSelectable = false
+        addSubview(placeholderField)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    func updatePlaceholder(show: Bool) {
+        placeholderField.stringValue = show ? "Quick thought..." : ""
+        placeholderField.isHidden = !show
+    }
+
+    override func layout() {
+        super.layout()
+        placeholderField.frame = NSRect(x: 0, y: 0, width: bounds.width, height: 16)
+    }
+
+    override var intrinsicContentSize: NSSize {
+        textView.layoutManager?.ensureLayout(for: textView.textContainer!)
+        let usedRect = textView.layoutManager?.usedRect(for: textView.textContainer!) ?? .zero
+        let height = max(ceil(usedRect.height + textView.textContainerInset.height * 2), 16)
+        return NSSize(width: NSView.noIntrinsicMetric, height: min(height, 120))
     }
 }
