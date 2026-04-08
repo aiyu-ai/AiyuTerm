@@ -169,13 +169,23 @@ final class ShellSession: ObservableObject, Identifiable {
         surfaceController.onTitleChange = { [weak self] title in
             guard let self, !title.isEmpty else { return }
             self.title = title
-            // Fast path: when permission badge is showing and terminal title switches
-            // to busy prefix, immediately transition to working. This avoids waiting
-            // for PostToolUse hook (which only fires after the tool finishes executing).
-            if self.agentStatus == .permissionNeeded {
-                let titleStatus = AgentSessionStatusDetector.detectFromTitle(title)
-                if titleStatus == .working {
-                    self.agentStatus = .working
+            let titleStatus = AgentSessionStatusDetector.detectFromTitle(title)
+            if self.agentStatus == .permissionNeeded && titleStatus == .working {
+                // Fast path: when permission badge is showing and terminal title switches
+                // to busy prefix, immediately transition to working. This avoids waiting
+                // for PostToolUse hook (which only fires after the tool finishes executing).
+                self.agentStatus = .working
+            } else if self.agentStatus == .working && titleStatus == .none {
+                // Title switched from busy to idle while status is .working.
+                // Delay 1s before clearing to give the file poller time to deliver
+                // .taskCompleted from the Stop hook. If the poller sets a new status
+                // within that window, didSet cancels this task automatically.
+                self.agentStatusClearTask?.cancel()
+                self.agentStatusClearTask = Task { [weak self] in
+                    try? await Task.sleep(for: .seconds(1))
+                    guard let self, !Task.isCancelled,
+                          self.agentStatus == .working else { return }
+                    self.agentStatus = .none
                 }
             }
         }
