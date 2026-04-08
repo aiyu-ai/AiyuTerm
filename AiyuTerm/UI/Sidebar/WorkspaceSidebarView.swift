@@ -1283,7 +1283,7 @@ private final class SidebarOutlineContainerView: NSView {
         outlineView.headerView = nil
         outlineView.rowSizeStyle = .default
         outlineView.rowHeight = 46
-        outlineView.indentationPerLevel = 10
+        outlineView.indentationPerLevel = 16
         outlineView.floatsGroupRows = false
         outlineView.selectionHighlightStyle = .regular
         outlineView.focusRingType = .none
@@ -1791,7 +1791,9 @@ private struct WorktreeRowContent: View {
                 AgentStatusOverlayBadge(displayState: worktreeBadgeDisplayState, size: 12 * uiScale)
             }
             Text(worktree.displayName)
-                .font(.system(size: 10 * uiScale, weight: .medium))
+                .font(worktree.isMainWorktree
+                    ? .system(size: 10 * uiScale, weight: .medium)
+                    : .system(size: 10 * uiScale, weight: .regular, design: .monospaced).italic())
                 .lineLimit(1)
             if worktree.isLocked {
                 Image(systemName: "lock.fill")

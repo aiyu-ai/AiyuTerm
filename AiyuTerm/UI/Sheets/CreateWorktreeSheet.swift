@@ -23,7 +23,7 @@ struct CreateWorktreeSheet: View {
 
         let branchName = (request.repositoryRoot as NSString).lastPathComponent
         let parentDirectoryPath = URL(fileURLWithPath: request.repositoryRoot)
-            .deletingLastPathComponent()
+            .appendingPathComponent(".claude/worktrees")
             .standardizedFileURL
             .path
 
@@ -129,13 +129,14 @@ struct CreateWorktreeSheet: View {
                         .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
                 )
 
-                Text(localized("sheet.worktree.branchName"))
+                Text(localized("sheet.worktree.worktreeName"))
                     .font(.headline)
-                TextField(localized("sheet.worktree.branchPlaceholder"), text: $draft.branchName)
+                TextField(localized("sheet.worktree.worktreeNamePlaceholder"), text: $draft.branchName)
                     .textFieldStyle(.roundedBorder)
                     .focused($isBranchFieldFocused)
-
-                Toggle(localized("sheet.worktree.createNewBranch"), isOn: $draft.createNewBranch)
+                Text(localized("sheet.worktree.worktreeNameHint"))
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
             }
 
             if let validationMessage {
@@ -143,6 +144,8 @@ struct CreateWorktreeSheet: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Color.orange)
             }
+
+            worktreeUsageTips
 
             HStack {
                 Spacer()
@@ -235,6 +238,32 @@ struct CreateWorktreeSheet: View {
                 .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
         )
         .help(help)
+    }
+
+    private var worktreeUsageTips: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(localized("sheet.worktree.tips.title"))
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 4) {
+                tipRow(localized("sheet.worktree.tips.commit"))
+                tipRow(localized("sheet.worktree.tips.merge"))
+                tipRow(localized("sheet.worktree.tips.delete"))
+            }
+        }
+        .padding(10)
+        .background(Color(nsColor: .controlBackgroundColor).opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    private func tipRow(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: 6) {
+            Text("*")
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundStyle(.tertiary)
+            Text(text)
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+        }
     }
 
     private func moveBranchInsertionPointToEnd() {
