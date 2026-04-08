@@ -95,8 +95,12 @@ final class AgentStatusFilePoller {
                 if status == .taskCompleted {
                     workspace.markCompletionUnread(forWorktreePath: worktree.path)
                 }
+                if status == .permissionNeeded {
+                    workspace.markPermissionUnread(forWorktreePath: worktree.path)
+                }
                 if status == .working {
                     workspace.markCompletionRead(forWorktreePath: worktree.path)
+                    workspace.markPermissionRead(forWorktreePath: worktree.path)
                 }
                 workspace.setAgentStatus(status, forWorktreePath: worktree.path)
             }

@@ -566,6 +566,7 @@ final class WorkspaceModel: ObservableObject, Identifiable {
     }
 
     @Published private(set) var unreadCompletedWorktrees: Set<String> = []
+    @Published private(set) var unreadPermissionWorktrees: Set<String> = []
 
     func markCompletionUnread(forWorktreePath path: String) {
         unreadCompletedWorktrees.insert(path)
@@ -573,6 +574,14 @@ final class WorkspaceModel: ObservableObject, Identifiable {
 
     func markCompletionRead(forWorktreePath path: String) {
         unreadCompletedWorktrees.remove(path)
+    }
+
+    func markPermissionUnread(forWorktreePath path: String) {
+        unreadPermissionWorktrees.insert(path)
+    }
+
+    func markPermissionRead(forWorktreePath path: String) {
+        unreadPermissionWorktrees.remove(path)
     }
 
     func clearErrorStatus(forWorktreePath path: String) {
@@ -899,6 +908,11 @@ final class WorkspaceModel: ObservableObject, Identifiable {
             session.onAgentStatusChange = { [weak self] status in
                 self?.objectWillChange.send()
                 self?.onExternalAgentStatusChange?(status)
+            }
+            session.onPermissionRead = { [weak self] in
+                guard let self else { return }
+                self.markPermissionRead(forWorktreePath: self.activeWorktreePath)
+                self.objectWillChange.send()
             }
         }
     }

@@ -109,6 +109,7 @@ final class ShellSession: ObservableObject, Identifiable {
     var onWorkspaceAction: ((TerminalWorkspaceAction) -> Void)?
     var onFocus: (() -> Void)?
     var onAgentStatusChange: ((AgentSessionStatus) -> Void)?
+    var onPermissionRead: (() -> Void)?
 
     private let surfaceController: ManagedTerminalSessionSurfaceController
     private let processReaper: @Sendable (TerminalLaunchConfiguration) -> Void
@@ -216,13 +217,17 @@ final class ShellSession: ObservableObject, Identifiable {
                     self.agentStatus = .permissionNeeded
                 }
             }
-            // Keyboard activity clears user-dismissible statuses (permission, completed, error).
-            // When user presses a key while a permission prompt is showing, it means
-            // they responded (approved or denied). Clear the badge immediately rather
-            // than waiting for a hook event that may never arrive after denial.
+            // Keyboard activity handles two cases:
+            // 1. Permission: shrink badge to "read" state (small dot), don't dismiss.
+            //    The badge clears when agent resumes working.
+            // 2. Completed/error: dismiss entirely to .none.
             ghosttyController.onKeyboardActivity = { [weak self] in
-                guard let self, self.agentStatus.isUserDismissible else { return }
-                self.agentStatus = .none
+                guard let self else { return }
+                if self.agentStatus.isReadableOnInteraction {
+                    self.onPermissionRead?()
+                } else if self.agentStatus.isUserDismissible {
+                    self.agentStatus = .none
+                }
             }
         }
     }

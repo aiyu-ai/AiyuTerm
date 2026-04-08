@@ -1659,7 +1659,10 @@ private struct WorkspaceRowContent: View {
     }
 
     private var workspaceBadgeDisplayState: AgentBadgeDisplayState {
-        let hasUnread = workspace.worktrees.contains { workspace.unreadCompletedWorktrees.contains($0.path) }
+        let hasUnread = workspace.worktrees.contains {
+            workspace.unreadCompletedWorktrees.contains($0.path)
+                || workspace.unreadPermissionWorktrees.contains($0.path)
+        }
         return workspaceAgentStatus.badgeDisplayState(isUnread: hasUnread)
     }
 
@@ -1777,7 +1780,9 @@ private struct WorktreeRowContent: View {
     }
 
     private var worktreeBadgeDisplayState: AgentBadgeDisplayState {
-        worktreeAgentStatus.badgeDisplayState(isUnread: workspace.unreadCompletedWorktrees.contains(worktree.path))
+        let isUnread = workspace.unreadCompletedWorktrees.contains(worktree.path)
+            || workspace.unreadPermissionWorktrees.contains(worktree.path)
+        return worktreeAgentStatus.badgeDisplayState(isUnread: isUnread)
     }
 
     var body: some View {
@@ -2019,7 +2024,7 @@ struct AgentStatusOverlayBadge: View {
     private var symbolName: String {
         switch displayState {
         case .completedUnread, .completedRead: return "checkmark"
-        case .permissionNeeded: return "exclamationmark"
+        case .permissionNeeded, .permissionNeededRead: return "exclamationmark"
         case .error: return "xmark"
         case .spinner, .hidden: return ""
         }
@@ -2029,7 +2034,7 @@ struct AgentStatusOverlayBadge: View {
         switch displayState {
         case .completedUnread, .completedRead:
             return [Color(red: 0.19, green: 0.82, blue: 0.35), Color(red: 0.15, green: 0.66, blue: 0.27)]
-        case .permissionNeeded:
+        case .permissionNeeded, .permissionNeededRead:
             return [Color(red: 1.0, green: 0.18, blue: 0.57), Color(red: 0.90, green: 0.0, blue: 0.31)]
         case .error:
             return [Color(red: 1.0, green: 0.27, blue: 0.23), Color(red: 0.84, green: 0.18, blue: 0.13)]
@@ -2116,11 +2121,15 @@ struct AgentStatusOverlayBadge: View {
         }
     }
 
-    // -- Static badge: completedRead (small dot) or fallback --
+    // -- Static badge: read states (small dot) or fallback --
+
+    private var isReadState: Bool {
+        displayState == .completedRead || displayState == .permissionNeededRead
+    }
 
     private var staticBadgeBody: some View {
-        let scale: CGFloat = displayState == .completedRead ? 0.6 : 1.0
-        let iconOp: Double = displayState == .completedRead ? 0 : 1
+        let scale: CGFloat = isReadState ? 0.6 : 1.0
+        let iconOp: Double = isReadState ? 0 : 1
         return badgeContent(scale: scale, glowOpacity: 0.3, iconOpacity: iconOp)
     }
 

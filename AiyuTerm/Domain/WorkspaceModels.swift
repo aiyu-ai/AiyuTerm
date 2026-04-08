@@ -1446,13 +1446,18 @@ enum AgentSessionStatus: Equatable {
         self != .none
     }
 
-    /// Whether user interaction (keyboard/notification) should auto-dismiss this status.
-    /// Working status must NOT be auto-dismissed by keyboard activity.
+    /// Whether user interaction (keyboard) should fully dismiss this status to .none.
+    /// Permission status transitions to "read" (small badge) instead of disappearing.
     var isUserDismissible: Bool {
         switch self {
-        case .permissionNeeded, .taskCompleted, .error: return true
-        case .none, .working: return false
+        case .taskCompleted, .error: return true
+        case .none, .working, .permissionNeeded: return false
         }
+    }
+
+    /// Whether keyboard activity should mark this status as "read" (shrink badge).
+    var isReadableOnInteraction: Bool {
+        self == .permissionNeeded
     }
 
     private var priority: Int {
@@ -1474,7 +1479,7 @@ enum AgentSessionStatus: Equatable {
         case .none: return .hidden
         case .working: return .spinner
         case .taskCompleted: return isUnread ? .completedUnread : .completedRead
-        case .permissionNeeded: return .permissionNeeded
+        case .permissionNeeded: return isUnread ? .permissionNeeded : .permissionNeededRead
         case .error: return .error
         }
     }
@@ -1487,4 +1492,5 @@ enum AgentBadgeDisplayState: Equatable {
     case completedRead
     case error
     case permissionNeeded
+    case permissionNeededRead
 }
