@@ -50,7 +50,7 @@ final class WorkspaceStore: ObservableObject {
     private let initialWorkspaceState: PersistedWorkspaceState?
     private let initialAppSettings: AppSettings?
     private let gitRepositoryService = GitRepositoryService()
-    private let updaterController = AppUpdaterController.shared
+    let updaterController = AppUpdaterController.shared
     private let remoteSessionCoordinator = RemoteSessionCoordinator()
     let tmuxPanelStore = TmuxPanelStore()
     private let tmuxAgentPoller = TmuxAgentStatusPoller()

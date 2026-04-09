@@ -5,12 +5,21 @@
 //  Author: wuwenrui
 //
 
+import Combine
 import Foundation
 import Sparkle
+
+enum AppUpdateState: Equatable {
+    case none
+    case available(version: String)
+    case downloading(version: String)
+    case readyToInstall(version: String)
+}
 
 @MainActor
 private final class SparkleUpdaterDelegate: NSObject, SPUUpdaterDelegate {
     var updateChannel: ReleaseChannel = .stable
+    weak var updateController: AppUpdaterController?
 
     nonisolated func feedURLString(for updater: SPUUpdater) -> String? {
         AppUpdaterController.resolveFeedURLString(infoDictionary: Bundle.main.infoDictionary)
@@ -26,10 +35,44 @@ private final class SparkleUpdaterDelegate: NSObject, SPUUpdaterDelegate {
             }
         }
     }
+
+    nonisolated func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
+        MainActor.assumeIsolated {
+            let version = item.displayVersionString ?? item.versionString
+            updateController?.updateState = .available(version: version)
+        }
+    }
+
+    nonisolated func updater(_ updater: SPUUpdater, didDownloadUpdate item: SUAppcastItem) {
+        MainActor.assumeIsolated {
+            let version = item.displayVersionString ?? item.versionString
+            updateController?.updateState = .readyToInstall(version: version)
+        }
+    }
+
+    nonisolated func updater(_ updater: SPUUpdater, willDownloadUpdate item: SUAppcastItem, with request: NSMutableURLRequest) {
+        MainActor.assumeIsolated {
+            let version = item.displayVersionString ?? item.versionString
+            updateController?.updateState = .downloading(version: version)
+        }
+    }
+
+    nonisolated func updater(
+        _ updater: SPUUpdater,
+        willInstallUpdateOnQuit item: SUAppcastItem,
+        immediateInstallationBlock immediateInstallHandler: @escaping () -> Void
+    ) -> Bool {
+        MainActor.assumeIsolated {
+            let version = item.displayVersionString ?? item.versionString
+            updateController?.updateState = .readyToInstall(version: version)
+            updateController?.immediateInstallHandler = immediateInstallHandler
+        }
+        return true
+    }
 }
 
 @MainActor
-final class AppUpdaterController {
+final class AppUpdaterController: ObservableObject {
     static let shared = AppUpdaterController()
 
     nonisolated static let repository = "AiyuAI/AiyuTerm"
@@ -42,12 +85,19 @@ final class AppUpdaterController {
         return "\(releaseHome)/sparkle_private_key"
     }()
 
+    @Published var updateState: AppUpdateState = .none
+    var immediateInstallHandler: (() -> Void)?
+
     private let delegate = SparkleUpdaterDelegate()
     private lazy var controller = SPUStandardUpdaterController(
         startingUpdater: !Self.defaultFeedURLString.isEmpty,
         updaterDelegate: delegate,
         userDriverDelegate: nil
     )
+
+    private init() {
+        delegate.updateController = self
+    }
 
     func configure(
         updateChannel: ReleaseChannel,
@@ -68,6 +118,14 @@ final class AppUpdaterController {
 
     func checkForUpdates() {
         controller.updater.checkForUpdates()
+    }
+
+    func installUpdateNow() {
+        if let handler = immediateInstallHandler {
+            handler()
+        } else {
+            checkForUpdates()
+        }
     }
 
     nonisolated static func resolveFeedURLString(infoDictionary: [String: Any]?) -> String {

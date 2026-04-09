@@ -186,7 +186,7 @@ struct MainWindowView: View {
         }
         .toolbar {
             ToolbarItem(placement: .navigation) {
-                HStack(spacing: 8) {
+                HStack(spacing: 4) {
                     Button {
                         NSApp.keyWindow?.firstResponder?.tryToPerform(
                             #selector(NSSplitViewController.toggleSidebar(_:)), with: nil
@@ -199,9 +199,12 @@ struct MainWindowView: View {
                     .accessibilityLabel(localized("menu.view.toggleSidebar"))
                     .help(localized("menu.view.toggleSidebar"))
 
-                    Text("AiyuTerm - \(store.currentReleaseVersion)")
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundStyle(.secondary)
+                    TitleBarVersionView(
+                        currentVersion: store.currentReleaseVersion,
+                        updateState: store.updaterController.updateState,
+                        onInstall: { store.updaterController.installUpdateNow() }
+                    )
+                    .padding(.trailing, 10)
                 }
             }
 
