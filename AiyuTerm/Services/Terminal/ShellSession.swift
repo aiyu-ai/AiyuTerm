@@ -94,7 +94,12 @@ final class ShellSession: ObservableObject, Identifiable {
             agentStatusClearTask = nil
             if agentStatus == .working {
                 agentStatusClearTask = Task { [weak self] in
-                    try? await Task.sleep(for: .seconds(2))
+                    // Allow enough time for Claude Code to transition from
+                    // loading ("Schlepping...") to active processing (braille
+                    // title animation). The gap between UserPromptSubmit and
+                    // the braille prefix appearing can exceed 5 seconds for
+                    // large contexts.
+                    try? await Task.sleep(for: .seconds(8))
                     guard let self, !Task.isCancelled,
                           self.agentStatus == .working else { return }
                     let titleStatus = AgentSessionStatusDetector.detectFromTitle(self.title)
@@ -177,13 +182,9 @@ final class ShellSession: ObservableObject, Identifiable {
                 // for PostToolUse hook (which only fires after the tool finishes executing).
                 self.agentStatus = .working
             } else if self.agentStatus == .working && titleStatus == .none {
-                // Title switched from busy to idle while status is .working.
-                // Delay 1s before clearing to give the file poller time to deliver
-                // .taskCompleted from the Stop hook. If the poller sets a new status
-                // within that window, didSet cancels this task automatically.
                 self.agentStatusClearTask?.cancel()
                 self.agentStatusClearTask = Task { [weak self] in
-                    try? await Task.sleep(for: .seconds(1))
+                    try? await Task.sleep(for: .seconds(4))
                     guard let self, !Task.isCancelled,
                           self.agentStatus == .working else { return }
                     self.agentStatus = .none

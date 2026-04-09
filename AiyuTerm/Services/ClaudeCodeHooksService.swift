@@ -172,7 +172,7 @@ case "$EVENT" in
   Notification)
     NTYPE=$(echo "$INPUT" | grep -o '"notification_type":"[^"]*"' | cut -d'"' -f4 2>/dev/null || echo "")
     case "$NTYPE" in
-      permission_prompt) STATUS="permission" ;;
+      permission_prompt|idle_prompt) STATUS="permission" ;;
       *) exit 0 ;;
     esac ;;
   *) exit 0 ;;
