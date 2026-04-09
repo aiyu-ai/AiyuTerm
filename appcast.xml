@@ -6,6 +6,26 @@
         <description>Signed Sparkle updates for AiyuTerm.</description>
         <language>en</language>
         <item>
+            <title>v1.0.11</title>
+            <link>https://github.com/aiyu-ai/AiyuTerm/releases/tag/v1.0.11</link>
+            <sparkle:version>15</sparkle:version>
+            <sparkle:shortVersionString>1.0.11</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.6</sparkle:minimumSystemVersion>
+            <pubDate>Wed, 09 Apr 2026 00:00:00 +0800</pubDate>
+            <enclosure url="https://github.com/aiyu-ai/AiyuTerm/releases/download/v1.0.11/AiyuTerm-1.0.11.app.zip"
+                       length="27136566"
+                       type="application/octet-stream"
+                       sparkle:edSignature="gOR5sq5LuIRf5oFTi7RKSdIygcww+tqeivF2dZ9AezEV/1UTX12m/emUd+7OeFO5EqEA5Dylwm6oMoOwargRCA==" />
+            <description><![CDATA[
+                <h2>Improvements</h2>
+                <ul>
+                    <li>Split pane divider: blue pill handle and resize cursor on hover</li>
+                    <li>Split pane: smooth, jitter-free drag resizing</li>
+                    <li>Capsule input: auto-grows for multi-line text</li>
+                </ul>
+            ]]></description>
+        </item>
+        <item>
             <title>v1.0.9</title>
             <link>https://github.com/aiyu-ai/AiyuTerm/releases/tag/v1.0.9</link>
             <sparkle:version>12</sparkle:version>
