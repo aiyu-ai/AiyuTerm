@@ -130,9 +130,11 @@ DSYM_ZIP_PATH="$DSYM_PATH.zip"
 APPCAST_OUTPUT_PATH="$OUTPUT_DIR/appcast.xml"
 TAG="${TAG:-v$VERSION}"
 
-if [[ ! -f "$SPARKLE_PRIVATE_KEY_FILE" ]]; then
+SPARKLE_USE_KEYCHAIN="${SPARKLE_USE_KEYCHAIN:-0}"
+if [[ "$SPARKLE_USE_KEYCHAIN" != "1" && ! -f "$SPARKLE_PRIVATE_KEY_FILE" ]]; then
   echo "Missing Sparkle private key file: $SPARKLE_PRIVATE_KEY_FILE" >&2
-  echo "Run scripts/setup_sparkle_keys.sh first, or set SPARKLE_PRIVATE_KEY_FILE / AIYUTERM_RELEASE_HOME." >&2
+  echo "Run scripts/setup_sparkle_keys.sh first, set SPARKLE_PRIVATE_KEY_FILE / AIYUTERM_RELEASE_HOME," >&2
+  echo "or set SPARKLE_USE_KEYCHAIN=1 to read the key from macOS Keychain." >&2
   exit 1
 fi
 
@@ -229,44 +231,101 @@ cat > "$RELEASE_NOTES_FILE" <<EOF
 - GitHub release: https://github.com/aiyu-ai/AiyuTerm/releases/tag/$TAG
 EOF
 
-APPCAST_STAGING_DIR="$(mktemp -d "${TMPDIR:-/tmp}/aiyuterm-appcast.XXXXXX")"
-ZIP_BASENAME="$(basename "$ZIP_PATH" .zip)"
-
 sparkle_create_app_zip "$APP_BUNDLE_PATH" "$ZIP_PATH"
-cp "$ZIP_PATH" "$APPCAST_STAGING_DIR/"
-cp "$RELEASE_NOTES_FILE" "$APPCAST_STAGING_DIR/$ZIP_BASENAME.md"
-if [[ -f "$APPCAST_SOURCE_FILE" ]]; then
-  cp "$APPCAST_SOURCE_FILE" "$APPCAST_STAGING_DIR/appcast.xml"
+
+if [[ "$SPARKLE_USE_KEYCHAIN" == "1" ]]; then
+  # Sign with Keychain key and manually update appcast.xml
+  SIGN_TOOL="$(sparkle_tool_path sign_update "$ROOT_DIR" "$PROJECT_PATH" "$SCHEME")"
+  SIGN_OUTPUT="$("$SIGN_TOOL" --account "${SPARKLE_KEY_ACCOUNT:-aiyuterm}" "$ZIP_PATH")"
+  ED_SIGNATURE="$(echo "$SIGN_OUTPUT" | sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p')"
+  ZIP_LENGTH="$(echo "$SIGN_OUTPUT" | sed -n 's/.*length="\([^"]*\)".*/\1/p')"
+
+  RELEASE_NOTES_HTML="<h2>AiyuTerm $VERSION</h2><ul><li>See release notes on GitHub</li></ul>"
+  PUB_DATE="$(date -R)"
+
+  # Build new item XML
+  NEW_ITEM=$(cat <<XMLEOF
+        <item>
+            <title>v$VERSION</title>
+            <link>https://github.com/aiyu-ai/AiyuTerm/releases/tag/$TAG</link>
+            <sparkle:version>$BUILD_NUMBER</sparkle:version>
+            <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.6</sparkle:minimumSystemVersion>
+            <pubDate>$PUB_DATE</pubDate>
+            <enclosure url="https://github.com/aiyu-ai/AiyuTerm/releases/download/$TAG/$APP_NAME-$VERSION.app.zip"
+                       length="$ZIP_LENGTH"
+                       type="application/octet-stream"
+                       sparkle:edSignature="$ED_SIGNATURE" />
+            <description><![CDATA[$RELEASE_NOTES_HTML]]></description>
+        </item>
+XMLEOF
+  )
+
+  # Insert new item after <language>en</language>
+  if [[ -f "$APPCAST_SOURCE_FILE" ]]; then
+    sed -i '' "/<language>en<\/language>/a\\
+$NEW_ITEM
+" "$APPCAST_SOURCE_FILE"
+    cp "$APPCAST_SOURCE_FILE" "$APPCAST_OUTPUT_PATH"
+  fi
+else
+  APPCAST_STAGING_DIR="$(mktemp -d "${TMPDIR:-/tmp}/aiyuterm-appcast.XXXXXX")"
+  ZIP_BASENAME="$(basename "$ZIP_PATH" .zip)"
+
+  cp "$ZIP_PATH" "$APPCAST_STAGING_DIR/"
+  cp "$RELEASE_NOTES_FILE" "$APPCAST_STAGING_DIR/$ZIP_BASENAME.md"
+  if [[ -f "$APPCAST_SOURCE_FILE" ]]; then
+    cp "$APPCAST_SOURCE_FILE" "$APPCAST_STAGING_DIR/appcast.xml"
+  fi
+
+  sparkle_generate_appcast \
+    "$APPCAST_STAGING_DIR" \
+    "$SPARKLE_PRIVATE_KEY_FILE" \
+    "https://github.com/aiyu-ai/AiyuTerm/releases/download/$TAG/" \
+    "https://github.com/aiyu-ai/AiyuTerm/releases/tag/$TAG" \
+    "https://github.com/aiyu-ai/AiyuTerm" \
+    "$SPARKLE_MAX_VERSIONS" \
+    "$SPARKLE_CHANNEL" \
+    "$ROOT_DIR" \
+    "$PROJECT_PATH" \
+    "$SCHEME"
+
+  cp "$APPCAST_STAGING_DIR/appcast.xml" "$APPCAST_OUTPUT_PATH"
+  rm -rf "$APPCAST_STAGING_DIR"
+  APPCAST_STAGING_DIR=""
 fi
 
-sparkle_generate_appcast \
-  "$APPCAST_STAGING_DIR" \
-  "$SPARKLE_PRIVATE_KEY_FILE" \
-  "https://github.com/aiyu-ai/AiyuTerm/releases/download/$TAG/" \
-  "https://github.com/aiyu-ai/AiyuTerm/releases/tag/$TAG" \
-  "https://github.com/aiyu-ai/AiyuTerm" \
-  "$SPARKLE_MAX_VERSIONS" \
-  "$SPARKLE_CHANNEL" \
-  "$ROOT_DIR" \
-  "$PROJECT_PATH" \
-  "$SCHEME"
-
-cp "$APPCAST_STAGING_DIR/appcast.xml" "$APPCAST_OUTPUT_PATH"
-rm -rf "$APPCAST_STAGING_DIR"
-APPCAST_STAGING_DIR=""
 rm -f "$RELEASE_NOTES_FILE"
 RELEASE_NOTES_FILE=""
 
 if [[ "$SKIP_GH_RELEASE" != "1" ]]; then
+  UPLOAD_ASSETS=("$DMG_PATH" "$ZIP_PATH" "$APPCAST_OUTPUT_PATH")
+  [[ -f "$DSYM_ZIP_PATH" ]] && UPLOAD_ASSETS+=("$DSYM_ZIP_PATH")
+
   if gh release view "$TAG" >/dev/null 2>&1; then
-    gh release upload "$TAG" "$DMG_PATH" "$ZIP_PATH" "$DSYM_ZIP_PATH" "$APPCAST_OUTPUT_PATH" --clobber
+    gh release upload "$TAG" "${UPLOAD_ASSETS[@]}" --clobber
     gh release edit "$TAG" \
       --title "$APP_NAME $VERSION" \
       --notes "Release $VERSION"
   else
-    gh release create "$TAG" "$DMG_PATH" "$ZIP_PATH" "$DSYM_ZIP_PATH" "$APPCAST_OUTPUT_PATH" \
+    gh release create "$TAG" "${UPLOAD_ASSETS[@]}" \
       --title "$APP_NAME $VERSION" \
       --notes "Release $VERSION"
+  fi
+fi
+
+# Auto-commit updated appcast.xml back to the repo
+SKIP_APPCAST_COMMIT="${SKIP_APPCAST_COMMIT:-0}"
+if [[ "$SKIP_APPCAST_COMMIT" != "1" && -f "$APPCAST_SOURCE_FILE" ]]; then
+  if ! diff -q "$APPCAST_OUTPUT_PATH" "$APPCAST_SOURCE_FILE" >/dev/null 2>&1; then
+    cp "$APPCAST_OUTPUT_PATH" "$APPCAST_SOURCE_FILE"
+  fi
+  if [[ -n "$(git diff -- "$APPCAST_SOURCE_FILE")" ]]; then
+    git add "$APPCAST_SOURCE_FILE"
+    git commit -m "chore: update appcast for v$VERSION Sparkle update"
+    if [[ "$SKIP_PUSH" != "1" ]]; then
+      git push origin "$(git branch --show-current)"
+    fi
   fi
 fi
 
