@@ -1040,10 +1040,15 @@ struct SettingsSheet: View {
 
                     Spacer()
 
+                    // Phase 7.1: re-runs the shared
+                    // AgentCLIConfigInstaller install + verifyAndRepair
+                    // path so users can manually re-install/repair the
+                    // hooks if the on-disk config ever drifts (e.g.
+                    // after a Claude Code update that rewrote
+                    // settings.json).
                     Button(localized("settings.claudeCode.configure")) {
                         showClaudeCodeConfirmation = true
                     }
-                    .disabled(claudeCodeHooksConfigured)
                 }
             }
             .alert(
@@ -1051,11 +1056,20 @@ struct SettingsSheet: View {
                 isPresented: $showClaudeCodeConfirmation
             ) {
                 Button(localized("settings.claudeCode.confirmButton")) {
-                    ClaudeCodeHooksService.ensureHookScript()
-                    let success = ClaudeCodeHooksService.injectHooks()
-                    if success {
-                        claudeCodeHooksConfigured = true
-                    }
+                    ClaudeCodeHooksService.ensureBridgeHookScript()
+                    let claudeHookCommand = ClaudeCodeHooksService.bridgeHookScriptURL().path
+                    let bridgeBinaryPath = ClaudeCodeHooksService.bridgeBinaryURL().path
+                    _ = AgentCLIConfigInstaller.install(
+                        claudeHookCommand: claudeHookCommand,
+                        externalBridgeBinaryPath: bridgeBinaryPath
+                    )
+                    _ = AgentCLIConfigInstaller.verifyAndRepair(
+                        claudeHookCommand: claudeHookCommand,
+                        externalBridgeBinaryPath: bridgeBinaryPath
+                    )
+                    claudeCodeHooksConfigured = AgentCLIConfigInstaller.isHooksInstalled(
+                        for: AgentCLIRegistry.allCLIs[0]
+                    )
                 }
                 Button(localized("settings.button.cancel"), role: .cancel) {}
             } message: {
@@ -1129,7 +1143,12 @@ struct SettingsSheet: View {
         originalAppLanguage = store.appSettings.appLanguage
         selectedWorkspaceID = request.workspaceID ?? store.selectedWorkspace?.id
         terminalFontSearchText = ""
-        claudeCodeHooksConfigured = ClaudeCodeHooksService.isConfigured()
+        // Phase 7.1: read the installed state from the new
+        // AgentCLIConfigInstaller instead of the legacy service,
+        // so the badge reflects the actual bridge hook entry.
+        claudeCodeHooksConfigured = AgentCLIConfigInstaller.isHooksInstalled(
+            for: AgentCLIRegistry.allCLIs[0]
+        )
         loadWorkspaceSettings()
     }
 

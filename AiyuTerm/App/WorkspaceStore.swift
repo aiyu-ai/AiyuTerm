@@ -665,19 +665,116 @@ final class WorkspaceStore: ObservableObject {
 
         configureUpdater(checkInBackground: true)
         syncAutomationServices()
-        ensureAgentFilePoller()
         ensureAgentHookServer()
-        ClaudeCodeHooksService.ensureHookScript()
-        // Phase 5.5: delegate all agent CLI hook installation to the
-        // shared AgentCLIConfigInstaller. It knows how to handle the
-        // .claude format for Claude Code and its forks plus the
-        // .nested / .flat / .copilot formats for Codex / Gemini /
-        // Cursor / Copilot and friends. The Phase 4 helpers
-        // (ensureBridgeHookScript + injectBridgeHooks) still write
-        // the shared script body; the installer just references it.
+        // Phase 7.1: one-shot migration of the legacy file-poller
+        // assets (bash script + /tmp status dir + settings.json
+        // entries) before we install the new bridge hook. Idempotent
+        // and guarded by a UserDefaults flag so subsequent launches
+        // are no-ops.
+        migrateLegacyAgentStatusIfNeeded()
         ClaudeCodeHooksService.ensureBridgeHookScript()
         installAgentCLIHooks()
         persist()
+    }
+
+    /// Phase 7.1: clean up the Phase 1-4 file-polling agent status
+    /// plumbing on first launch of a build that ships
+    /// AgentCLIConfigInstaller.
+    ///
+    /// What this removes:
+    ///   1. ~/.aiyuterm[-debug]/hooks/agent-status-notify.sh — the
+    ///      bash hook script that wrote status colons into
+    ///      /tmp/aiyuterm-agent-status/{md5}.
+    ///   2. /tmp/aiyuterm-agent-status — the directory the bash
+    ///      script and the AgentStatusFilePoller shared.
+    ///   3. Any hook entry in ~/.claude/settings.json whose command
+    ///      string references "agent-status-notify.sh". Foreign
+    ///      entries and the current bridge-hook entries are left
+    ///      alone by construction.
+    ///
+    /// Flagged by `UserDefaults aiyuterm.legacyAgentStatusMigrated`
+    /// so the migration runs at most once per machine. If the
+    /// cleanup partially fails (e.g. permission denied) we still
+    /// set the flag — the remaining files become inert once the
+    /// AgentStatusFilePoller is no longer scheduled.
+    private func migrateLegacyAgentStatusIfNeeded() {
+        let defaultsKey = "aiyuterm.legacyAgentStatusMigrated"
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: defaultsKey) else { return }
+        defer { defaults.set(true, forKey: defaultsKey) }
+
+        let logger = Logger(subsystem: "com.aiyuai.aiyuterm", category: "LegacyAgentStatusMigration")
+        let fm = FileManager.default
+
+        // 1. Legacy bash hook script.
+        let legacyScriptURL = aiyuTermStateDirectoryURL()
+            .appendingPathComponent("hooks", isDirectory: true)
+            .appendingPathComponent("agent-status-notify.sh")
+        if fm.fileExists(atPath: legacyScriptURL.path) {
+            do {
+                try fm.removeItem(at: legacyScriptURL)
+                logger.info("Removed legacy hook script at \(legacyScriptURL.path, privacy: .public)")
+            } catch {
+                logger.error("Failed to remove legacy hook script: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+
+        // 2. Legacy /tmp status directory.
+        let legacyStatusDir = "/tmp/aiyuterm-agent-status"
+        if fm.fileExists(atPath: legacyStatusDir) {
+            do {
+                try fm.removeItem(atPath: legacyStatusDir)
+                logger.info("Removed legacy status dir at \(legacyStatusDir, privacy: .public)")
+            } catch {
+                logger.error("Failed to remove legacy status dir: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+
+        // 3. Settings.json legacy entries.
+        let settingsURL = fm.homeDirectoryForCurrentUser
+            .appendingPathComponent(".claude", isDirectory: true)
+            .appendingPathComponent("settings.json")
+        guard let data = try? Data(contentsOf: settingsURL),
+              var root = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else {
+            return
+        }
+        guard var hooks = root["hooks"] as? [String: Any] else {
+            return
+        }
+        var touched = false
+        for (event, value) in hooks {
+            guard var entries = value as? [[String: Any]] else { continue }
+            let before = entries.count
+            entries.removeAll { entry in
+                guard let inner = entry["hooks"] as? [[String: Any]] else { return false }
+                return inner.contains { hook in
+                    guard let cmd = hook["command"] as? String else { return false }
+                    return cmd.contains("agent-status-notify.sh")
+                }
+            }
+            if entries.count != before {
+                touched = true
+                if entries.isEmpty {
+                    hooks.removeValue(forKey: event)
+                } else {
+                    hooks[event] = entries
+                }
+            }
+        }
+        guard touched else { return }
+        root["hooks"] = hooks
+        if let newData = try? JSONSerialization.data(
+            withJSONObject: root,
+            options: [.prettyPrinted, .sortedKeys]
+        ) {
+            do {
+                try newData.write(to: settingsURL, options: [.atomic])
+                logger.info("Cleaned legacy agent-status-notify entries from Claude settings.json")
+            } catch {
+                logger.error("Failed to rewrite settings.json: \(error.localizedDescription, privacy: .public)")
+            }
+        }
     }
 
     /// Phase 5.5 entry point: run the full registry install then
@@ -792,11 +889,17 @@ final class WorkspaceStore: ObservableObject {
         workspace.bootstrapIfNeeded()
         workspace.markCompletionRead(forWorktreePath: workspace.activeWorktreePath)
         workspace.clearErrorStatus(forWorktreePath: workspace.activeWorktreePath)
-        ensureAgentFilePoller()
+        // Phase 7.1: AgentHookServer is the authoritative data source
+        // now; the legacy file poller is not started here anymore.
         persist()
     }
 
-    /// Start the file-based agent status poller with a dynamic workspace reference.
+    // Phase 7.1 note: `ensureAgentFilePoller()` and the
+    // `agentStatusFilePoller` stored property are retained as dead
+    // code for one release so that a regression can be rolled back
+    // by re-adding the call from loadIfNeeded/selectWorkspace.
+    // Phase 7.2 will delete both.
+    @available(*, deprecated, message: "Phase 7.1: AgentHookServer replaces this poller; will be removed in Phase 7.2")
     private func ensureAgentFilePoller() {
         guard agentStatusFilePoller.workspacesProvider == nil else { return }
         agentStatusFilePoller.workspacesProvider = { [weak self] in
