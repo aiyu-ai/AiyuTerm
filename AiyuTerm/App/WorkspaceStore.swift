@@ -668,12 +668,41 @@ final class WorkspaceStore: ObservableObject {
         ensureAgentFilePoller()
         ensureAgentHookServer()
         ClaudeCodeHooksService.ensureHookScript()
-        // Phase 4: install the bridge-based hook alongside the legacy
-        // script so users running Claude Code see events flow through
-        // both paths until the legacy file poller is retired in Phase 7.
+        // Phase 5.5: delegate all agent CLI hook installation to the
+        // shared AgentCLIConfigInstaller. It knows how to handle the
+        // .claude format for Claude Code and its forks plus the
+        // .nested / .flat / .copilot formats for Codex / Gemini /
+        // Cursor / Copilot and friends. The Phase 4 helpers
+        // (ensureBridgeHookScript + injectBridgeHooks) still write
+        // the shared script body; the installer just references it.
         ClaudeCodeHooksService.ensureBridgeHookScript()
-        ClaudeCodeHooksService.injectBridgeHooks()
+        installAgentCLIHooks()
         persist()
+    }
+
+    /// Phase 5.5 entry point: run the full registry install then
+    /// verifyAndRepair so drifted third-party CLI configs self-heal
+    /// at startup.
+    private func installAgentCLIHooks() {
+        let logger = Logger(subsystem: "com.aiyuai.aiyuterm", category: "WorkspaceStore")
+        let claudeHookCommand = ClaudeCodeHooksService.bridgeHookScriptURL().path
+        let bridgeBinaryPath = ClaudeCodeHooksService.bridgeBinaryURL().path
+
+        let installed = AgentCLIConfigInstaller.install(
+            claudeHookCommand: claudeHookCommand,
+            externalBridgeBinaryPath: bridgeBinaryPath
+        )
+        if !installed.isEmpty {
+            logger.info("AgentCLIConfigInstaller.install wrote: \(installed.joined(separator: ", "), privacy: .public)")
+        }
+
+        let repaired = AgentCLIConfigInstaller.verifyAndRepair(
+            claudeHookCommand: claudeHookCommand,
+            externalBridgeBinaryPath: bridgeBinaryPath
+        )
+        if !repaired.isEmpty {
+            logger.info("AgentCLIConfigInstaller.verifyAndRepair fixed: \(repaired.joined(separator: ", "), privacy: .public)")
+        }
     }
 
     func addWorkspaceFromOpenPanel() {
