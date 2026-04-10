@@ -21,13 +21,17 @@
 //   • installClaude(cli:) — the .claude format writer
 //   • isHooksInstalled(for:) detector for Phase 5.4's verifyAndRepair
 //
-// Out of scope here (coming in Phase 5.3+):
-//   • .nested / .flat / .copilot writers
-//   • install() / uninstall() / verifyAndRepair() top-level API
-//   • Claude version gate `detectClaudeVersion`
-//   • Settings UI
+// Phase 9.2 completed:
+//   • Claude version detection + versionAtLeast + compatibleEvents
+//     so version-gated events (PermissionDenied, PostToolUseFailure)
+//     stop getting installed on Claude < 2.1.89.
+//   • Codex ~/.codex/config.toml flipping for codex_hooks = true.
+//   • Bridge binary auto-repair with removexattr quarantine strip
+//     so Release builds don't need the user to manually whitelist.
+//   • OpenCode JS plugin install/uninstall helpers (the 9th CLI).
 //
 
+import Darwin
 import Foundation
 import os.log
 
@@ -161,7 +165,7 @@ enum AgentCLIConfigInstaller {
             let outcome: InstallOutcome
             switch cli.format {
             case .claude:
-                outcome = installClaude(
+                outcome = installClaudeWithVersionGate(
                     cli: cli,
                     hookCommand: claudeHookCommand,
                     fileManager: fileManager
@@ -182,8 +186,57 @@ enum AgentCLIConfigInstaller {
             case .failed(let reason):
                 logger.warning("install failed for \(cli.name, privacy: .public): \(reason, privacy: .public)")
             }
+
+            // Phase 9.2: post-install per-CLI side effects.
+            if cli.source == "codex" {
+                _ = enableCodexHooksConfig(fileManager: fileManager)
+            }
+        }
+
+        // Phase 9.2: OpenCode plugin lives outside the per-CLI
+        // registry loop because it uses a JS plugin rather than a
+        // hook-config file.
+        if enablementStore.isCLIEnabled(source: "opencode", defaultValue: false) {
+            if installOpenCodePlugin(fileManager: fileManager) {
+                // Plugin installer reports success even on skip, so
+                // we add it to the "installed" list only when it
+                // was actually needed.
+                if isOpenCodePluginInstalled(fileManager: fileManager) {
+                    installed.append("OpenCode")
+                }
+            }
         }
         return installed
+    }
+
+    /// Internal wrapper that applies the Phase 9.2 version gate
+    /// before delegating to `installClaude`. Version-gated events
+    /// fall off the list when the installed Claude Code is older
+    /// than the required version so Claude doesn't reject the
+    /// settings file.
+    private static func installClaudeWithVersionGate(
+        cli: AgentCLIConfig,
+        hookCommand: String,
+        fileManager: FileManager
+    ) -> InstallOutcome {
+        let filteredEvents = compatibleEvents(for: cli)
+        guard filteredEvents.count != cli.events.count else {
+            return installClaude(
+                cli: cli,
+                hookCommand: hookCommand,
+                fileManager: fileManager
+            )
+        }
+        return installClaudeAt(
+            events: filteredEvents,
+            configKey: cli.configKey,
+            fullPath: cli.fullPath,
+            dirPath: cli.dirPath,
+            format: cli.format,
+            debugName: cli.name,
+            hookCommand: hookCommand,
+            fileManager: fileManager
+        )
     }
 
     /// Uninstall every managed hook entry across the full registry.
@@ -894,5 +947,361 @@ enum AgentCLIConfigInstaller {
             }
         }
         return false
+    }
+
+    // MARK: - Phase 9.2: Claude version detection
+
+    /// Cache the result of `claude --version` so we only shell out
+    /// once per app launch. Nilable so "unresolved" is distinct from
+    /// "detected 0.0.0".
+    nonisolated(unsafe) private static var cachedClaudeVersion: String?
+    private static let claudeVersionLock = NSLock()
+
+    /// Run `claude --version` and parse the output. GUI apps do not
+    /// inherit the user's shell PATH so we probe the two canonical
+    /// install locations first.
+    static func detectClaudeVersion() -> String? {
+        claudeVersionLock.lock()
+        if let cached = cachedClaudeVersion {
+            claudeVersionLock.unlock()
+            return cached
+        }
+        claudeVersionLock.unlock()
+
+        let candidates = [
+            NSHomeDirectory() + "/.local/bin/claude",
+            "/usr/local/bin/claude",
+            "/opt/homebrew/bin/claude",
+        ]
+        guard let claudePath = candidates.first(where: {
+            FileManager.default.isExecutableFile(atPath: $0)
+        }) else {
+            return nil
+        }
+
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: claudePath)
+        proc.arguments = ["--version"]
+        let pipe = Pipe()
+        proc.standardOutput = pipe
+        proc.standardError = FileHandle.nullDevice
+        do {
+            try proc.run()
+            proc.waitUntilExit()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            guard let output = String(data: data, encoding: .utf8) else { return nil }
+            // Parse "2.1.92 (Claude Code)" → "2.1.92"
+            let version = output
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .components(separatedBy: " ")
+                .first ?? ""
+            guard !version.isEmpty else { return nil }
+            claudeVersionLock.lock()
+            cachedClaudeVersion = version
+            claudeVersionLock.unlock()
+            return version
+        } catch {
+            return nil
+        }
+    }
+
+    /// Compare two dotted-semver strings. Returns true if
+    /// `installed >= required`. Missing components are treated as 0
+    /// so `"2.1" >= "2.1.0"` holds.
+    static func versionAtLeast(_ installed: String, _ required: String) -> Bool {
+        let i = installed.split(separator: ".").compactMap { Int($0) }
+        let r = required.split(separator: ".").compactMap { Int($0) }
+        for idx in 0 ..< max(i.count, r.count) {
+            let iv = idx < i.count ? i[idx] : 0
+            let rv = idx < r.count ? r[idx] : 0
+            if iv > rv { return true }
+            if iv < rv { return false }
+        }
+        return true // equal
+    }
+
+    /// Filter a CLI's event list down to the events whose
+    /// `versionedEvents` gate is satisfied by the detected version.
+    /// Unknown version + gated event = skip (conservative: we'd
+    /// rather miss an event than break Claude Code with an unknown
+    /// hook).
+    static func compatibleEvents(
+        for cli: AgentCLIConfig
+    ) -> [(name: String, timeout: Int, async: Bool)] {
+        guard !cli.versionedEvents.isEmpty else { return cli.events }
+        // Only Claude Code uses this today; the other CLIs ship
+        // versionedEvents = [:]. Short-circuit the rest.
+        guard cli.source == "claude" else { return cli.events }
+        let version = detectClaudeVersion()
+        return cli.events.filter { event in
+            guard let minVer = cli.versionedEvents[event.name] else { return true }
+            guard let version else { return false }
+            return versionAtLeast(version, minVer)
+        }
+    }
+
+    // MARK: - Phase 9.2: Codex config.toml
+
+    /// Ensure `codex_hooks = true` is present (and uncommented) in
+    /// the `[features]` section of `~/.codex/config.toml`. Without
+    /// this, Codex CLI treats its hooks.json as inert and nothing
+    /// fires. Returns true on success (or if already set).
+    @discardableResult
+    static func enableCodexHooksConfig(
+        fileManager: FileManager = .default
+    ) -> Bool {
+        let configPath = NSHomeDirectory() + "/.codex/config.toml"
+        var contents = ""
+        if fileManager.fileExists(atPath: configPath) {
+            contents = (try? String(contentsOfFile: configPath, encoding: .utf8)) ?? ""
+        }
+
+        // Already set to true (non-commented) — don't touch.
+        if contents.range(
+            of: #"(?m)^\s*codex_hooks\s*=\s*true"#,
+            options: .regularExpression
+        ) != nil {
+            return true
+        }
+
+        // Flip existing false setting in place.
+        if contents.range(
+            of: #"(?m)^\s*codex_hooks\s*=\s*false"#,
+            options: .regularExpression
+        ) != nil {
+            contents = contents.replacingOccurrences(
+                of: #"(?m)^\s*codex_hooks\s*=\s*false"#,
+                with: "codex_hooks = true",
+                options: .regularExpression
+            )
+            return writeCodexConfig(contents, to: configPath, fileManager: fileManager)
+        }
+
+        // Insert into [features] or append a new section.
+        var lines = contents.components(separatedBy: "\n")
+        if let featIdx = lines.firstIndex(where: {
+            $0.trimmingCharacters(in: .whitespaces) == "[features]"
+        }) {
+            lines.insert("codex_hooks = true", at: featIdx + 1)
+        } else {
+            if !lines.isEmpty, !lines.last!.isEmpty { lines.append("") }
+            lines.append("[features]")
+            lines.append("codex_hooks = true")
+        }
+        return writeCodexConfig(lines.joined(separator: "\n"), to: configPath, fileManager: fileManager)
+    }
+
+    private static func writeCodexConfig(
+        _ contents: String,
+        to path: String,
+        fileManager: FileManager
+    ) -> Bool {
+        let dir = (path as NSString).deletingLastPathComponent
+        try? fileManager.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        return fileManager.createFile(atPath: path, contents: contents.data(using: .utf8))
+    }
+
+    // MARK: - Phase 9.2: Bridge binary repair
+
+    /// Copy the `aiyuterm-hook-bridge` helper out of the running
+    /// .app bundle into a user-writable location and strip the
+    /// quarantine xattr so Gatekeeper will not block the CLI when
+    /// spawned by a third-party tool. Returns the absolute path of
+    /// the installed binary on success, nil if the source binary
+    /// could not be located.
+    ///
+    /// The destination path defaults to
+    /// `~/.aiyuterm[-debug]/hooks/aiyuterm-hook-bridge` so the
+    /// binary lives next to the wrapper shell script.
+    @discardableResult
+    static func installBridgeBinary(
+        destinationDirectory: String? = nil,
+        fileManager: FileManager = .default
+    ) -> String? {
+        // 1. Locate the source binary inside the app bundle.
+        guard let execPath = Bundle.main.executablePath else { return nil }
+        let execDir = (execPath as NSString).deletingLastPathComponent
+        let contentsDir = (execDir as NSString).deletingLastPathComponent
+        var srcPath = contentsDir + "/Helpers/aiyuterm-hook-bridge"
+        if !fileManager.fileExists(atPath: srcPath) {
+            // CLI-style layout fallback (bridge sibling to app executable).
+            srcPath = execDir + "/aiyuterm-hook-bridge"
+        }
+        guard fileManager.fileExists(atPath: srcPath) else { return nil }
+
+        // 2. Decide destination. Mirror the wrapper-hook dir so the
+        //    binary and the wrapper live together.
+        let dir = destinationDirectory ?? "\(NSHomeDirectory())/\(AgentHookSocketPath.stateDirectoryName)/hooks"
+        try? fileManager.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        let destPath = dir + "/aiyuterm-hook-bridge"
+
+        // 3. Atomic replace via a tmp sibling.
+        let tmpPath = destPath + ".tmp.\(ProcessInfo.processInfo.processIdentifier)"
+        try? fileManager.removeItem(atPath: tmpPath)
+        do {
+            try fileManager.copyItem(atPath: srcPath, toPath: tmpPath)
+            chmod(tmpPath, 0o755)
+            stripQuarantine(tmpPath)
+            _ = try fileManager.replaceItemAt(
+                URL(fileURLWithPath: destPath),
+                withItemAt: URL(fileURLWithPath: tmpPath)
+            )
+        } catch {
+            // Replace fails when destination doesn't exist yet.
+            try? fileManager.moveItem(atPath: tmpPath, toPath: destPath)
+            chmod(destPath, 0o755)
+        }
+        stripQuarantine(destPath)
+        return destPath
+    }
+
+    /// Strip `com.apple.quarantine` from a file so Gatekeeper stops
+    /// blocking spawns. No-op if the attribute isn't present.
+    static func stripQuarantine(_ path: String) {
+        removexattr(path, "com.apple.quarantine", 0)
+    }
+
+    // MARK: - Phase 9.2: OpenCode JS plugin
+
+    /// Canonical path where the AiyuTerm OpenCode plugin lives.
+    static var opencodePluginPath: String {
+        NSHomeDirectory() + "/.config/opencode/plugins/aiyuterm.js"
+    }
+
+    /// Path to `~/.config/opencode/config.json`.
+    static var opencodeConfigPath: String {
+        NSHomeDirectory() + "/.config/opencode/config.json"
+    }
+
+    /// Current OpenCode plugin version — bump when
+    /// `aiyuterm-opencode.js` changes so verifyAndRepair picks up
+    /// an update without a full uninstall/reinstall.
+    static let opencodePluginVersion = "v2"
+
+    /// Read the bundled JS plugin source. Production builds carry
+    /// it as a Copy-Bundle-Resources entry named
+    /// `aiyuterm-opencode.js`; tests can stub this lookup.
+    static func opencodePluginSource(bundle: Bundle = .main) -> String? {
+        // Try the primary resource name first.
+        if let url = bundle.url(forResource: "aiyuterm-opencode", withExtension: "js"),
+           let src = try? String(contentsOf: url, encoding: .utf8)
+        {
+            return src
+        }
+        // Fall back to the legacy CodeIsland filename in case the
+        // resource bundle still uses the upstream name.
+        if let url = bundle.url(forResource: "codeisland-opencode", withExtension: "js"),
+           let src = try? String(contentsOf: url, encoding: .utf8)
+        {
+            return src
+        }
+        return nil
+    }
+
+    /// Install the OpenCode plugin into `~/.config/opencode/plugins/`
+    /// and register it in `config.json`'s `plugin` array. Returns
+    /// true on success or if OpenCode isn't installed on this
+    /// machine (in which case the installer silently skips).
+    @discardableResult
+    static func installOpenCodePlugin(
+        bundle: Bundle = .main,
+        fileManager: FileManager = .default
+    ) -> Bool {
+        let configDir = (opencodeConfigPath as NSString).deletingLastPathComponent
+        guard fileManager.fileExists(atPath: configDir) else { return true }
+
+        // Clean up legacy CodeIsland / vibe-island plugin files.
+        let legacyCandidates = [
+            configDir + "/plugins/vibe-island.js",
+            configDir + "/plugins/codeisland.js",
+        ]
+        for legacy in legacyCandidates {
+            if fileManager.fileExists(atPath: legacy) {
+                try? fileManager.removeItem(atPath: legacy)
+            }
+        }
+
+        // Write the plugin JS.
+        guard let source = opencodePluginSource(bundle: bundle) else { return false }
+        let pluginDir = (opencodePluginPath as NSString).deletingLastPathComponent
+        try? fileManager.createDirectory(atPath: pluginDir, withIntermediateDirectories: true)
+        guard fileManager.createFile(
+            atPath: opencodePluginPath,
+            contents: Data(source.utf8)
+        ) else {
+            return false
+        }
+
+        // Register in config.json.
+        let pluginRef = "file://\(opencodePluginPath)"
+        var config: [String: Any] = [:]
+        if let data = fileManager.contents(atPath: opencodeConfigPath),
+           let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        {
+            config = parsed
+        }
+        var plugins = config["plugin"] as? [String] ?? []
+        plugins.removeAll { entry in
+            let lower = entry.lowercased()
+            return lower.contains("vibe-island")
+                || lower.contains("codeisland")
+                || lower.contains("aiyuterm")
+        }
+        plugins.append(pluginRef)
+        config["plugin"] = plugins
+
+        guard let data = try? JSONSerialization.data(
+            withJSONObject: config,
+            options: [.prettyPrinted, .sortedKeys]
+        ) else {
+            return false
+        }
+        return fileManager.createFile(atPath: opencodeConfigPath, contents: data)
+    }
+
+    /// Remove the plugin file and drop its entry from config.json.
+    /// Never touches other plugins.
+    static func uninstallOpenCodePlugin(fileManager: FileManager = .default) {
+        try? fileManager.removeItem(atPath: opencodePluginPath)
+        guard let data = fileManager.contents(atPath: opencodeConfigPath),
+              var config = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              var plugins = config["plugin"] as? [String]
+        else {
+            return
+        }
+        plugins.removeAll { $0.lowercased().contains("aiyuterm") }
+        if plugins.isEmpty {
+            config.removeValue(forKey: "plugin")
+        } else {
+            config["plugin"] = plugins
+        }
+        if let newData = try? JSONSerialization.data(
+            withJSONObject: config,
+            options: [.prettyPrinted, .sortedKeys]
+        ) {
+            fileManager.createFile(atPath: opencodeConfigPath, contents: newData)
+        }
+    }
+
+    /// Detect whether the installed plugin matches the current
+    /// shipped version. Used by verifyAndRepair to know when to
+    /// rewrite the JS after a bump.
+    static func isOpenCodePluginInstalled(fileManager: FileManager = .default) -> Bool {
+        guard fileManager.fileExists(atPath: opencodePluginPath),
+              let data = fileManager.contents(atPath: opencodeConfigPath),
+              let config = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let plugins = config["plugin"] as? [String]
+        else {
+            return false
+        }
+        guard plugins.contains(where: { $0.lowercased().contains("aiyuterm") }) else {
+            return false
+        }
+        guard let existing = fileManager.contents(atPath: opencodePluginPath),
+              let str = String(data: existing, encoding: .utf8)
+        else {
+            return false
+        }
+        return str.contains("// version: \(opencodePluginVersion)")
     }
 }
