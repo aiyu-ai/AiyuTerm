@@ -31,6 +31,66 @@
 import Foundation
 import os.log
 
+/// Minimal abstraction over UserDefaults so tests can inject a
+/// throwaway store and not pollute the host defaults database.
+///
+/// Protocol is Sendable so impls can cross actor boundaries without
+/// triggering the Swift 6 MainActor-backdeploy deinit path that
+/// tripped libmalloc during initial Phase 5.4 testing.
+protocol AgentCLIEnablementStore: AnyObject, Sendable {
+    func isCLIEnabled(source: String, defaultValue: Bool) -> Bool
+    func setCLIEnabled(source: String, enabled: Bool)
+}
+
+/// Production impl backed by UserDefaults.standard with the
+/// `aiyuterm.cli_enabled_<source>` key prefix. Stays name-spaced so
+/// we never collide with a user's other tools.
+final class UserDefaultsAgentCLIEnablementStore: AgentCLIEnablementStore, @unchecked Sendable {
+    static let shared = UserDefaultsAgentCLIEnablementStore()
+
+    private let defaults: UserDefaults
+    private let keyPrefix = "aiyuterm.cli_enabled_"
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
+
+    func isCLIEnabled(source: String, defaultValue: Bool) -> Bool {
+        let key = keyPrefix + source
+        if defaults.object(forKey: key) == nil { return defaultValue }
+        return defaults.bool(forKey: key)
+    }
+
+    func setCLIEnabled(source: String, enabled: Bool) {
+        defaults.set(enabled, forKey: keyPrefix + source)
+    }
+}
+
+/// In-memory impl used by tests. Marked `@unchecked Sendable` and
+/// wraps the dictionary in NSLock so there is no implicit MainActor
+/// isolation on deinit — otherwise Swift 6's
+/// `swift_task_deinitOnExecutorMainActorBackDeploy` path re-schedules
+/// the deinit on the main executor and libmalloc crashes during
+/// teardown of a test that created the store as a local let.
+final class InMemoryAgentCLIEnablementStore: AgentCLIEnablementStore, @unchecked Sendable {
+    private let lock = NSLock()
+    private var state: [String: Bool] = [:]
+
+    init() {}
+
+    func isCLIEnabled(source: String, defaultValue: Bool) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return state[source] ?? defaultValue
+    }
+
+    func setCLIEnabled(source: String, enabled: Bool) {
+        lock.lock()
+        defer { lock.unlock() }
+        state[source] = enabled
+    }
+}
+
 enum AgentCLIConfigInstaller {
 
     // MARK: - Public types
@@ -43,12 +103,234 @@ enum AgentCLIConfigInstaller {
         case failed(String)
     }
 
+    /// Per-CLI status reported by `discoverCLIs()` — lets the
+    /// settings UI render a three-way badge
+    /// (not-installed / not-enabled / installed).
+    struct CLIStatus: Equatable {
+        let source: String
+        let name: String
+        /// True if the CLI directory (e.g. ~/.claude) exists on disk.
+        let cliPresent: Bool
+        /// True if the user has the CLI toggled on in AgentCLIEnablementStore.
+        let userEnabled: Bool
+        /// True if our hook entry is currently present in the CLI's
+        /// config file. Independent of `cliPresent` and `userEnabled`
+        /// so the UI can say things like "enabled but missing hooks".
+        let hookInstalled: Bool
+    }
+
     // MARK: - Logging
 
     nonisolated private static let logger = Logger(
         subsystem: "com.aiyuai.aiyuterm",
         category: "AgentCLIConfigInstaller"
     )
+
+    // MARK: - Top-level orchestration
+
+    /// Install hooks for every enabled CLI that AiyuTerm knows about.
+    /// CLIs that are disabled or whose config directory is missing
+    /// are skipped silently. Returns the list of CLI display names
+    /// for which a fresh write happened (as opposed to a no-op
+    /// `.alreadyInstalled` outcome or a skipped CLI).
+    ///
+    /// The `claudeHookCommand` is the absolute path to the bridge
+    /// wrapper script (Phase 4's `claude-code-bridge-hook.sh`). All
+    /// other CLIs call the bridge binary directly using
+    /// `externalBridgeBinaryPath`.
+    @discardableResult
+    static func install(
+        claudeHookCommand: String,
+        externalBridgeBinaryPath: String,
+        registry: [AgentCLIConfig] = AgentCLIRegistry.allCLIs,
+        enablementStore: AgentCLIEnablementStore = UserDefaultsAgentCLIEnablementStore.shared,
+        fileManager: FileManager = .default
+    ) -> [String] {
+        var installed: [String] = []
+        for cli in registry {
+            guard enablementStore.isCLIEnabled(source: cli.source, defaultValue: cli.source == "claude") else {
+                continue
+            }
+            // Skip CLIs whose state directory doesn't exist on disk
+            // unless it's Claude Code (which we auto-onboard because
+            // AiyuTerm's primary target is Claude Code).
+            if cli.source != "claude" && !cli.looksInstalledOnDisk {
+                continue
+            }
+
+            let outcome: InstallOutcome
+            switch cli.format {
+            case .claude:
+                outcome = installClaude(
+                    cli: cli,
+                    hookCommand: claudeHookCommand,
+                    fileManager: fileManager
+                )
+            case .nested, .flat, .copilot:
+                outcome = installExternal(
+                    cli: cli,
+                    bridgeBinaryPath: externalBridgeBinaryPath,
+                    fileManager: fileManager
+                )
+            }
+
+            switch outcome {
+            case .installed:
+                installed.append(cli.name)
+            case .alreadyInstalled:
+                break
+            case .failed(let reason):
+                logger.warning("install failed for \(cli.name, privacy: .public): \(reason, privacy: .public)")
+            }
+        }
+        return installed
+    }
+
+    /// Uninstall every managed hook entry across the full registry.
+    /// Foreign tool entries are left alone (see `removeManagedHookEntries`).
+    /// Returns the list of CLI display names that had their config
+    /// file rewritten.
+    @discardableResult
+    static func uninstallAll(
+        registry: [AgentCLIConfig] = AgentCLIRegistry.allCLIs,
+        fileManager: FileManager = .default
+    ) -> [String] {
+        var rewritten: [String] = []
+        for cli in registry {
+            guard fileManager.fileExists(atPath: cli.fullPath) else { continue }
+            if uninstall(cli: cli, fileManager: fileManager) {
+                rewritten.append(cli.name)
+            }
+        }
+        return rewritten
+    }
+
+    /// Scan every enabled CLI whose directory exists on disk, and
+    /// re-install our hook if it's missing or stale. Used at app
+    /// startup to self-heal configs that the user or a CLI upgrade
+    /// may have clobbered.
+    ///
+    /// Returns the list of CLI display names that were repaired.
+    @discardableResult
+    static func verifyAndRepair(
+        claudeHookCommand: String,
+        externalBridgeBinaryPath: String,
+        registry: [AgentCLIConfig] = AgentCLIRegistry.allCLIs,
+        enablementStore: AgentCLIEnablementStore = UserDefaultsAgentCLIEnablementStore.shared,
+        fileManager: FileManager = .default
+    ) -> [String] {
+        var repaired: [String] = []
+        for cli in registry {
+            guard enablementStore.isCLIEnabled(source: cli.source, defaultValue: cli.source == "claude") else {
+                continue
+            }
+            // Skip CLIs the user hasn't onboarded, except Claude
+            // which we always target.
+            if cli.source != "claude" && !cli.looksInstalledOnDisk {
+                continue
+            }
+            if isHooksInstalled(for: cli, fileManager: fileManager) {
+                continue
+            }
+
+            let outcome: InstallOutcome
+            switch cli.format {
+            case .claude:
+                outcome = installClaude(
+                    cli: cli,
+                    hookCommand: claudeHookCommand,
+                    fileManager: fileManager
+                )
+            case .nested, .flat, .copilot:
+                outcome = installExternal(
+                    cli: cli,
+                    bridgeBinaryPath: externalBridgeBinaryPath,
+                    fileManager: fileManager
+                )
+            }
+            if case .installed = outcome {
+                repaired.append(cli.name)
+            }
+        }
+        return repaired
+    }
+
+    /// Report the install/enabled/on-disk status of every CLI in the
+    /// registry. The settings UI consumes this to render the agents
+    /// panel; tests use it to assert install-side effects.
+    static func discoverCLIs(
+        registry: [AgentCLIConfig] = AgentCLIRegistry.allCLIs,
+        enablementStore: AgentCLIEnablementStore = UserDefaultsAgentCLIEnablementStore.shared,
+        fileManager: FileManager = .default
+    ) -> [CLIStatus] {
+        registry.map { cli in
+            CLIStatus(
+                source: cli.source,
+                name: cli.name,
+                cliPresent: cli.looksInstalledOnDisk,
+                userEnabled: enablementStore.isCLIEnabled(
+                    source: cli.source,
+                    defaultValue: cli.source == "claude"
+                ),
+                hookInstalled: isHooksInstalled(for: cli, fileManager: fileManager)
+            )
+        }
+    }
+
+    /// Toggle a specific CLI on or off. When enabling, runs install
+    /// for that CLI immediately so the user sees hooks become
+    /// active. When disabling, runs uninstall for that CLI.
+    ///
+    /// Returns the post-toggle `isHooksInstalled` state.
+    @discardableResult
+    static func setCLIEnabled(
+        source: String,
+        enabled: Bool,
+        claudeHookCommand: String,
+        externalBridgeBinaryPath: String,
+        registry: [AgentCLIConfig] = AgentCLIRegistry.allCLIs,
+        enablementStore: AgentCLIEnablementStore = UserDefaultsAgentCLIEnablementStore.shared,
+        fileManager: FileManager = .default
+    ) -> Bool {
+        enablementStore.setCLIEnabled(source: source, enabled: enabled)
+        guard let cli = registry.first(where: { $0.source == source }) else {
+            return false
+        }
+
+        if enabled {
+            // Allow enabling Claude Code even if ~/.claude doesn't
+            // exist yet — we'll create the directory ourselves on
+            // first install. Other CLIs need the user to have
+            // onboarded them first.
+            if cli.source != "claude" && !cli.looksInstalledOnDisk {
+                return false
+            }
+            let outcome: InstallOutcome
+            switch cli.format {
+            case .claude:
+                outcome = installClaude(
+                    cli: cli,
+                    hookCommand: claudeHookCommand,
+                    fileManager: fileManager
+                )
+            case .nested, .flat, .copilot:
+                outcome = installExternal(
+                    cli: cli,
+                    bridgeBinaryPath: externalBridgeBinaryPath,
+                    fileManager: fileManager
+                )
+            }
+            switch outcome {
+            case .installed, .alreadyInstalled:
+                return isHooksInstalled(for: cli, fileManager: fileManager)
+            case .failed:
+                return false
+            }
+        } else {
+            _ = uninstall(cli: cli, fileManager: fileManager)
+            return false
+        }
+    }
 
     // MARK: - Claude format writer
 
