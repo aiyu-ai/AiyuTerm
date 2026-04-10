@@ -114,12 +114,10 @@ final class AgentCLIConfigInstallerTests: XCTestCase {
 
     // MARK: - removeManagedHookEntries
 
-    func testRemoveManagedEntriesKeepsEntriesWithoutOurMarker() {
-        // The identifier marker is 'aiyuterm-bridge'. An entry whose
-        // command only contains 'aiyuterm' (e.g. the legacy
-        // '~/.aiyuterm-debug/hooks/claude-code-bridge-hook.sh' path)
-        // does NOT match AgentHookIdentifier.isOurs, so both entries
-        // should survive removeManagedHookEntries.
+    func testRemoveManagedEntriesDropsAiyuTermDebugBridgeHook() {
+        // The product-name marker 'aiyuterm' matches any path under
+        // ~/.aiyuterm or ~/.aiyuterm-debug, so the Phase 4 bridge
+        // hook script must be cleaned out during re-install.
         let hooks: [String: Any] = [
             "Stop": [
                 [
@@ -134,9 +132,10 @@ final class AgentCLIConfigInstallerTests: XCTestCase {
         ]
         let cleaned = AgentCLIConfigInstaller.removeManagedHookEntries(from: hooks)
         let stopEntries = cleaned["Stop"] as? [[String: Any]]
-        // Both entries stay: neither matches the `aiyuterm-bridge` marker.
-        XCTAssertEqual(stopEntries?.count, 2,
-                       "Neither command contains the 'aiyuterm-bridge' marker")
+        XCTAssertEqual(stopEntries?.count, 1,
+                       "Phase 4 bridge hook should be swept out; other-tool stays")
+        let cmd = ((stopEntries?.first?["hooks"] as? [[String: Any]])?.first?["command"]) as? String
+        XCTAssertEqual(cmd, "/usr/local/bin/other-tool")
     }
 
     func testRemoveManagedEntriesDropsCurrentMarker() {
@@ -386,6 +385,244 @@ final class AgentCLIConfigInstallerTests: XCTestCase {
             configKey: "hooks",
             events: sandboxEvents
         ))
+    }
+
+    // MARK: - installExternalAt - .nested format (Codex / Gemini)
+
+    private let nestedEvents: [(name: String, timeout: Int, async: Bool)] = [
+        ("SessionStart", 5, false),
+        ("UserPromptSubmit", 5, false),
+        ("PreToolUse", 5, false),
+    ]
+
+    func testInstallNestedWritesEntries() throws {
+        let path = sandboxRoot + "/codex-hooks.json"
+        let outcome = AgentCLIConfigInstaller.installExternalAt(
+            format: .nested,
+            source: "codex",
+            events: nestedEvents,
+            configKey: "hooks",
+            fullPath: path,
+            dirPath: sandboxRoot,
+            debugName: "Codex",
+            bridgeBinaryPath: "/usr/local/bin/aiyuterm-hook-bridge"
+        )
+        XCTAssertEqual(outcome, .installed)
+
+        let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        let root = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        let hooks = root?["hooks"] as? [String: Any]
+        XCTAssertNotNil(hooks)
+
+        for event in nestedEvents {
+            let entries = hooks?[event.name] as? [[String: Any]]
+            XCTAssertEqual(entries?.count, 1)
+            // Nested format has NO 'matcher' key; commands live in
+            // entry.hooks[].command.
+            XCTAssertNil(entries?.first?["matcher"],
+                         "Nested format must not emit 'matcher'")
+            let inner = entries?.first?["hooks"] as? [[String: Any]]
+            XCTAssertEqual(inner?.first?["command"] as? String,
+                           "/usr/local/bin/aiyuterm-hook-bridge --source codex")
+            XCTAssertEqual(inner?.first?["timeout"] as? Int, event.timeout)
+        }
+    }
+
+    func testInstallNestedIsIdempotent() throws {
+        let path = sandboxRoot + "/codex-hooks.json"
+        let first = AgentCLIConfigInstaller.installExternalAt(
+            format: .nested,
+            source: "codex",
+            events: nestedEvents,
+            configKey: "hooks",
+            fullPath: path,
+            dirPath: sandboxRoot,
+            debugName: "Codex",
+            bridgeBinaryPath: "/usr/local/bin/aiyuterm-hook-bridge"
+        )
+        XCTAssertEqual(first, .installed)
+        let second = AgentCLIConfigInstaller.installExternalAt(
+            format: .nested,
+            source: "codex",
+            events: nestedEvents,
+            configKey: "hooks",
+            fullPath: path,
+            dirPath: sandboxRoot,
+            debugName: "Codex",
+            bridgeBinaryPath: "/usr/local/bin/aiyuterm-hook-bridge"
+        )
+        XCTAssertEqual(second, .alreadyInstalled)
+    }
+
+    func testInstallNestedQuotesBridgePathWithSpaces() throws {
+        let path = sandboxRoot + "/gemini-settings.json"
+        _ = AgentCLIConfigInstaller.installExternalAt(
+            format: .nested,
+            source: "gemini",
+            events: [("BeforeTool", 5000, false)],
+            configKey: "hooks",
+            fullPath: path,
+            dirPath: sandboxRoot,
+            debugName: "Gemini",
+            bridgeBinaryPath: "/Applications/AiyuTerm 1.app/Contents/Helpers/aiyuterm-hook-bridge"
+        )
+
+        let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        let root = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        let entries = (root?["hooks"] as? [String: Any])?["BeforeTool"] as? [[String: Any]]
+        let cmd = (entries?.first?["hooks"] as? [[String: Any]])?.first?["command"] as? String
+        XCTAssertEqual(
+            cmd,
+            "\"/Applications/AiyuTerm 1.app/Contents/Helpers/aiyuterm-hook-bridge\" --source gemini",
+            "Bridge paths with spaces must be quoted"
+        )
+    }
+
+    // MARK: - installExternalAt - .flat format (Cursor)
+
+    func testInstallFlatWritesSingleCommandEntry() throws {
+        let path = sandboxRoot + "/cursor-hooks.json"
+        let outcome = AgentCLIConfigInstaller.installExternalAt(
+            format: .flat,
+            source: "cursor",
+            events: [
+                ("beforeSubmitPrompt", 5, false),
+                ("afterAgentResponse", 5, false),
+            ],
+            configKey: "hooks",
+            fullPath: path,
+            dirPath: sandboxRoot,
+            debugName: "Cursor",
+            bridgeBinaryPath: "/usr/local/bin/aiyuterm-hook-bridge"
+        )
+        XCTAssertEqual(outcome, .installed)
+
+        let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        let root = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        let hooks = root?["hooks"] as? [String: Any]
+
+        let entries = hooks?["beforeSubmitPrompt"] as? [[String: Any]]
+        XCTAssertEqual(entries?.count, 1)
+        // Flat format: entry is just {command: ...} — no nesting.
+        XCTAssertEqual(entries?.first?["command"] as? String,
+                       "/usr/local/bin/aiyuterm-hook-bridge --source cursor")
+        XCTAssertNil(entries?.first?["hooks"],
+                     "Flat format must not emit nested 'hooks'")
+    }
+
+    // MARK: - installExternalAt - .copilot format
+
+    func testInstallCopilotSkipsWhenParentMissing() {
+        // Do NOT pre-create a .copilot parent — the installer must
+        // treat this as 'Copilot not onboarded' and return
+        // .alreadyInstalled (a no-op).
+        let path = sandboxRoot + "/missing-copilot/hooks/aiyuterm.json"
+        let outcome = AgentCLIConfigInstaller.installExternalAt(
+            format: .copilot,
+            source: "copilot",
+            events: [("sessionStart", 5, false)],
+            configKey: "hooks",
+            fullPath: path,
+            dirPath: sandboxRoot + "/missing-copilot/hooks",
+            debugName: "Copilot",
+            bridgeBinaryPath: "/usr/local/bin/aiyuterm-hook-bridge"
+        )
+        XCTAssertEqual(outcome, .alreadyInstalled)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: path))
+    }
+
+    func testInstallCopilotCreatesVersionedFileWhenParentExists() throws {
+        // Pre-create ~/.copilot analog inside sandbox.
+        let copilotRoot = sandboxRoot + "/dot-copilot"
+        let hooksDir = copilotRoot + "/hooks"
+        try FileManager.default.createDirectory(
+            atPath: copilotRoot, withIntermediateDirectories: true
+        )
+        let path = hooksDir + "/aiyuterm.json"
+
+        let outcome = AgentCLIConfigInstaller.installExternalAt(
+            format: .copilot,
+            source: "copilot",
+            events: [
+                ("sessionStart", 5, false),
+                ("postToolUse", 5, true),
+            ],
+            configKey: "hooks",
+            fullPath: path,
+            dirPath: hooksDir,
+            debugName: "Copilot",
+            bridgeBinaryPath: "/usr/local/bin/aiyuterm-hook-bridge"
+        )
+        XCTAssertEqual(outcome, .installed)
+
+        let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        let root = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        // Top-level 'version' must be present for Copilot.
+        XCTAssertEqual(root?["version"] as? Int, 1)
+
+        let entries = (root?["hooks"] as? [String: Any])?["sessionStart"] as? [[String: Any]]
+        XCTAssertEqual(entries?.count, 1)
+        // Copilot entry shape: {type, bash, timeoutSec}.
+        XCTAssertEqual(entries?.first?["type"] as? String, "command")
+        XCTAssertEqual(
+            entries?.first?["bash"] as? String,
+            "/usr/local/bin/aiyuterm-hook-bridge --source copilot --event sessionStart",
+            "Copilot bash command must include --event suffix"
+        )
+        XCTAssertEqual(entries?.first?["timeoutSec"] as? Int, 5)
+    }
+
+    // MARK: - uninstallAt
+
+    func testUninstallRemovesManagedEntries() throws {
+        let path = sandboxRoot + "/uninstall.json"
+        // Install first.
+        _ = AgentCLIConfigInstaller.installExternalAt(
+            format: .flat,
+            source: "cursor",
+            events: [("beforeSubmitPrompt", 5, false)],
+            configKey: "hooks",
+            fullPath: path,
+            dirPath: sandboxRoot,
+            debugName: "Cursor",
+            bridgeBinaryPath: "/usr/local/bin/aiyuterm-hook-bridge"
+        )
+        XCTAssertTrue(AgentCLIConfigInstaller.uninstallAt(
+            configKey: "hooks",
+            fullPath: path
+        ))
+        let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        let root = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        // The hooks key should be gone entirely because the only
+        // entry was ours.
+        XCTAssertNil(root?["hooks"])
+    }
+
+    func testUninstallPreservesForeignEntries() throws {
+        let path = sandboxRoot + "/foreign.json"
+        // Seed with a mixed file: one foreign entry + one managed.
+        let seed: [String: Any] = [
+            "hooks": [
+                "Stop": [
+                    ["command": "/usr/local/bin/other-tool"],
+                    ["command": "/path/aiyuterm-bridge --source cursor"],
+                ],
+            ],
+        ]
+        let data = try JSONSerialization.data(
+            withJSONObject: seed,
+            options: [.prettyPrinted, .sortedKeys]
+        )
+        try data.write(to: URL(fileURLWithPath: path))
+
+        _ = AgentCLIConfigInstaller.uninstallAt(configKey: "hooks", fullPath: path)
+
+        let after = try JSONSerialization.jsonObject(
+            with: Data(contentsOf: URL(fileURLWithPath: path))
+        ) as? [String: Any]
+        let stop = (after?["hooks"] as? [String: Any])?["Stop"] as? [[String: Any]]
+        XCTAssertEqual(stop?.count, 1)
+        XCTAssertEqual(stop?.first?["command"] as? String, "/usr/local/bin/other-tool")
     }
 
     func testIsHooksInstalledFalseWhenPartial() throws {

@@ -170,6 +170,241 @@ enum AgentCLIConfigInstaller {
         }
     }
 
+    // MARK: - External format writers (.nested / .flat / .copilot)
+
+    /// Install hooks into a non-Claude CLI's config file. Dispatches
+    /// on `cli.format` and calls the bridge binary directly
+    /// (no intermediate shell wrapper) using the bridge command
+    /// string the caller provides.
+    ///
+    /// The bridge command should be the absolute path to the
+    /// `aiyuterm-hook-bridge` binary (or a quoted variant when the
+    /// path contains spaces). Callers are responsible for appending
+    /// any `--source` flag; we do that here based on `cli.source`.
+    @discardableResult
+    static func installExternal(
+        cli: AgentCLIConfig,
+        bridgeBinaryPath: String,
+        fileManager: FileManager = .default
+    ) -> InstallOutcome {
+        installExternalAt(
+            format: cli.format,
+            source: cli.source,
+            events: cli.events,
+            configKey: cli.configKey,
+            fullPath: cli.fullPath,
+            dirPath: cli.dirPath,
+            debugName: cli.name,
+            bridgeBinaryPath: bridgeBinaryPath,
+            fileManager: fileManager
+        )
+    }
+
+    /// Path-explicit variant of `installExternal`. Same contract as
+    /// `installClaudeAt` — tests inject a sandbox path.
+    @discardableResult
+    static func installExternalAt(
+        format: AgentHookFormat,
+        source: String,
+        events: [(name: String, timeout: Int, async: Bool)],
+        configKey: String,
+        fullPath: String,
+        dirPath: String,
+        debugName: String,
+        bridgeBinaryPath: String,
+        fileManager: FileManager = .default
+    ) -> InstallOutcome {
+        precondition(format != .claude,
+                     "installExternalAt must not be called on .claude CLI \(debugName)")
+
+        // 1) Ensure parent dir. For .copilot we additionally require
+        //    ~/.copilot itself to exist so we don't manufacture a
+        //    phantom install root for a user who hasn't onboarded
+        //    Copilot yet.
+        if format == .copilot {
+            let copilotRoot = (dirPath as NSString).deletingLastPathComponent
+            guard fileManager.fileExists(atPath: copilotRoot) else {
+                return .alreadyInstalled // treat as no-op
+            }
+        }
+        if !fileManager.fileExists(atPath: dirPath) {
+            do {
+                try fileManager.createDirectory(
+                    atPath: dirPath,
+                    withIntermediateDirectories: true
+                )
+            } catch {
+                logger.error("mkdir failed for \(dirPath, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                return .failed("mkdir: \(error.localizedDescription)")
+            }
+        }
+
+        // 2) Read existing config (JSONC-tolerant).
+        var root: [String: Any] = [:]
+        if let existing = parseJSONFile(at: fullPath, fileManager: fileManager) {
+            root = existing
+        }
+
+        var hooks = root[configKey] as? [String: Any] ?? [:]
+
+        // 3) Build the base command. Quote the bridge path if it
+        //    contains spaces so shell hosts that re-tokenize the
+        //    string still end up with the right argv[0].
+        let quotedBridge = bridgeBinaryPath.contains(" ")
+            ? "\"\(bridgeBinaryPath)\""
+            : bridgeBinaryPath
+        let baseCommand = "\(quotedBridge) --source \(source)"
+
+        // 4) Fast-path detection: for every event, verify an entry
+        //    exists that carries our base command verbatim. If all
+        //    match, the install is a no-op.
+        let allMatch = events.allSatisfy { event in
+            guard let entries = hooks[event.name] as? [[String: Any]] else { return false }
+            return entries.contains { entry in
+                containsBaseCommand(entry, baseCommand: baseCommand, format: format, eventName: event.name)
+            }
+        }
+        if allMatch && !hasStaleAsyncKey(hooks) {
+            return .alreadyInstalled
+        }
+
+        // 5) Sweep stale managed entries and re-inject.
+        for event in events {
+            var eventEntries = hooks[event.name] as? [[String: Any]] ?? []
+            eventEntries.removeAll(where: containsOurHook)
+
+            let entry: [String: Any]
+            switch format {
+            case .claude:
+                preconditionFailure("unreachable — filtered above")
+            case .nested:
+                entry = [
+                    "hooks": [[
+                        "type": "command",
+                        "command": baseCommand,
+                        "timeout": event.timeout,
+                    ]],
+                ]
+            case .flat:
+                entry = ["command": baseCommand]
+            case .copilot:
+                // Copilot stdin lacks session_id / hook_event_name,
+                // so we pass the event name via --event and let the
+                // bridge reconstruct the canonical JSON before
+                // forwarding.
+                let copilotCommand = "\(baseCommand) --event \(event.name)"
+                entry = [
+                    "type": "command",
+                    "bash": copilotCommand,
+                    "timeoutSec": event.timeout,
+                ]
+            }
+
+            eventEntries.append(entry)
+            hooks[event.name] = eventEntries
+        }
+
+        root[configKey] = hooks
+
+        // 6) Copilot requires a top-level "version" field — if it's
+        //    absent from the existing file, set it now.
+        if format == .copilot, root["version"] == nil {
+            root["version"] = 1
+        }
+
+        guard let data = try? JSONSerialization.data(
+            withJSONObject: root,
+            options: [.prettyPrinted, .sortedKeys]
+        ) else {
+            return .failed("serialize")
+        }
+
+        let url = URL(fileURLWithPath: fullPath)
+        do {
+            try data.write(to: url, options: [.atomic])
+            return .installed
+        } catch {
+            logger.error("Failed to write \(fullPath, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            return .failed("write: \(error.localizedDescription)")
+        }
+    }
+
+    /// Detect whether a hook entry already carries our `baseCommand`.
+    /// Checks the format-specific command field.
+    private static func containsBaseCommand(
+        _ entry: [String: Any],
+        baseCommand: String,
+        format: AgentHookFormat,
+        eventName: String
+    ) -> Bool {
+        switch format {
+        case .nested:
+            guard let inner = entry["hooks"] as? [[String: Any]] else { return false }
+            return inner.contains { ($0["command"] as? String) == baseCommand }
+        case .flat:
+            return (entry["command"] as? String) == baseCommand
+        case .copilot:
+            // Copilot entries include the --event suffix so we
+            // compare with the matching event name.
+            let expected = "\(baseCommand) --event \(eventName)"
+            return (entry["bash"] as? String) == expected
+        case .claude:
+            return false
+        }
+    }
+
+    // MARK: - Uninstall
+
+    /// Remove all managed hook entries from a CLI's config file and
+    /// write the result back. Non-managed entries are left alone.
+    /// Returns true if the file was rewritten (or was already clean).
+    @discardableResult
+    static func uninstall(
+        cli: AgentCLIConfig,
+        fileManager: FileManager = .default
+    ) -> Bool {
+        uninstallAt(
+            configKey: cli.configKey,
+            fullPath: cli.fullPath,
+            fileManager: fileManager
+        )
+    }
+
+    @discardableResult
+    static func uninstallAt(
+        configKey: String,
+        fullPath: String,
+        fileManager: FileManager = .default
+    ) -> Bool {
+        guard var root = parseJSONFile(at: fullPath, fileManager: fileManager) else {
+            return true
+        }
+        guard var hooks = root[configKey] as? [String: Any] else {
+            return true
+        }
+        hooks = removeManagedHookEntries(from: hooks)
+
+        if hooks.isEmpty {
+            root.removeValue(forKey: configKey)
+        } else {
+            root[configKey] = hooks
+        }
+
+        guard let data = try? JSONSerialization.data(
+            withJSONObject: root,
+            options: [.prettyPrinted, .sortedKeys]
+        ) else {
+            return false
+        }
+        do {
+            try data.write(to: URL(fileURLWithPath: fullPath), options: [.atomic])
+            return true
+        } catch {
+            logger.error("uninstall write failed: \(error.localizedDescription, privacy: .public)")
+            return false
+        }
+    }
+
     // MARK: - Install detection
 
     /// Returns true if the on-disk config file already contains a

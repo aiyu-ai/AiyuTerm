@@ -23,7 +23,20 @@ import Foundation
 /// upstream chain plus AiyuTerm's own Phase 4 bridge marker so that
 /// users migrating from either origin get a clean merge.
 enum AgentHookIdentifier {
-    static let current = "aiyuterm-bridge"
+    /// Product-name marker. Every path/command AiyuTerm writes into a
+    /// third-party CLI config file is guaranteed to contain this
+    /// substring (via the bundle name, the `~/.aiyuterm[-debug]`
+    /// state directory, or the `aiyuterm-hook-bridge` binary name).
+    /// Relying on the product name rather than a narrower tag keeps
+    /// the Phase 4 bridge hook (`claude-code-bridge-hook.sh` inside
+    /// `~/.aiyuterm-debug/hooks/`) and the Phase 5+ direct bridge
+    /// invocations (`aiyuterm-hook-bridge --source codex`) both
+    /// identifiable by a single string.
+    static let current = "aiyuterm"
+
+    /// Legacy names from the upstream CodeIsland chain. These entries
+    /// must also be recognized so users migrating from CodeIsland or
+    /// its ancestors get a clean re-install.
     static let legacyNames = [
         "codeisland",     // upstream CodeIsland
         "vibenotch",      // CodeIsland ancestor

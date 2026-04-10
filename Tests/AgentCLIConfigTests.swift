@@ -99,7 +99,13 @@ final class AgentCLIConfigTests: XCTestCase {
     }
 
     func testHookIdentifierRecognizesLegacyNames() {
-        XCTAssertTrue(AgentHookIdentifier.isOurs("/path/to/aiyuterm-bridge"))
+        // Product-name marker: anything containing "aiyuterm"
+        // matches, including the Phase 4 bridge hook script path
+        // (~/.aiyuterm-debug/hooks/claude-code-bridge-hook.sh) and
+        // the Phase 5+ bridge binary path
+        // (/usr/local/bin/aiyuterm-hook-bridge).
+        XCTAssertTrue(AgentHookIdentifier.isOurs("/path/to/aiyuterm-hook-bridge"))
+        XCTAssertTrue(AgentHookIdentifier.isOurs("~/.aiyuterm-debug/hooks/claude-code-bridge-hook.sh"))
         XCTAssertTrue(AgentHookIdentifier.isOurs("/path/to/codeisland-bridge"))
         XCTAssertTrue(AgentHookIdentifier.isOurs("/path/to/VIBENOTCH-bridge"))
         XCTAssertFalse(AgentHookIdentifier.isOurs("/other/tool/script.sh"))
@@ -176,7 +182,7 @@ final class AgentCLIConfigTests: XCTestCase {
     }
 
     func testHookIdentifierIsNotCaseSensitive() {
-        XCTAssertTrue(AgentHookIdentifier.isOurs("AIYUTERM-BRIDGE"))
+        XCTAssertTrue(AgentHookIdentifier.isOurs("AIYUTERM-HOOK-BRIDGE"))
         XCTAssertTrue(AgentHookIdentifier.isOurs("Codeisland"))
     }
 }
