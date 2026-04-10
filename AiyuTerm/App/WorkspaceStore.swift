@@ -1029,6 +1029,16 @@ final class WorkspaceStore: ObservableObject {
         AgentSessionPersistence.save(agentHookMapper.allSnapshots())
     }
 
+    /// Phase 10.1.d: show the NSSavePanel-driven diagnostics
+    /// exporter with the current agent session snapshots. Called
+    /// from the Help menu "Export Agent Diagnostics…" item via
+    /// AiyuTermDesktopApplication.
+    func exportAgentDiagnostics() {
+        AgentDiagnosticsExporter.export(
+            sessions: agentHookMapper.allSnapshots()
+        )
+    }
+
     /// Idempotent scheduler — no-ops when the timer is already
     /// armed so repeated `showNotchPanel()` calls don't create
     /// duplicate timers.

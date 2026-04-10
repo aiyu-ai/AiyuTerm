@@ -173,6 +173,17 @@ final class ApplicationMenuController: NSObject {
         addItem(title: localized("menu.help.visitWebsite"), action: #selector(openWebsite(_:)), keyEquivalent: "", to: helpMenu)
         addItem(title: localized("menu.help.starSourceCode"), action: #selector(openRepository(_:)), keyEquivalent: "", to: helpMenu)
         addItem(title: localized("menu.help.submitFeedback"), action: #selector(submitFeedback(_:)), keyEquivalent: "", to: helpMenu)
+        // Phase 10.1.d: Export Agent Diagnostics... — bundles
+        // agent session snapshots, CLI configs, and recent logs
+        // into a zip the user can attach to a bug report.
+        helpMenu.addItem(.separator())
+        let exportDiagnosticsItem = addItem(
+            title: localized("menu.help.exportAgentDiagnostics"),
+            action: #selector(AppDelegate.exportAgentDiagnostics(_:)),
+            keyEquivalent: "",
+            to: helpMenu
+        )
+        exportDiagnosticsItem.target = target
         NSApp.helpMenu = helpMenu
 
         NSApp.mainMenu = mainMenu
