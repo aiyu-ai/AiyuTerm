@@ -660,6 +660,10 @@ final class WorkspaceStore: ObservableObject {
         appSettings = initialAppSettings ?? appSettingsPersistence.load()
         appSettings.githubIntegrationEnabled = false
         LocalizationManager.shared.updateSelectedLanguage(appSettings.appLanguage)
+        // Phase 10.2: propagate the stored AgentSoundManager toggle
+        // so reducer `.playSound` effects honour the user's choice
+        // from the first event onward.
+        AgentSoundManager.isEnabled = appSettings.agentSoundEnabled
         NotificationCenter.default.post(name: .aiyuTermAppSettingsDidChange, object: appSettings)
         let state = normalizeLaunchState(initialWorkspaceState ?? persistence.load())
         workspaces = state.workspaces.map(WorkspaceModel.init(record:))
@@ -1280,11 +1284,15 @@ final class WorkspaceStore: ObservableObject {
             sshPresets: settings.sshPresets,
             preferredSSHPresetID: settings.preferredSSHPresetID,
             keyboardShortcutOverrides: settings.keyboardShortcutOverrides,
-            notchPanelEnabled: settings.notchPanelEnabled
+            notchPanelEnabled: settings.notchPanelEnabled,
+            agentSoundEnabled: settings.agentSoundEnabled
         )
         LocalizationManager.shared.updateSelectedLanguage(appSettings.appLanguage)
         // Phase 8.4: toggling notchPanelEnabled live without restart.
         ensureNotchPanelIfEnabled()
+        // Phase 10.2: keep the sound subsystem in sync with the
+        // user's toggle without requiring a relaunch.
+        AgentSoundManager.isEnabled = appSettings.agentSoundEnabled
         let validAgentPresetIDs = Set(appSettings.agentPresets.map(\.id))
         for workspace in workspaces {
             workspace.settings = normalizedWorkspaceSettings(

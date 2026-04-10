@@ -21,7 +21,9 @@
 //   • Ghostty is already recognized via its bundle ID
 //     `com.mitchellh.ghostty` in the upstream table.
 //   • The `playSound` side effect is preserved for interface parity;
-//     AiyuTerm's mapper (Phase 3) simply discards it.
+//     Phase 3 discarded it, Phase 10.2 now forwards it to
+//     `AgentSoundManager` via the mapper (see
+//     `AgentHookEventMapper.dispatchSideEffects`).
 //
 
 import Foundation
