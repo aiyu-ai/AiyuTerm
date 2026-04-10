@@ -132,7 +132,12 @@ final class AgentHookEventMapper: AgentHookReceiver {
 
         let derivedStatus = deriveStatus(from: event, normalizedName: AgentHookEventNormalizer.normalize(event.eventName))
 
-        applyStatus(derivedStatus, to: workspace, worktreePath: worktreePath)
+        applyStatus(
+            derivedStatus,
+            to: workspace,
+            worktreePath: worktreePath,
+            sessionId: sessionId
+        )
     }
 
     func handlePermissionRequest(_ event: AgentHookEvent) async -> Data {
@@ -382,21 +387,81 @@ final class AgentHookEventMapper: AgentHookReceiver {
     /// `lastActivity`; the `sessionWorktreeCache` is the authoritative
     /// session→worktree mapping.
     func latestSnapshot(forWorktreePath path: String) -> AgentSessionSnapshot? {
+        latestSnapshotWithId(forWorktreePath: path)?.snapshot
+    }
+
+    /// Same as `latestSnapshot(forWorktreePath:)` but also returns
+    /// the underlying `sessionId` key. Callers that need to resolve
+    /// a title via `AgentSessionTitleStore.title(for:provider:cwd:)`
+    /// need the sessionId to look up the on-disk JSONL.
+    func latestSnapshotWithId(
+        forWorktreePath path: String
+    ) -> (sessionId: String, snapshot: AgentSessionSnapshot)? {
         let matchingSessionIds = sessionWorktreeCache
             .filter { $0.value == path }
             .map(\.key)
-        var best: AgentSessionSnapshot?
+        var best: (sessionId: String, snapshot: AgentSessionSnapshot)?
         for sid in matchingSessionIds {
             guard let candidate = snapshots[sid] else { continue }
             if let current = best {
-                if candidate.lastActivity > current.lastActivity {
-                    best = candidate
+                if candidate.lastActivity > current.snapshot.lastActivity {
+                    best = (sid, candidate)
                 }
             } else {
-                best = candidate
+                best = (sid, candidate)
             }
         }
         return best
+    }
+
+    // MARK: - Persistence bridge (Phase 10.1.a)
+
+    /// Copy of the snapshot dictionary. Used by the shutdown /
+    /// periodic-save hook in `WorkspaceStore.persistAgentSessions()`.
+    func allSnapshots() -> [String: AgentSessionSnapshot] {
+        snapshots
+    }
+
+    /// Seed the mapper with a snapshot rebuilt from disk on launch.
+    /// Call from `WorkspaceStore.loadIfNeeded()` with each
+    /// `AgentPersistedSession` that survived the last session.
+    ///
+    /// Populates both the `snapshots` map and the
+    /// `sessionWorktreeCache` (when the persisted cwd matches a
+    /// known worktree) so subsequent live events can find the
+    /// restored session without waiting for a new resolve.
+    func restoreSnapshot(_ persisted: AgentPersistedSession) {
+        var snapshot = AgentSessionSnapshot(startTime: persisted.startTime)
+        snapshot.lastActivity = persisted.lastActivity
+        snapshot.cwd = persisted.cwd
+        snapshot.source = persisted.source
+        snapshot.model = persisted.model
+        snapshot.sessionTitle = persisted.sessionTitle
+        snapshot.sessionTitleSource = persisted.sessionTitleSource
+        snapshot.providerSessionId = persisted.providerSessionId
+        snapshot.lastUserPrompt = persisted.lastUserPrompt
+        snapshot.lastAssistantMessage = persisted.lastAssistantMessage
+        snapshot.termApp = persisted.termApp
+        snapshot.itermSessionId = persisted.itermSessionId
+        snapshot.ttyPath = persisted.ttyPath
+        snapshot.kittyWindowId = persisted.kittyWindowId
+        snapshot.tmuxPane = persisted.tmuxPane
+        snapshot.tmuxClientTty = persisted.tmuxClientTty
+        snapshot.tmuxEnv = persisted.tmuxEnv
+        snapshot.termBundleId = persisted.termBundleId
+        if let pid = persisted.cliPid {
+            snapshot.cliPid = pid_t(pid)
+        }
+        snapshot.cliStartTime = persisted.cliStartTime
+
+        snapshots[persisted.sessionId] = snapshot
+
+        // If the persisted cwd maps to a known worktree, prime the
+        // session cache so the first live event resolves instantly.
+        if let cwd = persisted.cwd,
+           let matched = walkUpToMatchWorktree(from: cwd) {
+            sessionWorktreeCache[persisted.sessionId] = matched
+        }
     }
 
     // MARK: - Private: event status derivation
@@ -412,12 +477,21 @@ final class AgentHookEventMapper: AgentHookReceiver {
     private func applyStatus(
         _ status: AgentSessionStatus,
         to workspace: WorkspaceModel,
-        worktreePath: String
+        worktreePath: String,
+        sessionId: String
     ) {
         switch status {
         case .taskCompleted:
             workspace.markCompletionUnread(forWorktreePath: worktreePath)
             workspace.setAgentStatus(.taskCompleted, forWorktreePath: worktreePath)
+            // Phase 10.1.c: smart-suppress notification. The
+            // router checks whether the terminal is already
+            // visible before posting to avoid double-signalling
+            // the user when the notch panel + sidebar badge are
+            // enough.
+            if let snapshot = snapshots[sessionId] {
+                AgentNotificationRouter.notifyTaskCompleted(session: snapshot)
+            }
 
         case .permissionNeeded:
             workspace.markPermissionUnread(forWorktreePath: worktreePath)

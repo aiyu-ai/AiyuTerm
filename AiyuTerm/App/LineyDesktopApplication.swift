@@ -133,9 +133,20 @@ public final class AiyuTermDesktopApplication: NSObject {
         activeStore?.dispatch(.checkForUpdates)
     }
 
+    /// Phase 10.1.d: Help menu -> "Export Agent Diagnostics…"
+    /// Delegates to the active window's store so the exporter
+    /// sees the mapper it's actually populated with.
+    public func exportAgentDiagnostics() {
+        activeStore?.exportAgentDiagnostics()
+    }
+
     public func shutdown() {
         AiyuTermGlobalHotKeyMonitor.shared.unregister()
+        // Phase 10.1.a: best-effort persist each window's agent
+        // session snapshots before the app terminates. Each
+        // WorkspaceStore owns an independent mapper.
         for context in windowContexts {
+            context.store.persistAgentSessions()
             context.store.stopSleepPrevention()
         }
     }

@@ -198,6 +198,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
     }
 
+    @objc func exportAgentDiagnostics(_ sender: Any?) {
+        Task { @MainActor in
+            desktopApplication?.exportAgentDiagnostics()
+        }
+    }
+
     @objc func toggleCommandPalette(_ sender: Any?) {
         Task { @MainActor in
             desktopApplication?.toggleCommandPalette()
