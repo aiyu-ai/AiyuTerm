@@ -132,7 +132,12 @@ final class AgentHookEventMapper: AgentHookReceiver {
 
         let derivedStatus = deriveStatus(from: event, normalizedName: AgentHookEventNormalizer.normalize(event.eventName))
 
-        applyStatus(derivedStatus, to: workspace, worktreePath: worktreePath)
+        applyStatus(
+            derivedStatus,
+            to: workspace,
+            worktreePath: worktreePath,
+            sessionId: sessionId
+        )
     }
 
     func handlePermissionRequest(_ event: AgentHookEvent) async -> Data {
@@ -472,12 +477,21 @@ final class AgentHookEventMapper: AgentHookReceiver {
     private func applyStatus(
         _ status: AgentSessionStatus,
         to workspace: WorkspaceModel,
-        worktreePath: String
+        worktreePath: String,
+        sessionId: String
     ) {
         switch status {
         case .taskCompleted:
             workspace.markCompletionUnread(forWorktreePath: worktreePath)
             workspace.setAgentStatus(.taskCompleted, forWorktreePath: worktreePath)
+            // Phase 10.1.c: smart-suppress notification. The
+            // router checks whether the terminal is already
+            // visible before posting to avoid double-signalling
+            // the user when the notch panel + sidebar badge are
+            // enough.
+            if let snapshot = snapshots[sessionId] {
+                AgentNotificationRouter.notifyTaskCompleted(session: snapshot)
+            }
 
         case .permissionNeeded:
             workspace.markPermissionUnread(forWorktreePath: worktreePath)

@@ -678,6 +678,9 @@ final class WorkspaceStore: ObservableObject {
 
         configureUpdater(checkInBackground: true)
         syncAutomationServices()
+        // Phase 10.1.c: ask for notification auth once so the
+        // smart-suppress router can post when it decides to.
+        AgentNotificationRouter.requestAuthIfNeeded()
         // Phase 10.1.a: restore persisted agent sessions so the
         // notch panel keeps its session list across restarts.
         restorePersistedAgentSessions()
