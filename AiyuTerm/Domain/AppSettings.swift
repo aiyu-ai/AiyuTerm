@@ -289,6 +289,23 @@ struct AppSettings: Codable, Hashable {
     /// Defaults to false so upgrading users do not see a new
     /// floating pill without opting in via Settings first.
     var notchPanelEnabled: Bool = false
+    /// Phase 10.4: notch panel behavior knobs ported from CodeIsland.
+    /// Hides the notch panel whenever any app is in fullscreen.
+    var notchHideInFullscreen: Bool = true
+    /// Hides the collapsed pill entirely when no active sessions exist.
+    var notchHideWhenNoSession: Bool = false
+    /// Suppresses agent notifications when the terminal tab is frontmost.
+    var notchSmartSuppress: Bool = true
+    /// Collapses the expanded card automatically when the cursor leaves it.
+    var notchCollapseOnMouseLeave: Bool = true
+    /// Drops sessions idle for longer than this many minutes (0 = never).
+    var notchSessionTimeoutMinutes: Int = 30
+    /// Maximum number of session cards displayed in the expanded panel.
+    var notchMaxVisibleSessions: Int = 8
+    /// Number of assistant message lines previewed per session card.
+    var notchAiMessageLines: Int = 3
+    /// Toggles the "current tool" row inside each session card.
+    var notchShowToolStatus: Bool = true
 
     init(
         appLanguage: AppLanguage = .english,
@@ -328,7 +345,15 @@ struct AppSettings: Codable, Hashable {
         preferredSSHPresetID: UUID? = nil,
         workspaceGroups: [WorkspaceGroup] = [],
         keyboardShortcutOverrides: [String: KeyboardShortcutOverride] = [:],
-        notchPanelEnabled: Bool = false
+        notchPanelEnabled: Bool = false,
+        notchHideInFullscreen: Bool = true,
+        notchHideWhenNoSession: Bool = false,
+        notchSmartSuppress: Bool = true,
+        notchCollapseOnMouseLeave: Bool = true,
+        notchSessionTimeoutMinutes: Int = 30,
+        notchMaxVisibleSessions: Int = 8,
+        notchAiMessageLines: Int = 3,
+        notchShowToolStatus: Bool = true
     ) {
         let normalizedKeyboardShortcutOverrides = AiyuTermKeyboardShortcuts.normalizedOverrides(keyboardShortcutOverrides)
         let normalizedAgentPresets = aiyuTermNormalizedAgentPresets(agentPresets)
@@ -391,6 +416,14 @@ struct AppSettings: Codable, Hashable {
         }
         self.workspaceGroups = workspaceGroups
         self.notchPanelEnabled = notchPanelEnabled
+        self.notchHideInFullscreen = notchHideInFullscreen
+        self.notchHideWhenNoSession = notchHideWhenNoSession
+        self.notchSmartSuppress = notchSmartSuppress
+        self.notchCollapseOnMouseLeave = notchCollapseOnMouseLeave
+        self.notchSessionTimeoutMinutes = max(0, min(notchSessionTimeoutMinutes, 180))
+        self.notchMaxVisibleSessions = max(1, min(notchMaxVisibleSessions, 30))
+        self.notchAiMessageLines = max(1, min(notchAiMessageLines, 10))
+        self.notchShowToolStatus = notchShowToolStatus
     }
 }
 
@@ -434,6 +467,14 @@ extension AppSettings {
         case workspaceGroups
         case keyboardShortcutOverrides
         case notchPanelEnabled
+        case notchHideInFullscreen
+        case notchHideWhenNoSession
+        case notchSmartSuppress
+        case notchCollapseOnMouseLeave
+        case notchSessionTimeoutMinutes
+        case notchMaxVisibleSessions
+        case notchAiMessageLines
+        case notchShowToolStatus
     }
 
     init(from decoder: any Decoder) throws {
@@ -484,7 +525,15 @@ extension AppSettings {
             preferredSSHPresetID: try container.decodeIfPresent(UUID.self, forKey: .preferredSSHPresetID),
             workspaceGroups: try container.decodeIfPresent([WorkspaceGroup].self, forKey: .workspaceGroups) ?? [],
             keyboardShortcutOverrides: try container.decodeIfPresent([String: KeyboardShortcutOverride].self, forKey: .keyboardShortcutOverrides) ?? [:],
-            notchPanelEnabled: try container.decodeIfPresent(Bool.self, forKey: .notchPanelEnabled) ?? false
+            notchPanelEnabled: try container.decodeIfPresent(Bool.self, forKey: .notchPanelEnabled) ?? false,
+            notchHideInFullscreen: try container.decodeIfPresent(Bool.self, forKey: .notchHideInFullscreen) ?? true,
+            notchHideWhenNoSession: try container.decodeIfPresent(Bool.self, forKey: .notchHideWhenNoSession) ?? false,
+            notchSmartSuppress: try container.decodeIfPresent(Bool.self, forKey: .notchSmartSuppress) ?? true,
+            notchCollapseOnMouseLeave: try container.decodeIfPresent(Bool.self, forKey: .notchCollapseOnMouseLeave) ?? true,
+            notchSessionTimeoutMinutes: try container.decodeIfPresent(Int.self, forKey: .notchSessionTimeoutMinutes) ?? 30,
+            notchMaxVisibleSessions: try container.decodeIfPresent(Int.self, forKey: .notchMaxVisibleSessions) ?? 8,
+            notchAiMessageLines: try container.decodeIfPresent(Int.self, forKey: .notchAiMessageLines) ?? 3,
+            notchShowToolStatus: try container.decodeIfPresent(Bool.self, forKey: .notchShowToolStatus) ?? true
         )
     }
 }
