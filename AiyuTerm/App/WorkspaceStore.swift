@@ -72,6 +72,11 @@ final class WorkspaceStore: ObservableObject {
     /// and tears it down on `hide()`.
     private var agentNotchPanelController: AgentNotchPanelController<AgentNotchPanelView>?
     private var agentNotchPanelViewModel: AgentNotchPanelViewModel?
+    /// Phase 10.1.a: periodic-save timer for agent session
+    /// snapshots. Scheduled when the notch panel is created (i.e.
+    /// agent sessions are actively being tracked) and invalidated
+    /// when the panel is hidden. Fires every 30 seconds.
+    private var agentSessionPersistenceTimer: Timer?
     private let metadataWatchService = WorkspaceMetadataWatchService.shared
     private let sleepPreventionController = SleepPreventionController()
     private var persistsWorkspaceState: Bool
@@ -673,6 +678,9 @@ final class WorkspaceStore: ObservableObject {
 
         configureUpdater(checkInBackground: true)
         syncAutomationServices()
+        // Phase 10.1.a: restore persisted agent sessions so the
+        // notch panel keeps its session list across restarts.
+        restorePersistedAgentSessions()
         ensureAgentHookServer()
         // Phase 7.1: one-shot migration of the legacy file-poller
         // assets (bash script + /tmp status dir + settings.json
@@ -955,6 +963,9 @@ final class WorkspaceStore: ObservableObject {
     }
 
     private func showNotchPanel() {
+        // Phase 10.1.a: defensive periodic-save timer. Safe to
+        // schedule repeatedly; the helper no-ops if already armed.
+        startAgentSessionPersistenceTimerIfNeeded()
         if agentNotchPanelController != nil {
             agentNotchPanelController?.show()
             refreshNotchPanelState()
@@ -986,6 +997,50 @@ final class WorkspaceStore: ObservableObject {
 
     private func hideNotchPanel() {
         agentNotchPanelController?.hide()
+        // Phase 10.1.a: persist one last time before stopping so
+        // hiding the panel doesn't lose any in-memory state, then
+        // invalidate the timer.
+        persistAgentSessions()
+        agentSessionPersistenceTimer?.invalidate()
+        agentSessionPersistenceTimer = nil
+    }
+
+    // MARK: - Phase 10.1.a: Agent session persistence lifecycle
+
+    /// Restore on-disk agent sessions into the mapper. Safe to call
+    /// from `loadIfNeeded()` — missing file / decode failure is
+    /// handled silently by `AgentSessionPersistence.load()`.
+    private func restorePersistedAgentSessions() {
+        let persisted = AgentSessionPersistence.load()
+        guard !persisted.isEmpty else { return }
+        for entry in persisted {
+            agentHookMapper.restoreSnapshot(entry)
+        }
+    }
+
+    /// Serialize the mapper's current snapshot map to disk. Called
+    /// from the periodic timer, from `hideNotchPanel()` as a
+    /// final flush, and from the AppDelegate
+    /// `applicationWillTerminate` hook via the public shim below.
+    func persistAgentSessions() {
+        AgentSessionPersistence.save(agentHookMapper.allSnapshots())
+    }
+
+    /// Idempotent scheduler — no-ops when the timer is already
+    /// armed so repeated `showNotchPanel()` calls don't create
+    /// duplicate timers.
+    private func startAgentSessionPersistenceTimerIfNeeded() {
+        guard agentSessionPersistenceTimer == nil else { return }
+        let timer = Timer.scheduledTimer(
+            withTimeInterval: 30,
+            repeats: true
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.persistAgentSessions()
+            }
+        }
+        timer.tolerance = 5
+        agentSessionPersistenceTimer = timer
     }
 
     /// Push a fresh AgentNotchViewState into the view-model.

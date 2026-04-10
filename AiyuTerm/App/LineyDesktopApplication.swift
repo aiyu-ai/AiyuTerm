@@ -135,7 +135,11 @@ public final class AiyuTermDesktopApplication: NSObject {
 
     public func shutdown() {
         AiyuTermGlobalHotKeyMonitor.shared.unregister()
+        // Phase 10.1.a: best-effort persist each window's agent
+        // session snapshots before the app terminates. Each
+        // WorkspaceStore owns an independent mapper.
         for context in windowContexts {
+            context.store.persistAgentSessions()
             context.store.stopSleepPrevention()
         }
     }
