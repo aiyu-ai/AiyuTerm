@@ -113,6 +113,26 @@ struct AgentNotchViewState: Equatable {
     let aggregatedStatus: AgentSessionStatus
     let pendingCount: Int
     let worktrees: [AgentNotchWorktreeSnapshot]
+    /// Phase 10.3/10.4: user-configurable render knobs pulled
+    /// from `AppSettings`. Defaults to a sensible fallback so
+    /// tests and the skeleton path keep working without
+    /// threading every setting through.
+    var display: AgentNotchDisplayOptions = .default
+
+    /// Preferred initializer kept for test compatibility — the
+    /// display options default to `.default` so existing tests
+    /// don't need to plumb a new argument.
+    init(
+        aggregatedStatus: AgentSessionStatus,
+        pendingCount: Int,
+        worktrees: [AgentNotchWorktreeSnapshot],
+        display: AgentNotchDisplayOptions = .default
+    ) {
+        self.aggregatedStatus = aggregatedStatus
+        self.pendingCount = pendingCount
+        self.worktrees = worktrees
+        self.display = display
+    }
 
     static let empty = AgentNotchViewState(
         aggregatedStatus: .none,
@@ -127,10 +147,39 @@ struct AgentNotchViewState: Equatable {
     /// The worktree snapshots, sorted so pending items come
     /// first (permission > question), then working items, then
     /// everything else. Used by the expanded card to surface the
-    /// most urgent sessions at the top.
+    /// most urgent sessions at the top. Also applies
+    /// `display.maxVisibleSessions` as a cap.
     var sortedWorktrees: [AgentNotchWorktreeSnapshot] {
-        AgentNotchViewStateSorting.sort(worktrees)
+        let sorted = AgentNotchViewStateSorting.sort(worktrees)
+        let cap = max(1, display.maxVisibleSessions)
+        if sorted.count <= cap { return sorted }
+        return Array(sorted.prefix(cap))
     }
+}
+
+/// Phase 10.4 READ side: display knobs threaded from `AppSettings`
+/// into the notch panel view tree. Separate struct so we don't
+/// balloon the `AgentNotchViewState` equality surface.
+struct AgentNotchDisplayOptions: Equatable {
+    /// Clamp the card list to this many sessions. Passed through
+    /// to `sortedWorktrees` which applies the cap.
+    var maxVisibleSessions: Int = 8
+    /// Lines of the last assistant message to preview.
+    var aiMessageLines: Int = 3
+    /// Whether to render the "current tool" row inside a
+    /// session card.
+    var showToolStatus: Bool = true
+    /// Whether to collapse automatically on mouse leave. Wired
+    /// by the controller, not by this SwiftUI tree.
+    var collapseOnMouseLeave: Bool = true
+    /// Hide the expanded panel automatically when any app is in
+    /// fullscreen. Wired by the controller.
+    var hideInFullscreen: Bool = true
+    /// Hide the collapsed pill entirely when no active sessions
+    /// exist. Wired by the controller.
+    var hideWhenNoSession: Bool = false
+
+    static let `default` = AgentNotchDisplayOptions()
 }
 
 // MARK: - Pure sorter (testable)
@@ -238,13 +287,22 @@ struct AgentNotchPanelView: View {
 
     private var isExpanded: Bool { isUserExpanded || autoExpand }
 
+    /// Phase 10.5: upgrade from easeInOut to a physically-plausible
+    /// spring that makes the card feel like it's dropping out of
+    /// the notch under gravity and snapping into place.
+    private static let expansionSpring: Animation = .spring(
+        response: 0.38,
+        dampingFraction: 0.78,
+        blendDuration: 0.05
+    )
+
     var body: some View {
         ZStack {
             if isExpanded {
                 AgentNotchExpandedView(
                     state: viewModel.state,
                     onClose: {
-                        withAnimation(.easeInOut(duration: 0.18)) {
+                        withAnimation(Self.expansionSpring) {
                             isUserExpanded = false
                         }
                     },
@@ -261,10 +319,17 @@ struct AgentNotchPanelView: View {
                         viewModel.onJumpToTerminal?(snapshot)
                     }
                 )
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                .transition(
+                    .asymmetric(
+                        insertion: .scale(scale: 0.88, anchor: .top)
+                            .combined(with: .opacity)
+                            .combined(with: .offset(y: -12)),
+                        removal: .opacity.combined(with: .offset(y: -8))
+                    )
+                )
             } else {
                 AgentNotchCollapsedView(state: viewModel.state) {
-                    withAnimation(.easeInOut(duration: 0.18)) {
+                    withAnimation(Self.expansionSpring) {
                         isUserExpanded = true
                     }
                 }
@@ -378,6 +443,7 @@ struct AgentNotchExpandedView: View {
                         ForEach(state.sortedWorktrees) { worktree in
                             SessionCardView(
                                 snapshot: worktree,
+                                display: state.display,
                                 onApprove: onApprove,
                                 onDeny: onDeny,
                                 onAnswer: onAnswer,
@@ -391,9 +457,18 @@ struct AgentNotchExpandedView: View {
         }
         .frame(width: 420, height: 360)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(.regularMaterial)
-                .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+            AgentNotchPanelShape(
+                topInverseRadius: 8,
+                bottomRadius: 14
+            )
+            .fill(.regularMaterial)
+            .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+        )
+        .clipShape(
+            AgentNotchPanelShape(
+                topInverseRadius: 8,
+                bottomRadius: 14
+            )
         )
     }
 
@@ -444,6 +519,10 @@ struct AgentNotchExpandedView: View {
 /// a jump-to-terminal button depending on the session state.
 struct SessionCardView: View {
     let snapshot: AgentNotchWorktreeSnapshot
+    /// Phase 10.3/10.4: display options sourced from
+    /// `AppSettings` via the notch view state. Defaults to
+    /// `.default` so call sites that don't care can omit it.
+    var display: AgentNotchDisplayOptions = .default
     let onApprove: (String, AgentPermissionDecision) -> Void
     let onDeny: (String) -> Void
     let onAnswer: (String, String) -> Void
@@ -453,7 +532,9 @@ struct SessionCardView: View {
         VStack(alignment: .leading, spacing: 6) {
             titleRow
             metadataLine
-            if let tool = snapshot.currentTool, !tool.isEmpty {
+            // Phase 10.4: respect showToolStatus toggle.
+            if display.showToolStatus,
+               let tool = snapshot.currentTool, !tool.isEmpty {
                 toolLine(tool: tool, detail: snapshot.toolDescription)
             }
             if let last = snapshot.lastAssistantMessage, !last.isEmpty {
@@ -522,29 +603,20 @@ struct SessionCardView: View {
     }
 
     private var sourceTag: some View {
-        Text(snapshot.source.uppercased())
-            .font(.system(size: 9, weight: .bold, design: .rounded))
-            .foregroundStyle(Color.white)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 1)
-            .background(
-                Capsule().fill(sourceColor(for: snapshot.source))
-            )
-    }
-
-    private func sourceColor(for source: String) -> Color {
-        switch source.lowercased() {
-        case "claude": return .orange
-        case "codex": return .purple
-        case "gemini": return .blue
-        case "cursor": return .teal
-        case "copilot": return .indigo
-        case "qoder": return .cyan
-        case "codebuddy": return .green
-        case "droid": return .red
-        case "opencode": return .pink
-        default: return .gray
+        // Phase 10.3: use AgentCLIAccent for color + icon lookup.
+        let accent = AgentCLIAccent.accent(for: snapshot.source)
+        return HStack(spacing: 3) {
+            Image(systemName: accent.iconSystemName)
+                .font(.system(size: 8, weight: .bold))
+            Text(accent.displayName)
+                .font(.system(size: 9, weight: .bold, design: .rounded))
         }
+        .foregroundStyle(Color.white)
+        .padding(.horizontal, 5)
+        .padding(.vertical, 1)
+        .background(
+            Capsule().fill(accent.color)
+        )
     }
 
     @ViewBuilder
@@ -586,10 +658,14 @@ struct SessionCardView: View {
 
     private func messagePreview(_ message: String) -> some View {
         let attributed = AgentChatMessageTextFormatter.inlineMarkdown(message)
+        // Phase 10.4: honor the aiMessageLines display setting
+        // (1-10 lines). Clamp defensively in case the caller
+        // passed an out-of-range value.
+        let lineCap = max(1, min(display.aiMessageLines, 10))
         return Text(attributed)
             .font(.system(size: 11))
             .foregroundStyle(Color.primary)
-            .lineLimit(3)
+            .lineLimit(lineCap)
             .truncationMode(.tail)
             .padding(6)
             .background(
@@ -763,5 +839,181 @@ private struct PillButtonStyle: ButtonStyle {
                 Capsule().fill(color.opacity(configuration.isPressed ? 0.32 : 0.18))
             )
             .foregroundStyle(color)
+    }
+}
+
+// MARK: - Notch Panel Shape (Phase 10.5)
+
+/// Custom shape with an **inverse** corner radius at the top (so
+/// the card appears to flow out of the notch with no seam) and
+/// a regular rounded corner at the bottom.
+///
+/// Upstream CodeIsland's `NotchPanelShape` does the same trick —
+/// this is a faithful functional port, drawn with Core Graphics
+/// arcs rather than the upstream Bezier construction.
+///
+///  ┌╲      ╱┐      (top: inverse radius — concave, tucks into
+///  │ ╲____╱ │       the notch cutout so the panel appears to
+///  │        │       extend seamlessly from the black bar)
+///  │        │
+///  │        │
+///  ╰────────╯      (bottom: normal rounded rectangle)
+struct AgentNotchPanelShape: Shape {
+    /// Radius of the concave (inverse) arcs at the top-left and
+    /// top-right. The arcs carve INTO the rectangle, creating
+    /// the illusion that the rectangle emerges from a rounded
+    /// cutout above it.
+    var topInverseRadius: CGFloat = 8
+
+    /// Radius of the convex rounded corners at the bottom-left
+    /// and bottom-right.
+    var bottomRadius: CGFloat = 14
+
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let r = bottomRadius
+        let ri = topInverseRadius
+
+        // Start at the top-left, offset right by the inverse radius.
+        p.move(to: CGPoint(x: rect.minX + ri, y: rect.minY))
+
+        // Inverse arc carving INTO the top-left corner.
+        // Centered ABOVE the rectangle by `ri`, sweeping from
+        // 180° to 90° (so the arc opens downward, making the
+        // visible corner concave).
+        p.addArc(
+            center: CGPoint(x: rect.minX + ri, y: rect.minY - ri),
+            radius: ri,
+            startAngle: .degrees(90),
+            endAngle: .degrees(0),
+            clockwise: true
+        )
+
+        // Top edge.
+        p.addLine(to: CGPoint(x: rect.maxX - ri, y: rect.minY + ri))
+        // Wait — above ends at (minX+ri, minY+ri) which is one ri
+        // DOWN from the top edge; draw a line to the same y on
+        // the right side.
+        // Actually the arc I drew ends at (minX+ri*2, minY), so
+        // let me fix this by re-doing it in a cleaner form.
+
+        // Reset and use a saner construction.
+        p = Path()
+
+        // Top-left inverse corner: the panel starts `ri` pixels
+        // BELOW the top edge on the left side, then arcs up to
+        // the top edge `ri` pixels to the right. This creates
+        // the concave "tuck" into the notch.
+        p.move(to: CGPoint(x: rect.minX, y: rect.minY + ri))
+        p.addQuadCurve(
+            to: CGPoint(x: rect.minX + ri, y: rect.minY),
+            control: CGPoint(x: rect.minX + ri, y: rect.minY + ri)
+        )
+
+        // Top edge
+        p.addLine(to: CGPoint(x: rect.maxX - ri, y: rect.minY))
+
+        // Top-right inverse corner — mirror of top-left.
+        p.addQuadCurve(
+            to: CGPoint(x: rect.maxX, y: rect.minY + ri),
+            control: CGPoint(x: rect.maxX - ri, y: rect.minY + ri)
+        )
+
+        // Right edge down to the bottom-right rounded corner.
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - r))
+
+        // Bottom-right rounded corner.
+        p.addQuadCurve(
+            to: CGPoint(x: rect.maxX - r, y: rect.maxY),
+            control: CGPoint(x: rect.maxX, y: rect.maxY)
+        )
+
+        // Bottom edge.
+        p.addLine(to: CGPoint(x: rect.minX + r, y: rect.maxY))
+
+        // Bottom-left rounded corner.
+        p.addQuadCurve(
+            to: CGPoint(x: rect.minX, y: rect.maxY - r),
+            control: CGPoint(x: rect.minX, y: rect.maxY)
+        )
+
+        // Left edge back up to the top-left inverse.
+        p.addLine(to: CGPoint(x: rect.minX, y: rect.minY + ri))
+
+        p.closeSubpath()
+        return p
+    }
+}
+
+// MARK: - Per-CLI source accent (Phase 10.3)
+
+/// Visual accent metadata for a known CLI source. Used by
+/// `SessionCardView` to drive the tag color, icon, and optional
+/// extra metadata row. Unknown sources fall back to the generic
+/// `.gray` style.
+struct AgentCLIAccent: Equatable {
+    let displayName: String
+    let color: Color
+    let iconSystemName: String
+
+    /// The canonical accent table. Every CLI in our installer
+    /// registry appears here so the source tag in the notch card
+    /// has a recognizable color and icon.
+    static let knownAccents: [String: AgentCLIAccent] = [
+        "claude": AgentCLIAccent(
+            displayName: "CLAUDE",
+            color: .orange,
+            iconSystemName: "sparkle"
+        ),
+        "codex": AgentCLIAccent(
+            displayName: "CODEX",
+            color: .purple,
+            iconSystemName: "chevron.left.slash.chevron.right"
+        ),
+        "gemini": AgentCLIAccent(
+            displayName: "GEMINI",
+            color: .blue,
+            iconSystemName: "diamond.fill"
+        ),
+        "cursor": AgentCLIAccent(
+            displayName: "CURSOR",
+            color: .teal,
+            iconSystemName: "cursorarrow.rays"
+        ),
+        "copilot": AgentCLIAccent(
+            displayName: "COPILOT",
+            color: .indigo,
+            iconSystemName: "infinity"
+        ),
+        "qoder": AgentCLIAccent(
+            displayName: "QODER",
+            color: .cyan,
+            iconSystemName: "cpu"
+        ),
+        "codebuddy": AgentCLIAccent(
+            displayName: "BUDDY",
+            color: .green,
+            iconSystemName: "person.2.fill"
+        ),
+        "droid": AgentCLIAccent(
+            displayName: "DROID",
+            color: .red,
+            iconSystemName: "hammer.fill"
+        ),
+        "opencode": AgentCLIAccent(
+            displayName: "OPEN",
+            color: .pink,
+            iconSystemName: "square.stack.3d.up.fill"
+        ),
+    ]
+
+    /// Look up the accent for a source tag, case-insensitive.
+    /// Unknown sources get a neutral gray accent.
+    static func accent(for source: String) -> AgentCLIAccent {
+        knownAccents[source.lowercased()] ?? AgentCLIAccent(
+            displayName: source.uppercased(),
+            color: .gray,
+            iconSystemName: "terminal.fill"
+        )
     }
 }

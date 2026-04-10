@@ -1130,10 +1130,23 @@ final class WorkspaceStore: ObservableObject {
                 }
             }
         }
+        // Phase 10.3/10.4 READ side: pull display knobs from
+        // AppSettings so the notch panel honors user preferences
+        // (max sessions, AI preview line count, tool status row
+        // visibility, etc.).
+        let display = AgentNotchDisplayOptions(
+            maxVisibleSessions: appSettings.notchMaxVisibleSessions,
+            aiMessageLines: appSettings.notchAiMessageLines,
+            showToolStatus: appSettings.notchShowToolStatus,
+            collapseOnMouseLeave: appSettings.notchCollapseOnMouseLeave,
+            hideInFullscreen: appSettings.notchHideInFullscreen,
+            hideWhenNoSession: appSettings.notchHideWhenNoSession
+        )
         return AgentNotchViewState(
             aggregatedStatus: AgentSessionStatus.highestPriority(in: statuses),
             pendingCount: pendingCount,
-            worktrees: worktreeSnapshots
+            worktrees: worktreeSnapshots,
+            display: display
         )
     }
 
