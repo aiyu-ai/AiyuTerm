@@ -553,7 +553,17 @@ struct SessionCardView: View {
 
     private var titleRow: some View {
         HStack(spacing: 8) {
-            statusDot
+            // Phase 11.2: mascot + small status dot in bottom-right
+            ZStack(alignment: .bottomTrailing) {
+                AgentMascotFactory.mascot(
+                    for: snapshot.source,
+                    status: snapshot.status,
+                    size: 27
+                )
+                .frame(width: 27, height: 27)
+                statusDot
+                    .offset(x: 3, y: 3)
+            }
             VStack(alignment: .leading, spacing: 0) {
                 if let title = snapshot.resolvedTitle,
                    !title.isEmpty {
