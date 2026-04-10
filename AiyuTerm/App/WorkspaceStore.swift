@@ -825,6 +825,43 @@ final class WorkspaceStore: ObservableObject {
         }
     }
 
+    // MARK: - Phase 6.2: Sidebar bubble action handlers
+
+    /// Approve the pending permission request on the given worktree.
+    /// `mode` controls whether the approval is one-shot or saved as
+    /// a rule for future tool calls.
+    func approveAgentPermission(
+        forWorktreePath path: String,
+        mode: AgentPermissionDecision = .allowOnce
+    ) {
+        agentHookMapper.resolvePermission(
+            forWorktreePath: path,
+            decision: mode
+        )
+    }
+
+    /// Deny the pending permission request on the given worktree.
+    func denyAgentPermission(forWorktreePath path: String) {
+        agentHookMapper.resolvePermission(
+            forWorktreePath: path,
+            decision: .deny
+        )
+    }
+
+    /// Answer the pending AskUserQuestion / Notification-question
+    /// request on the given worktree. `option` must be one of the
+    /// options from `AgentQuestionRequest.options`; passing nil
+    /// skips the question (treated as deny).
+    func answerAgentQuestion(
+        forWorktreePath path: String,
+        option: String?
+    ) {
+        agentHookMapper.resolveQuestion(
+            forWorktreePath: path,
+            option: option
+        )
+    }
+
     func selectGlobalCanvasCard(_ cardID: GlobalCanvasCardID) {
         guard let workspace = workspace(for: cardID.workspaceID) else { return }
         selectedWorkspaceID = workspace.id

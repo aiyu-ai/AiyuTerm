@@ -1785,43 +1785,100 @@ private struct WorktreeRowContent: View {
         return worktreeAgentStatus.badgeDisplayState(isUnread: isUnread)
     }
 
-    var body: some View {
-        HStack(spacing: 8 * uiScale) {
-            if worktreeBadgeDisplayState != .hidden {
-                AgentStatusOverlayBadge(displayState: worktreeBadgeDisplayState, size: 12 * uiScale)
-            }
-            Text(worktree.displayName)
-                .font(worktree.isMainWorktree
-                    ? .system(size: 10 * uiScale, weight: .medium)
-                    : .system(size: 10 * uiScale, weight: .regular, design: .monospaced).italic())
-                .lineLimit(1)
-            if worktree.isLocked {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 8 * uiScale))
-                    .foregroundStyle(AiyuTermTheme.mutedText)
-            }
-            Spacer()
-            if appSettings.sidebarShowsWorktreeBadges {
-                HStack(spacing: 5 * uiScale) {
-                    if workspace.activeWorktreePath == worktree.path {
-                        SidebarInfoBadge(text: localized("sidebar.badge.current"), tone: .subtleSuccess)
-                    }
+    private var pendingPermissionRequest: AgentPermissionRequest? {
+        workspace.pendingPermissionRequests[worktree.path]
+    }
 
-                    if let status = workspace.status(for: worktree.path),
-                       status.hasUncommittedChanges {
-                        SidebarInfoBadge(text: "\(status.changedFileCount)", tone: .warning)
+    private var pendingQuestionRequest: AgentQuestionRequest? {
+        workspace.pendingQuestionRequests[worktree.path]
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4 * uiScale) {
+            HStack(spacing: 8 * uiScale) {
+                if worktreeBadgeDisplayState != .hidden {
+                    AgentStatusOverlayBadge(displayState: worktreeBadgeDisplayState, size: 12 * uiScale)
+                }
+                Text(worktree.displayName)
+                    .font(worktree.isMainWorktree
+                        ? .system(size: 10 * uiScale, weight: .medium)
+                        : .system(size: 10 * uiScale, weight: .regular, design: .monospaced).italic())
+                    .lineLimit(1)
+                if worktree.isLocked {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 8 * uiScale))
+                        .foregroundStyle(AiyuTermTheme.mutedText)
+                }
+                Spacer()
+                if appSettings.sidebarShowsWorktreeBadges {
+                    HStack(spacing: 5 * uiScale) {
+                        if workspace.activeWorktreePath == worktree.path {
+                            SidebarInfoBadge(text: localized("sidebar.badge.current"), tone: .subtleSuccess)
+                        }
+
+                        if let status = workspace.status(for: worktree.path),
+                           status.hasUncommittedChanges {
+                            SidebarInfoBadge(text: "\(status.changedFileCount)", tone: .warning)
+                        }
                     }
                 }
+            }
+
+            // Phase 6.2: render the pending permission / question
+            // bubble underneath the worktree row when the mapper
+            // has an in-flight blocking request. The bubble calls
+            // back into WorkspaceStore which forwards the decision
+            // through AgentHookEventMapper.resolvePermission /
+            // resolveQuestion, resuming the suspended continuation
+            // inside AgentHookServer so the bridge binary finally
+            // writes a response back to Claude Code.
+            if let request = pendingPermissionRequest {
+                AgentPermissionBubbleView(
+                    request: request,
+                    onApproveOnce: {
+                        store?.approveAgentPermission(forWorktreePath: worktree.path, mode: .allowOnce)
+                    },
+                    onApproveAlways: {
+                        store?.approveAgentPermission(forWorktreePath: worktree.path, mode: .allowAlways)
+                    },
+                    onDeny: {
+                        store?.denyAgentPermission(forWorktreePath: worktree.path)
+                    }
+                )
+                .padding(.leading, leadingInset + 16 * uiScale)
+                .padding(.trailing, 8 * uiScale)
+                .transition(.asymmetric(
+                    insertion: .move(edge: .top).combined(with: .opacity),
+                    removal: .opacity
+                ))
+            } else if let request = pendingQuestionRequest {
+                AgentQuestionBubbleView(
+                    request: request,
+                    onAnswer: { option in
+                        store?.answerAgentQuestion(forWorktreePath: worktree.path, option: option)
+                    },
+                    onSkip: {
+                        store?.answerAgentQuestion(forWorktreePath: worktree.path, option: nil)
+                    }
+                )
+                .padding(.leading, leadingInset + 16 * uiScale)
+                .padding(.trailing, 8 * uiScale)
+                .transition(.asymmetric(
+                    insertion: .move(edge: .top).combined(with: .opacity),
+                    removal: .opacity
+                ))
             }
         }
         .padding(.vertical, 1 * uiScale)
         .padding(.leading, leadingInset)
         .padding(.trailing, 8 * uiScale)
-        .frame(maxWidth: .infinity, minHeight: 24 * uiScale, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             AiyuTermTheme.subtleFill.opacity(isHovering ? 1 : 0),
             in: RoundedRectangle(cornerRadius: 8, style: .continuous)
         )
+        .animation(.easeInOut(duration: 0.18), value: pendingPermissionRequest?.id)
+        .animation(.easeInOut(duration: 0.18), value: pendingQuestionRequest?.id)
         .onHover { isInside in
             isHovering = isInside
         }
