@@ -415,6 +415,10 @@ struct SettingsSheet: View {
                     Toggle(localized("settings.general.behavior.enableFileWatchers"), isOn: $appSettings.fileWatcherEnabled)
                     Toggle(localized("settings.general.behavior.allowSystemNotifications"), isOn: $appSettings.systemNotificationsEnabled)
                     Toggle(localized("settings.general.behavior.showArchivedWorkspaces"), isOn: $appSettings.showArchivedWorkspaces)
+                    // Phase 8.5: gate the notch activity panel.
+                    // Localization keys fall back to English copy
+                    // since Phase 8 has not translated them yet.
+                    Toggle("Show agent activity in the notch", isOn: $appSettings.notchPanelEnabled)
 
                     Divider()
 
