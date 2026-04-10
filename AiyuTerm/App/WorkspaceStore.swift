@@ -669,6 +669,10 @@ final class WorkspaceStore: ObservableObject {
         // `.playSound` effects honour the user's choices from the
         // first event onward.
         AgentSoundManager.updateSettings(appSettings)
+        // Phase 11.4.3: play the boot jingle after the sound
+        // subsystem has the latest settings. Gated on
+        // agentSoundEnabled + agentSoundBoot inside playBoot.
+        AgentSoundManager.playBoot()
         NotificationCenter.default.post(name: .aiyuTermAppSettingsDidChange, object: appSettings)
         let state = normalizeLaunchState(initialWorkspaceState ?? persistence.load())
         workspaces = state.workspaces.map(WorkspaceModel.init(record:))
