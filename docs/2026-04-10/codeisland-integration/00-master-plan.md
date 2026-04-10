@@ -73,10 +73,10 @@
 ## 4. 阶段划分总览
 
 ```
-Phase 1 ──► Phase 2 ──► Phase 3 ──► Phase 4 ──► Phase 5 ──► Phase 6 ──► Phase 7
-   │           │            │            │            │           │           │
- vendor     Bridge       事件映射      替换轮询      多 CLI      权限 UI    测试+清理
- Core模块   + Server     + 协议层      + 双写期     安装器      + 问答 UI   + 迁移
+P1 ──► P2 ──► P3 ──► P4 ──► P5 ──► P6 ──► P7 ──► P8
+ │      │      │      │      │      │      │      │
+ vendor bridge 事件   替换   多 CLI  权限  测试+  刘海
+ Core   +Srv   映射   轮询   安装    UI    清理   面板
 ```
 
 | 阶段 | 目标 | 可交付 | 风险 |
@@ -88,6 +88,7 @@ Phase 1 ──► Phase 2 ──► Phase 3 ──► Phase 4 ──► Phase 5 
 | **P5: 多 CLI ConfigInstaller** | 移植 `ConfigInstaller`，支持 9 种 CLI 的 hook 安装/自愈 | 设置页新增"支持的 Agent"多选开关 | 高（路径冲突）|
 | **P6: 权限/问答 UI** | 侧边栏气泡 Approve/Deny/Answer | 新的 `AgentSessionStatus` case + SwiftUI 气泡 | 高（阻塞语义）|
 | **P7: 测试 + 清理** | 单元 + 集成 + 手工验收；删除旧 `AgentStatusFilePoller` 兼容代码 | 覆盖率达标；旧代码删除 | 中 |
+| **P8: 刘海面板** | 移植 `NotchPanelView` + `PanelWindowController` + `ScreenDetector`，订阅 `WorkspaceModel` | 面板展开折叠、权限审批快捷入口、多屏幕刘海检测 | 高（AppKit NSPanel 层级 + 多屏动画）|
 
 ## 5. 目录布局（最终形态）
 
@@ -111,6 +112,14 @@ AiyuTerm/
 │   │       │   └── AgentCLIConfigInstaller.swift  # from ConfigInstaller.swift
 │   │       ├── ClaudeCodeHooksService.swift    # Phase 7 删除
 │   │       └── AgentStatusFilePoller.swift     # Phase 7 删除
+│   ├── UI/
+│   │   └── NotchPanel/                         # Phase 8 新增
+│   │       ├── AgentNotchPanelController.swift # from PanelWindowController.swift
+│   │       ├── AgentNotchPanelView.swift       # from NotchPanelView.swift
+│   │       ├── AgentNotchCollapsedView.swift
+│   │       ├── AgentNotchExpandedView.swift
+│   │       ├── AgentNotchScreenDetector.swift  # from ScreenDetector.swift
+│   │       └── AgentNotchPixelAnimation.swift  # from IslandPixelAnimation.swift
 │   └── ...
 ├── AiyuTermHookBridge/                         # Phase 2 新增 target
 │   └── main.swift                              # from CodeIslandBridge/main.swift
@@ -124,7 +133,8 @@ AiyuTerm/
 │           ├── 04-phase4-replace-poller.md
 │           ├── 05-phase5-multi-cli.md
 │           ├── 06-phase6-permission-ui.md
-│           └── 07-phase7-tests-cleanup.md
+│           ├── 07-phase7-tests-cleanup.md
+│           └── 08-phase8-notch-panel.md        # Phase 8 新增
 └── THIRD_PARTY_LICENSES.md                     # Phase 1 新增
 ```
 
@@ -175,9 +185,14 @@ AiyuTerm/
 - **旧 hook 脚本识别**：在 `~/.claude/settings.json` 中检测 `aiyuterm` / `codeisland` / `vibenotch` / `vibe-island` 关键字并清理。
 - **接管顺序**：新安装器在写入前先 `removeManagedHookEntries`（移植自 `ConfigInstaller.swift:670-682`），保证幂等。
 
-### D7: 暂不移植的功能
-- 刘海悬浮面板（`NotchPanelView.swift` 2045 行）：产品重复 Sidebar Badge，延后。
-- 吉祥物动画 + 8bit 音效：产品方向不一致，延后。
+### D7: 刘海悬浮面板列入 Phase 8（2026-04-10 评审追加）
+- **用户决策**：刘海面板要做，纳入本方案作为 Phase 8 闭环交付。
+- **移植范围**：`NotchPanelView.swift` (2045) + `IslandPanelController`（CodeIsland 变体）+ `ScreenDetector.swift` + `IslandCollapsedView/ExpandedView` + `IslandPixelAnimation`。
+- **不移植**：CodeIsland 的 `AppState.swift`（3103 行），改为订阅 AiyuTerm 的 `WorkspaceModel` 聚合状态。
+- **依赖**: 必须在 Phase 6（permission UI）完成后启动，否则面板没有可用的数据源。
+
+### D8: 暂不移植的功能（精简后）
+- 吉祥物动画 + 8bit 音效：产品方向不一致，可选在 Phase 8 末尾作为可关开关添加。
 - `ChatMessageTextFormatter`：仅 Phase 6 的问答 UI 需要时再 vendor。
 - `SessionSnapshot` 的大量 `terminalName` 分支：AiyuTerm 只关心 Ghostty，可精简。
 
