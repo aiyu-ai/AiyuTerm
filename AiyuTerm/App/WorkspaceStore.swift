@@ -668,6 +668,11 @@ final class WorkspaceStore: ObservableObject {
         ensureAgentFilePoller()
         ensureAgentHookServer()
         ClaudeCodeHooksService.ensureHookScript()
+        // Phase 4: install the bridge-based hook alongside the legacy
+        // script so users running Claude Code see events flow through
+        // both paths until the legacy file poller is retired in Phase 7.
+        ClaudeCodeHooksService.ensureBridgeHookScript()
+        ClaudeCodeHooksService.injectBridgeHooks()
         persist()
     }
 

@@ -25,9 +25,22 @@ enum AgentHookSocketPath {
     /// We keep a safety margin of 100 to leave room for the null terminator.
     static let maximumSocketPathLength = 100
 
+    /// State directory name. Debug builds use `.aiyuterm-debug` to
+    /// stay isolated from a concurrently-running release build. The
+    /// debug suffix must match `aiyuTermStateDirectoryName()` in
+    /// `AppSettingsPersistence.swift` so the socket path and the
+    /// on-disk hook scripts stay in lockstep.
+    static var stateDirectoryName: String {
+        #if DEBUG
+        return ".aiyuterm-debug"
+        #else
+        return ".aiyuterm"
+        #endif
+    }
+
     /// Resolved socket path:
     /// 1. Environment override if set and non-empty.
-    /// 2. `~/.aiyuterm/hook.sock` (default).
+    /// 2. `~/{stateDirectoryName}/hook.sock` (default).
     /// 3. `/tmp/aiyuterm-hook-<uid>.sock` fallback if the default path is
     ///    too long to fit into `sockaddr_un.sun_path`.
     static var path: String {
@@ -53,10 +66,14 @@ enum AgentHookSocketPath {
 
     private static func defaultHomePath() -> String {
         let home = NSHomeDirectory()
-        return "\(home)/.aiyuterm/hook.sock"
+        return "\(home)/\(stateDirectoryName)/hook.sock"
     }
 
     private static func tmpFallbackPath() -> String {
-        "/tmp/aiyuterm-hook-\(getuid()).sock"
+        #if DEBUG
+        return "/tmp/aiyuterm-hook-debug-\(getuid()).sock"
+        #else
+        return "/tmp/aiyuterm-hook-\(getuid()).sock"
+        #endif
     }
 }

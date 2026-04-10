@@ -43,10 +43,22 @@ signal(SIGALRM) { _ in
 }
 
 // MARK: - Socket path resolver (mirrors AgentHookSocketPath.swift)
+//
+// Keep the #if DEBUG branches synchronized with
+// AiyuTerm/Services/Agent/HookProtocol/AgentHookSocketPath.swift so
+// that debug and release app / bridge builds never cross-talk.
 
 enum HookBridgeSocketPath {
     static let environmentOverrideKey = "AIYUTERM_HOOK_SOCKET"
     static let maximumSocketPathLength = 100
+
+    static var stateDirectoryName: String {
+        #if DEBUG
+        return ".aiyuterm-debug"
+        #else
+        return ".aiyuterm"
+        #endif
+    }
 
     static var path: String {
         if let override = ProcessInfo.processInfo.environment[environmentOverrideKey],
@@ -54,11 +66,15 @@ enum HookBridgeSocketPath {
         {
             return override
         }
-        let preferred = "\(NSHomeDirectory())/.aiyuterm/hook.sock"
+        let preferred = "\(NSHomeDirectory())/\(stateDirectoryName)/hook.sock"
         if preferred.utf8.count <= maximumSocketPathLength {
             return preferred
         }
+        #if DEBUG
+        return "/tmp/aiyuterm-hook-debug-\(getuid()).sock"
+        #else
         return "/tmp/aiyuterm-hook-\(getuid()).sock"
+        #endif
     }
 }
 

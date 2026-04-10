@@ -25,10 +25,31 @@ final class AgentHookSocketPathTests: XCTestCase {
 
     func testDefaultPathLivesUnderHome() {
         let path = AgentHookSocketPath.path
+        // Debug builds live under ~/.aiyuterm-debug/ and release builds
+        // under ~/.aiyuterm/; both may also fall back to /tmp if the
+        // home path is too long.
+        let acceptableSuffixes = [
+            "/.aiyuterm/hook.sock",
+            "/.aiyuterm-debug/hook.sock",
+        ]
+        let acceptablePrefixes = [
+            "/tmp/aiyuterm-hook-",
+            "/tmp/aiyuterm-hook-debug-",
+        ]
+        let matchesSuffix = acceptableSuffixes.contains(where: path.hasSuffix)
+        let matchesPrefix = acceptablePrefixes.contains(where: path.hasPrefix)
         XCTAssertTrue(
-            path.hasSuffix("/.aiyuterm/hook.sock") || path.hasPrefix("/tmp/aiyuterm-hook-"),
-            "Default path should be under ~/.aiyuterm or /tmp fallback, got: \(path)"
+            matchesSuffix || matchesPrefix,
+            "Default path should be under ~/.aiyuterm[-debug] or /tmp[-debug] fallback, got: \(path)"
         )
+    }
+
+    func testStateDirectoryNameUsesDebugSuffixInDebugBuilds() {
+        #if DEBUG
+        XCTAssertEqual(AgentHookSocketPath.stateDirectoryName, ".aiyuterm-debug")
+        #else
+        XCTAssertEqual(AgentHookSocketPath.stateDirectoryName, ".aiyuterm")
+        #endif
     }
 
     func testEnvironmentOverrideWins() {
