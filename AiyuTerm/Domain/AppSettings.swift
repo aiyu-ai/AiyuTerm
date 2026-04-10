@@ -312,6 +312,63 @@ struct AppSettings: Codable, Hashable {
     /// Toggles the "current tool" row inside each session card.
     var notchShowToolStatus: Bool = true
 
+    // MARK: - Phase 11.3B: remaining CodeIsland settings parity
+
+    /// Preferred screen for the notch panel. `"auto"` picks the built-in
+    /// display when available, `"builtin"` forces the built-in display,
+    /// `"external"` forces the current main external display.
+    var notchDisplayChoice: String = "auto"
+    /// When true the user can drag the notch panel horizontally along the
+    /// screen edge and the offset is remembered via
+    /// `notchPanelHorizontalOffset`.
+    var notchAllowHorizontalDrag: Bool = false
+    /// Horizontal offset (in points) applied to the notch panel when
+    /// horizontal drag is allowed. Clamped to a sane -200...200 range so
+    /// a stale persisted value cannot pin the pill off-screen.
+    var notchPanelHorizontalOffset: Double = 0
+    /// Maximum height (in points) the expanded notch panel may use.
+    /// Matches the upstream CodeIsland ceiling of 520, clamped 240...1200
+    /// to prevent absurd values from breaking the layout.
+    var notchMaxPanelHeight: Double = 520
+    /// Font size (in points) used for session content inside the notch
+    /// panel. Clamped 9...16 to keep the pill readable.
+    var notchContentFontSize: Double = 11
+    /// Interval (in seconds) between automatic session rotations in the
+    /// notch pill. Clamped 2...60.
+    var notchRotationInterval: Int = 5
+    /// Maximum number of tool-use entries kept per session in the notch
+    /// panel history. Clamped 5...100.
+    var notchMaxToolHistory: Int = 20
+    /// How sessions are grouped in the notch panel. `"byWorkspace"`
+    /// groups by git worktree / workspace, `"flat"` lists them in a
+    /// single stream.
+    var notchSessionGroupingMode: String = "byWorkspace"
+    /// Toggles the expanded agent detail rows inside each notch session
+    /// card. Mirrors the upstream `showAgentDetails` key.
+    var notchShowAgentDetails: Bool = true
+
+    /// Mascot animation speed index. 0 = slow, 1 = normal, 2 = fast.
+    /// Clamped 0...2 — upstream uses a percentage but we store a
+    /// three-step enum because the UI exposes three named choices.
+    var notchMascotSpeed: Int = 1
+
+    /// Playback volume applied to every agent feedback sound. 0.0...1.0.
+    var agentSoundVolume: Double = 0.7
+    /// Per-event gate for the "session start" jingle.
+    var agentSoundSessionStart: Bool = true
+    /// Per-event gate for the "task complete" chime.
+    var agentSoundTaskComplete: Bool = true
+    /// Per-event gate for the "task error" buzz.
+    var agentSoundTaskError: Bool = true
+    /// Per-event gate for the "permission needed" ping.
+    var agentSoundApprovalNeeded: Bool = true
+    /// Per-event gate for the "user prompt submitted" click.
+    /// Defaults to false because this event fires frequently and most
+    /// users find the tick noisy.
+    var agentSoundPromptSubmit: Bool = false
+    /// Per-event gate for the app boot jingle.
+    var agentSoundBoot: Bool = true
+
     init(
         appLanguage: AppLanguage = .english,
         autoRefreshEnabled: Bool = true,
@@ -359,7 +416,24 @@ struct AppSettings: Codable, Hashable {
         notchSessionTimeoutMinutes: Int = 30,
         notchMaxVisibleSessions: Int = 8,
         notchAiMessageLines: Int = 3,
-        notchShowToolStatus: Bool = true
+        notchShowToolStatus: Bool = true,
+        notchDisplayChoice: String = "auto",
+        notchAllowHorizontalDrag: Bool = false,
+        notchPanelHorizontalOffset: Double = 0,
+        notchMaxPanelHeight: Double = 520,
+        notchContentFontSize: Double = 11,
+        notchRotationInterval: Int = 5,
+        notchMaxToolHistory: Int = 20,
+        notchSessionGroupingMode: String = "byWorkspace",
+        notchShowAgentDetails: Bool = true,
+        notchMascotSpeed: Int = 1,
+        agentSoundVolume: Double = 0.7,
+        agentSoundSessionStart: Bool = true,
+        agentSoundTaskComplete: Bool = true,
+        agentSoundTaskError: Bool = true,
+        agentSoundApprovalNeeded: Bool = true,
+        agentSoundPromptSubmit: Bool = false,
+        agentSoundBoot: Bool = true
     ) {
         let normalizedKeyboardShortcutOverrides = AiyuTermKeyboardShortcuts.normalizedOverrides(keyboardShortcutOverrides)
         let normalizedAgentPresets = aiyuTermNormalizedAgentPresets(agentPresets)
@@ -431,6 +505,33 @@ struct AppSettings: Codable, Hashable {
         self.notchMaxVisibleSessions = max(1, min(notchMaxVisibleSessions, 30))
         self.notchAiMessageLines = max(1, min(notchAiMessageLines, 10))
         self.notchShowToolStatus = notchShowToolStatus
+
+        // Phase 11.3B — clamped ranges mirror the task spec. Stale or
+        // hand-edited values outside the clamp snap back to the nearest
+        // valid bound so persisted garbage cannot wedge the UI.
+        let allowedDisplayChoices: Set<String> = ["auto", "builtin", "external"]
+        self.notchDisplayChoice = allowedDisplayChoices.contains(notchDisplayChoice)
+            ? notchDisplayChoice
+            : "auto"
+        self.notchAllowHorizontalDrag = notchAllowHorizontalDrag
+        self.notchPanelHorizontalOffset = max(-200, min(notchPanelHorizontalOffset, 200))
+        self.notchMaxPanelHeight = max(240, min(notchMaxPanelHeight, 1200))
+        self.notchContentFontSize = max(9, min(notchContentFontSize, 16))
+        self.notchRotationInterval = max(2, min(notchRotationInterval, 60))
+        self.notchMaxToolHistory = max(5, min(notchMaxToolHistory, 100))
+        let allowedGroupingModes: Set<String> = ["byWorkspace", "flat"]
+        self.notchSessionGroupingMode = allowedGroupingModes.contains(notchSessionGroupingMode)
+            ? notchSessionGroupingMode
+            : "byWorkspace"
+        self.notchShowAgentDetails = notchShowAgentDetails
+        self.notchMascotSpeed = max(0, min(notchMascotSpeed, 2))
+        self.agentSoundVolume = max(0.0, min(agentSoundVolume, 1.0))
+        self.agentSoundSessionStart = agentSoundSessionStart
+        self.agentSoundTaskComplete = agentSoundTaskComplete
+        self.agentSoundTaskError = agentSoundTaskError
+        self.agentSoundApprovalNeeded = agentSoundApprovalNeeded
+        self.agentSoundPromptSubmit = agentSoundPromptSubmit
+        self.agentSoundBoot = agentSoundBoot
     }
 }
 
@@ -483,6 +584,23 @@ extension AppSettings {
         case notchMaxVisibleSessions
         case notchAiMessageLines
         case notchShowToolStatus
+        case notchDisplayChoice
+        case notchAllowHorizontalDrag
+        case notchPanelHorizontalOffset
+        case notchMaxPanelHeight
+        case notchContentFontSize
+        case notchRotationInterval
+        case notchMaxToolHistory
+        case notchSessionGroupingMode
+        case notchShowAgentDetails
+        case notchMascotSpeed
+        case agentSoundVolume
+        case agentSoundSessionStart
+        case agentSoundTaskComplete
+        case agentSoundTaskError
+        case agentSoundApprovalNeeded
+        case agentSoundPromptSubmit
+        case agentSoundBoot
     }
 
     init(from decoder: any Decoder) throws {
@@ -542,7 +660,24 @@ extension AppSettings {
             notchSessionTimeoutMinutes: try container.decodeIfPresent(Int.self, forKey: .notchSessionTimeoutMinutes) ?? 30,
             notchMaxVisibleSessions: try container.decodeIfPresent(Int.self, forKey: .notchMaxVisibleSessions) ?? 8,
             notchAiMessageLines: try container.decodeIfPresent(Int.self, forKey: .notchAiMessageLines) ?? 3,
-            notchShowToolStatus: try container.decodeIfPresent(Bool.self, forKey: .notchShowToolStatus) ?? true
+            notchShowToolStatus: try container.decodeIfPresent(Bool.self, forKey: .notchShowToolStatus) ?? true,
+            notchDisplayChoice: try container.decodeIfPresent(String.self, forKey: .notchDisplayChoice) ?? "auto",
+            notchAllowHorizontalDrag: try container.decodeIfPresent(Bool.self, forKey: .notchAllowHorizontalDrag) ?? false,
+            notchPanelHorizontalOffset: try container.decodeIfPresent(Double.self, forKey: .notchPanelHorizontalOffset) ?? 0,
+            notchMaxPanelHeight: try container.decodeIfPresent(Double.self, forKey: .notchMaxPanelHeight) ?? 520,
+            notchContentFontSize: try container.decodeIfPresent(Double.self, forKey: .notchContentFontSize) ?? 11,
+            notchRotationInterval: try container.decodeIfPresent(Int.self, forKey: .notchRotationInterval) ?? 5,
+            notchMaxToolHistory: try container.decodeIfPresent(Int.self, forKey: .notchMaxToolHistory) ?? 20,
+            notchSessionGroupingMode: try container.decodeIfPresent(String.self, forKey: .notchSessionGroupingMode) ?? "byWorkspace",
+            notchShowAgentDetails: try container.decodeIfPresent(Bool.self, forKey: .notchShowAgentDetails) ?? true,
+            notchMascotSpeed: try container.decodeIfPresent(Int.self, forKey: .notchMascotSpeed) ?? 1,
+            agentSoundVolume: try container.decodeIfPresent(Double.self, forKey: .agentSoundVolume) ?? 0.7,
+            agentSoundSessionStart: try container.decodeIfPresent(Bool.self, forKey: .agentSoundSessionStart) ?? true,
+            agentSoundTaskComplete: try container.decodeIfPresent(Bool.self, forKey: .agentSoundTaskComplete) ?? true,
+            agentSoundTaskError: try container.decodeIfPresent(Bool.self, forKey: .agentSoundTaskError) ?? true,
+            agentSoundApprovalNeeded: try container.decodeIfPresent(Bool.self, forKey: .agentSoundApprovalNeeded) ?? true,
+            agentSoundPromptSubmit: try container.decodeIfPresent(Bool.self, forKey: .agentSoundPromptSubmit) ?? false,
+            agentSoundBoot: try container.decodeIfPresent(Bool.self, forKey: .agentSoundBoot) ?? true
         )
     }
 }
@@ -848,6 +983,13 @@ enum AiyuTermShortcutAction: String, CaseIterable, Hashable, Identifiable {
     case minimizeWindow
     case closeWindow
     case enterFullScreen
+    // Phase 11.3B — CodeIsland notch panel shortcuts. These reuse the
+    // existing keyboardShortcutOverrides storage so no schema change is
+    // required; they only need to appear in the registry so the
+    // Settings UI can surface a binding row for each.
+    case toggleNotchPanel
+    case notchNextSession
+    case notchPrevSession
 
     var id: String { rawValue }
 
@@ -896,6 +1038,13 @@ enum AiyuTermShortcutAction: String, CaseIterable, Hashable, Identifiable {
              .closeWindow,
              .enterFullScreen:
             return .window
+        case .toggleNotchPanel,
+             .notchNextSession,
+             .notchPrevSession:
+            // Notch panel shortcuts live under General because the
+            // feature is app-wide rather than scoped to workspace,
+            // tabs, or panes.
+            return .general
         }
     }
 
@@ -977,6 +1126,12 @@ enum AiyuTermShortcutAction: String, CaseIterable, Hashable, Identifiable {
             return aiyuTermLocalizedSettingsString("settings.shortcuts.action.closeWindow.title")
         case .enterFullScreen:
             return aiyuTermLocalizedSettingsString("settings.shortcuts.action.enterFullScreen.title")
+        case .toggleNotchPanel:
+            return "Toggle Notch Panel"
+        case .notchNextSession:
+            return "Notch: Next Session"
+        case .notchPrevSession:
+            return "Notch: Previous Session"
         }
     }
 
@@ -1058,6 +1213,12 @@ enum AiyuTermShortcutAction: String, CaseIterable, Hashable, Identifiable {
             return aiyuTermLocalizedSettingsString("settings.shortcuts.action.closeWindow.subtitle")
         case .enterFullScreen:
             return aiyuTermLocalizedSettingsString("settings.shortcuts.action.enterFullScreen.subtitle")
+        case .toggleNotchPanel:
+            return "Show or hide the agent activity notch panel."
+        case .notchNextSession:
+            return "Rotate the notch panel to the next active session."
+        case .notchPrevSession:
+            return "Rotate the notch panel to the previous active session."
         }
     }
 
@@ -1139,6 +1300,14 @@ enum AiyuTermShortcutAction: String, CaseIterable, Hashable, Identifiable {
             return StoredShortcut(key: "w", command: true, shift: true, option: false, control: false)
         case .enterFullScreen:
             return StoredShortcut(key: "f", command: true, shift: false, option: false, control: true)
+        case .toggleNotchPanel:
+            // ⌘⇧I mirrors the upstream CodeIsland default. Users can
+            // clear or rebind it from the shortcuts settings tab.
+            return StoredShortcut(key: "i", command: true, shift: true, option: false, control: false)
+        case .notchNextSession:
+            return nil
+        case .notchPrevSession:
+            return nil
         }
     }
 

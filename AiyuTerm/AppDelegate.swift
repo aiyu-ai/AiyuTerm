@@ -351,6 +351,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 return desktopApplication.hasFocusedPane
             case .minimizeWindow, .closeWindow, .enterFullScreen:
                 return NSApp.keyWindow != nil
+            case .toggleNotchPanel, .notchNextSession, .notchPrevSession:
+                // Phase 11.3B — notch panel shortcuts are dispatched
+                // via the app delegate, but they are not surfaced as
+                // NSMenuItem commands, so menu validation is a no-op.
+                return true
             }
         default:
             return true
@@ -481,6 +486,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
         case .enterFullScreen:
             NSApp.keyWindow?.toggleFullScreen(nil)
+
+        case .toggleNotchPanel,
+             .notchNextSession,
+             .notchPrevSession:
+            // Phase 11.3B — the notch panel live wiring lands in a
+            // later phase. For now we register the action so it
+            // appears in Settings and participates in conflict
+            // detection, but the runtime dispatch is a no-op so the
+            // shortcut silently does nothing until Phase 11.4 wires
+            // it through to the panel controller.
+            break
         }
     }
 
