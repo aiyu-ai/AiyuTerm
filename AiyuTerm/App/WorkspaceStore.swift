@@ -72,6 +72,10 @@ final class WorkspaceStore: ObservableObject {
     /// and tears it down on `hide()`.
     private var agentNotchPanelController: AgentNotchPanelController<AgentNotchPanelView>?
     private var agentNotchPanelViewModel: AgentNotchPanelViewModel?
+    /// Phase 11.3D.a: menu-bar status item that mirrors the notch
+    /// panel's aggregated state. Created alongside the notch panel
+    /// in `showNotchPanel()` and torn down in `hideNotchPanel()`.
+    private var agentStatusItemController: AgentStatusItemController?
     /// Phase 10.1.a: periodic-save timer for agent session
     /// snapshots. Scheduled when the notch panel is created (i.e.
     /// agent sessions are actively being tracked) and invalidated
@@ -1000,10 +1004,34 @@ final class WorkspaceStore: ObservableObject {
         }
         agentNotchPanelController = controller
         controller.show()
+        // Phase 11.3D.a: menu-bar status item reflects the same
+        // aggregated agent state as the notch panel. Created lazily
+        // so tests can exercise WorkspaceStore without forcing an
+        // NSStatusItem into the host process' menu bar.
+        if agentStatusItemController == nil {
+            agentStatusItemController = AgentStatusItemController(
+                onTogglePanel: { [weak self] in
+                    Task { @MainActor [weak self] in
+                        self?.ensureNotchPanelIfEnabled()
+                        self?.refreshNotchPanelState()
+                    }
+                },
+                onExportDiagnostics: { [weak self] in
+                    Task { @MainActor [weak self] in
+                        self?.exportAgentDiagnostics()
+                    }
+                }
+            )
+        }
     }
 
     private func hideNotchPanel() {
         agentNotchPanelController?.hide()
+        // Phase 11.3D.a: tear down the menu-bar status item in
+        // lockstep with the panel so users who disable the notch
+        // panel no longer see a status bar icon either.
+        agentStatusItemController?.tearDown()
+        agentStatusItemController = nil
         // Phase 10.1.a: persist one last time before stopping so
         // hiding the panel doesn't lose any in-memory state, then
         // invalidate the timer.
@@ -1065,7 +1093,26 @@ final class WorkspaceStore: ObservableObject {
     /// wires them up; Phase 8.4 calls it on initial show.
     func refreshNotchPanelState() {
         guard let viewModel = agentNotchPanelViewModel else { return }
-        viewModel.update(state: currentNotchViewState())
+        let state = currentNotchViewState()
+        viewModel.update(state: state)
+        // Phase 11.3D.a: keep the status bar icon aligned with the
+        // aggregated agent state. Also propagate the display options
+        // to the panel controller so fullscreen/no-session/
+        // mouse-leave hints take effect without a restart
+        // (Phase 11.3D.b).
+        agentStatusItemController?.update(
+            status: state.aggregatedStatus,
+            pendingCount: state.pendingCount
+        )
+        // Phase 11.3D.b: propagate the display options + current
+        // aggregated state into the controller so the reactive
+        // knobs (hideInFullscreen, collapseOnMouseLeave,
+        // hideWhenNoSession) take effect without a restart.
+        agentNotchPanelController?.setDisplayOptions(
+            state.display,
+            aggregatedStatus: state.aggregatedStatus,
+            pendingCount: state.pendingCount
+        )
     }
 
     private func currentNotchViewState() -> AgentNotchViewState {
