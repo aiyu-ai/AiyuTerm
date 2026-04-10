@@ -31,8 +31,22 @@
 
 import AppKit
 import Combine
+import Foundation
 import os.log
 import SwiftUI
+
+// MARK: - Collapse request notification
+
+extension Notification.Name {
+    /// Phase 11.3D.b: posted by the controller when the mouse
+    /// leaves the panel's tracking area and
+    /// `AgentNotchDisplayOptions.collapseOnMouseLeave == true`. The
+    /// SwiftUI view layer can observe this to collapse the expanded
+    /// card without the controller touching view state directly.
+    static let agentNotchPanelCollapseRequested = Notification.Name(
+        "AgentNotchPanelCollapseRequested"
+    )
+}
 
 // MARK: - KeyableNotchPanel
 
@@ -137,12 +151,38 @@ final class AgentNotchPanelController<Content: View>: NSObject {
     private var panel: KeyableNotchPanel?
     private var hostingView: NotchHostingView<Content>?
     private var screenParamObserver: NSObjectProtocol?
+    private var fullscreenEnterObserver: NSObjectProtocol?
+    private var fullscreenExitObserver: NSObjectProtocol?
 
     /// Cached signature of the screen currently hosting the panel.
     /// Used to skip no-op repositions when screen parameters fire
     /// without actually changing the preferred screen (e.g. a
     /// brightness adjustment).
     private var lastChosenScreenSignature: String = ""
+
+    // Phase 11.3D.b: reactive display options.
+    //
+    // `lastDisplayOptions` holds the settings pushed from the
+    // store so `setDisplayOptions` can detect changes and attach or
+    // detach tracking areas without thrashing AppKit resources.
+    //
+    // `lastAggregatedStatus` / `lastPendingCount` let the
+    // controller re-evaluate `hideWhenNoSession` on both setting
+    // changes AND state refreshes.
+    //
+    // `isHiddenByDisplayOptions` is `true` when the panel has been
+    // ordered out by a display-options rule (fullscreen / no-
+    // session). Distinct from `hide()` which is the full-
+    // lifecycle teardown.
+    private var lastDisplayOptions: AgentNotchDisplayOptions = .default
+    private var lastAggregatedStatus: AgentSessionStatus = .none
+    private var lastPendingCount: Int = 0
+    private var isHiddenByDisplayOptions: Bool = false
+    // Phase 11.6.2 / P11.0.3 fix: the mouse-exit tracker is now a
+    // private NSView subclass (`NotchMouseTrackerView`) added as a
+    // subview of `hostingView` so we can react to exits without
+    // making the controller inherit from NSResponder.
+    private var mouseTracker: NotchMouseTrackerView?
 
     nonisolated private static var logger: Logger {
         Logger(subsystem: "com.aiyuai.aiyuterm", category: "AgentNotchPanelController")
@@ -187,7 +227,73 @@ final class AgentNotchPanelController<Content: View>: NSObject {
         panel = nil
         hostingView = nil
         detachScreenObserver()
+        detachFullscreenObservers()
+        removeTrackingArea()
         lastChosenScreenSignature = ""
+        isHiddenByDisplayOptions = false
+    }
+
+    /// Phase 11.3D.b: push new display options + current aggregated
+    /// state into the controller. The caller (WorkspaceStore)
+    /// invokes this from `refreshNotchPanelState()` so the three
+    /// reactive knobs — `hideInFullscreen`, `collapseOnMouseLeave`,
+    /// `hideWhenNoSession` — take effect without requiring a
+    /// restart.
+    ///
+    /// This method is idempotent: calling it with the same options
+    /// is a no-op apart from the `hideWhenNoSession` re-evaluation
+    /// which always runs because the aggregated state may have
+    /// changed independently of the options.
+    func setDisplayOptions(
+        _ options: AgentNotchDisplayOptions,
+        aggregatedStatus: AgentSessionStatus,
+        pendingCount: Int
+    ) {
+        let optionsChanged = options != lastDisplayOptions
+        lastDisplayOptions = options
+        lastAggregatedStatus = aggregatedStatus
+        lastPendingCount = pendingCount
+
+        // Fullscreen observer attach/detach must only run when
+        // `hideInFullscreen` actually changes so we don't churn
+        // NotificationCenter registrations on every state push.
+        if optionsChanged {
+            if options.hideInFullscreen {
+                attachFullscreenObserversIfNeeded()
+            } else {
+                detachFullscreenObservers()
+                if isHiddenByDisplayOptions, panel != nil {
+                    panel?.orderFrontRegardless()
+                    isHiddenByDisplayOptions = false
+                }
+            }
+            if options.collapseOnMouseLeave {
+                installTrackingAreaIfNeeded()
+            } else {
+                removeTrackingArea()
+            }
+        }
+
+        applyVisibilityRules()
+    }
+
+    /// Exposed for tests: the last display options pushed into the
+    /// controller via `setDisplayOptions(_:aggregatedStatus:pendingCount:)`.
+    var currentDisplayOptions: AgentNotchDisplayOptions {
+        lastDisplayOptions
+    }
+
+    /// Exposed for tests: `true` when the panel has been ordered
+    /// out by a display-options rule (fullscreen / no-session).
+    var isHiddenByDisplayOptionsForTests: Bool {
+        isHiddenByDisplayOptions
+    }
+
+    /// Exposed for tests: `true` when a mouse-exit tracker view
+    /// has been installed on the hosting view for mouse-leave
+    /// detection.
+    var hasMouseLeaveTrackingAreaForTests: Bool {
+        mouseTracker != nil
     }
 
     /// Force a re-anchor to the current preferred screen, skipping
@@ -276,4 +382,171 @@ final class AgentNotchPanelController<Content: View>: NSObject {
             screenParamObserver = nil
         }
     }
+
+    // MARK: - Phase 11.3D.b: reactive visibility
+
+    /// Evaluate the three display-option rules against the current
+    /// state and show/hide the panel accordingly. Order matters:
+    ///
+    ///   1. `hideInFullscreen` wins if any app is fullscreen on the
+    ///      preferred screen. Nothing else matters while fullscreen
+    ///      is active.
+    ///   2. `hideWhenNoSession` hides the collapsed pill if the
+    ///      aggregated state is idle AND no pending permission/
+    ///      question exists.
+    ///   3. Otherwise the panel is visible.
+    private func applyVisibilityRules() {
+        guard let panel else { return }
+
+        let shouldHideForFullscreen = lastDisplayOptions.hideInFullscreen
+            && Self.isAnyScreenInFullscreen()
+
+        let shouldHideForNoSession = lastDisplayOptions.hideWhenNoSession
+            && lastAggregatedStatus == .none
+            && lastPendingCount == 0
+
+        let shouldHide = shouldHideForFullscreen || shouldHideForNoSession
+
+        if shouldHide {
+            if panel.isVisible {
+                panel.orderOut(nil)
+            }
+            isHiddenByDisplayOptions = true
+        } else if isHiddenByDisplayOptions {
+            panel.orderFrontRegardless()
+            isHiddenByDisplayOptions = false
+        }
+    }
+
+    // MARK: - Fullscreen detection
+
+    /// Heuristic: on macOS, when any app is in fullscreen mode on
+    /// the main screen, the menu bar auto-hides and the visible
+    /// frame becomes equal to the full frame. This is cheaper and
+    /// more reliable than walking the window list.
+    static func isAnyScreenInFullscreen() -> Bool {
+        guard let main = NSScreen.main else { return false }
+        // When the menu bar is hidden, visibleFrame.height equals
+        // frame.height (minus a dock if docked on the side/bottom).
+        // We just compare the TOP edge: if visibleFrame.maxY ==
+        // frame.maxY (no menu bar gap), someone's in fullscreen.
+        return abs(main.visibleFrame.maxY - main.frame.maxY) < 0.5
+    }
+
+    private func attachFullscreenObserversIfNeeded() {
+        if fullscreenEnterObserver == nil {
+            fullscreenEnterObserver = NotificationCenter.default.addObserver(
+                forName: NSWindow.didEnterFullScreenNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.applyVisibilityRules()
+                }
+            }
+        }
+        if fullscreenExitObserver == nil {
+            fullscreenExitObserver = NotificationCenter.default.addObserver(
+                forName: NSWindow.didExitFullScreenNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.applyVisibilityRules()
+                }
+            }
+        }
+    }
+
+    private func detachFullscreenObservers() {
+        if let token = fullscreenEnterObserver {
+            NotificationCenter.default.removeObserver(token)
+            fullscreenEnterObserver = nil
+        }
+        if let token = fullscreenExitObserver {
+            NotificationCenter.default.removeObserver(token)
+            fullscreenExitObserver = nil
+        }
+    }
+
+    // MARK: - Mouse-leave tracking
+
+    /// Install an `NSTrackingArea` on the panel's content view so
+    /// we get a `mouseExited(with:)` callback when the pointer
+    /// leaves. The callback posts
+    /// `agentNotchPanelCollapseRequested`, which the view layer
+    /// consumes to collapse an expanded card (wired in a later
+    /// phase).
+    ///
+    /// Note: `AgentNotchPanelController` inherits from `NSObject`,
+    /// not `NSResponder`, so it cannot override `mouseExited`
+    /// itself. Instead, we install a private `NSView` subclass
+    /// (`NotchMouseTrackerView`, defined below) that owns the
+    /// tracking area and forwards the exit event via a closure.
+    private func installTrackingAreaIfNeeded() {
+        guard mouseTracker == nil, let hostingView else { return }
+        let tracker = NotchMouseTrackerView(frame: hostingView.bounds)
+        tracker.autoresizingMask = [.width, .height]
+        tracker.onMouseExited = { [weak self] in
+            guard let self,
+                  self.lastDisplayOptions.collapseOnMouseLeave else { return }
+            self.postCollapseRequestNotification()
+        }
+        hostingView.addSubview(tracker, positioned: .below, relativeTo: nil)
+        mouseTracker = tracker
+    }
+
+    private func removeTrackingArea() {
+        mouseTracker?.removeFromSuperview()
+        mouseTracker = nil
+    }
+
+    /// Exposed so tests can drive the collapse request path
+    /// without synthesizing an NSEvent.
+    func handleMouseExitedForTests() {
+        if lastDisplayOptions.collapseOnMouseLeave {
+            postCollapseRequestNotification()
+        }
+    }
+
+    private func postCollapseRequestNotification() {
+        NotificationCenter.default.post(
+            name: .agentNotchPanelCollapseRequested,
+            object: self
+        )
+    }
+}
+
+/// Private NSView subclass that owns the tracking area for the
+/// notch panel. Added to the hosting view as a transparent
+/// sibling below the SwiftUI content so it doesn't intercept
+/// clicks — it only exists to deliver `mouseExited` events to
+/// the controller via `onMouseExited`.
+private final class NotchMouseTrackerView: NSView {
+    var onMouseExited: (() -> Void)?
+    private var trackingArea: NSTrackingArea?
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let existing = trackingArea {
+            removeTrackingArea(existing)
+        }
+        let area = NSTrackingArea(
+            rect: bounds,
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(area)
+        trackingArea = area
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        super.mouseExited(with: event)
+        onMouseExited?()
+    }
+
+    // Make the tracker transparent to clicks so the actual
+    // SwiftUI hosting view keeps receiving them.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }

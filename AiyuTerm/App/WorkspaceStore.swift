@@ -1104,6 +1104,15 @@ final class WorkspaceStore: ObservableObject {
             status: state.aggregatedStatus,
             pendingCount: state.pendingCount
         )
+        // Phase 11.3D.b: propagate the display options + current
+        // aggregated state into the controller so the reactive
+        // knobs (hideInFullscreen, collapseOnMouseLeave,
+        // hideWhenNoSession) take effect without a restart.
+        agentNotchPanelController?.setDisplayOptions(
+            state.display,
+            aggregatedStatus: state.aggregatedStatus,
+            pendingCount: state.pendingCount
+        )
     }
 
     private func currentNotchViewState() -> AgentNotchViewState {
