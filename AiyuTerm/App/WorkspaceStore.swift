@@ -660,10 +660,11 @@ final class WorkspaceStore: ObservableObject {
         appSettings = initialAppSettings ?? appSettingsPersistence.load()
         appSettings.githubIntegrationEnabled = false
         LocalizationManager.shared.updateSelectedLanguage(appSettings.appLanguage)
-        // Phase 10.2: propagate the stored AgentSoundManager toggle
-        // so reducer `.playSound` effects honour the user's choice
-        // from the first event onward.
-        AgentSoundManager.isEnabled = appSettings.agentSoundEnabled
+        // Phase 10.2 / 11.3B: propagate the stored AgentSoundManager
+        // toggles (master gate, per-event gates, volume) so reducer
+        // `.playSound` effects honour the user's choices from the
+        // first event onward.
+        AgentSoundManager.updateSettings(appSettings)
         NotificationCenter.default.post(name: .aiyuTermAppSettingsDidChange, object: appSettings)
         let state = normalizeLaunchState(initialWorkspaceState ?? persistence.load())
         workspaces = state.workspaces.map(WorkspaceModel.init(record:))
@@ -1296,16 +1297,47 @@ final class WorkspaceStore: ObservableObject {
             preferredAgentPresetID: settings.preferredAgentPresetID,
             sshPresets: settings.sshPresets,
             preferredSSHPresetID: settings.preferredSSHPresetID,
+            workspaceGroups: settings.workspaceGroups,
             keyboardShortcutOverrides: settings.keyboardShortcutOverrides,
             notchPanelEnabled: settings.notchPanelEnabled,
-            agentSoundEnabled: settings.agentSoundEnabled
+            agentSoundEnabled: settings.agentSoundEnabled,
+            // Phase 10.4 / 11.3B — all downstream notch + mascot +
+            // per-event sound fields must be forwarded or the
+            // re-constructed AppSettings resets them to their init
+            // defaults. This is load-bearing: dropping any field here
+            // silently reverts the user's preferences on every save.
+            notchHideInFullscreen: settings.notchHideInFullscreen,
+            notchHideWhenNoSession: settings.notchHideWhenNoSession,
+            notchSmartSuppress: settings.notchSmartSuppress,
+            notchCollapseOnMouseLeave: settings.notchCollapseOnMouseLeave,
+            notchSessionTimeoutMinutes: settings.notchSessionTimeoutMinutes,
+            notchMaxVisibleSessions: settings.notchMaxVisibleSessions,
+            notchAiMessageLines: settings.notchAiMessageLines,
+            notchShowToolStatus: settings.notchShowToolStatus,
+            notchDisplayChoice: settings.notchDisplayChoice,
+            notchAllowHorizontalDrag: settings.notchAllowHorizontalDrag,
+            notchPanelHorizontalOffset: settings.notchPanelHorizontalOffset,
+            notchMaxPanelHeight: settings.notchMaxPanelHeight,
+            notchContentFontSize: settings.notchContentFontSize,
+            notchRotationInterval: settings.notchRotationInterval,
+            notchMaxToolHistory: settings.notchMaxToolHistory,
+            notchSessionGroupingMode: settings.notchSessionGroupingMode,
+            notchShowAgentDetails: settings.notchShowAgentDetails,
+            notchMascotSpeed: settings.notchMascotSpeed,
+            agentSoundVolume: settings.agentSoundVolume,
+            agentSoundSessionStart: settings.agentSoundSessionStart,
+            agentSoundTaskComplete: settings.agentSoundTaskComplete,
+            agentSoundTaskError: settings.agentSoundTaskError,
+            agentSoundApprovalNeeded: settings.agentSoundApprovalNeeded,
+            agentSoundPromptSubmit: settings.agentSoundPromptSubmit,
+            agentSoundBoot: settings.agentSoundBoot
         )
         LocalizationManager.shared.updateSelectedLanguage(appSettings.appLanguage)
         // Phase 8.4: toggling notchPanelEnabled live without restart.
         ensureNotchPanelIfEnabled()
-        // Phase 10.2: keep the sound subsystem in sync with the
-        // user's toggle without requiring a relaunch.
-        AgentSoundManager.isEnabled = appSettings.agentSoundEnabled
+        // Phase 10.2 / 11.3B: keep the sound subsystem in sync with the
+        // user's toggles and volume without requiring a relaunch.
+        AgentSoundManager.updateSettings(appSettings)
         let validAgentPresetIDs = Set(appSettings.agentPresets.map(\.id))
         for workspace in workspaces {
             workspace.settings = normalizedWorkspaceSettings(

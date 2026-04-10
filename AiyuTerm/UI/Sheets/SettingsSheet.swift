@@ -458,17 +458,33 @@ struct SettingsSheet: View {
         }
     }
 
-    // Phase 10.4: notch panel behavior options. Labels are kept in English
-    // without localization because the parent notch toggle is also
-    // untranslated until the Phase 8 strings are finalized.
+    // Phase 10.4 / 11.3B: notch panel behavior options. Labels are
+    // kept in English without localization because the parent notch
+    // toggle is also untranslated until the Phase 8 strings are
+    // finalized.
+    //
+    // Phase 11.3B expanded the original Phase 10.4 group into four
+    // sub-sections (Behavior / Layout / Mascot / Sounds) so the full
+    // CodeIsland parity surface lives in one place inside the
+    // existing General tab.
     private var notchPanelOptionsGroup: some View {
-        GroupBox("Notch Panel") {
+        VStack(alignment: .leading, spacing: 12) {
+            notchBehaviorGroup
+            notchLayoutGroup
+            notchMascotGroup
+            notchSoundGroup
+        }
+    }
+
+    private var notchBehaviorGroup: some View {
+        GroupBox("Notch Panel - Behavior") {
             VStack(alignment: .leading, spacing: 10) {
                 Toggle("Hide in fullscreen", isOn: $appSettings.notchHideInFullscreen)
                 Toggle("Hide when no sessions", isOn: $appSettings.notchHideWhenNoSession)
                 Toggle("Smart suppress notifications", isOn: $appSettings.notchSmartSuppress)
                 Toggle("Collapse on mouse leave", isOn: $appSettings.notchCollapseOnMouseLeave)
                 Toggle("Show tool status", isOn: $appSettings.notchShowToolStatus)
+                Toggle("Show agent details", isOn: $appSettings.notchShowAgentDetails)
 
                 Stepper(
                     "Session timeout (minutes): \(appSettings.notchSessionTimeoutMinutes)",
@@ -488,6 +504,128 @@ struct SettingsSheet: View {
                     in: 1...10,
                     step: 1
                 )
+                Stepper(
+                    "Rotation interval (seconds): \(appSettings.notchRotationInterval)",
+                    value: $appSettings.notchRotationInterval,
+                    in: 2...60,
+                    step: 1
+                )
+                Stepper(
+                    "Max tool history per session: \(appSettings.notchMaxToolHistory)",
+                    value: $appSettings.notchMaxToolHistory,
+                    in: 5...100,
+                    step: 5
+                )
+
+                Picker("Session grouping", selection: $appSettings.notchSessionGroupingMode) {
+                    Text("By workspace").tag("byWorkspace")
+                    Text("Flat list").tag("flat")
+                }
+                .pickerStyle(.segmented)
+            }
+            .padding(.top, 8)
+        }
+    }
+
+    private var notchLayoutGroup: some View {
+        GroupBox("Notch Panel - Layout") {
+            VStack(alignment: .leading, spacing: 10) {
+                Picker("Display", selection: $appSettings.notchDisplayChoice) {
+                    Text("Auto").tag("auto")
+                    Text("Built-in").tag("builtin")
+                    Text("External").tag("external")
+                }
+                .pickerStyle(.segmented)
+
+                Toggle("Allow horizontal drag", isOn: $appSettings.notchAllowHorizontalDrag)
+
+                HStack {
+                    Text("Horizontal offset")
+                    Spacer()
+                    Text("\(Int(appSettings.notchPanelHorizontalOffset)) pt")
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+                Slider(
+                    value: $appSettings.notchPanelHorizontalOffset,
+                    in: -200...200,
+                    step: 5
+                )
+
+                HStack {
+                    Text("Max panel height")
+                    Spacer()
+                    Text("\(Int(appSettings.notchMaxPanelHeight)) pt")
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+                Slider(
+                    value: $appSettings.notchMaxPanelHeight,
+                    in: 240...1200,
+                    step: 10
+                )
+
+                HStack {
+                    Text("Content font size")
+                    Spacer()
+                    Text("\(Int(appSettings.notchContentFontSize)) pt")
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+                Slider(
+                    value: $appSettings.notchContentFontSize,
+                    in: 9...16,
+                    step: 1
+                )
+            }
+            .padding(.top, 8)
+        }
+    }
+
+    private var notchMascotGroup: some View {
+        GroupBox("Notch Panel - Mascot") {
+            VStack(alignment: .leading, spacing: 10) {
+                Picker("Mascot speed", selection: $appSettings.notchMascotSpeed) {
+                    Text("Slow").tag(0)
+                    Text("Normal").tag(1)
+                    Text("Fast").tag(2)
+                }
+                .pickerStyle(.segmented)
+
+                Text("Mascot preview will appear here once the mascot kit ships.")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.top, 8)
+        }
+    }
+
+    private var notchSoundGroup: some View {
+        GroupBox("Notch Panel - Sounds") {
+            VStack(alignment: .leading, spacing: 10) {
+                Toggle("Enable agent sounds", isOn: $appSettings.agentSoundEnabled)
+
+                if appSettings.agentSoundEnabled {
+                    HStack {
+                        Text("Volume")
+                        Spacer()
+                        Text("\(Int(appSettings.agentSoundVolume * 100))%")
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                    Slider(
+                        value: $appSettings.agentSoundVolume,
+                        in: 0...1,
+                        step: 0.05
+                    )
+
+                    Toggle("Session start", isOn: $appSettings.agentSoundSessionStart)
+                    Toggle("Task complete", isOn: $appSettings.agentSoundTaskComplete)
+                    Toggle("Task error", isOn: $appSettings.agentSoundTaskError)
+                    Toggle("Permission request", isOn: $appSettings.agentSoundApprovalNeeded)
+                    Toggle("Prompt submit", isOn: $appSettings.agentSoundPromptSubmit)
+                    Toggle("App boot", isOn: $appSettings.agentSoundBoot)
+                }
             }
             .padding(.top, 8)
         }
