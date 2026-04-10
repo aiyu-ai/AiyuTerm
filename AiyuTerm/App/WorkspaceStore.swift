@@ -56,10 +56,13 @@ final class WorkspaceStore: ObservableObject {
     let tmuxPanelStore = TmuxPanelStore()
     private let tmuxAgentPoller = TmuxAgentStatusPoller()
     let agentStatusFilePoller = AgentStatusFilePoller()
-    /// Phase 2 scaffold: the native socket-based hook server. Starts
-    /// in "no receiver attached" mode so it simply acks every incoming
-    /// connection with `{}`. A real receiver is wired in Phase 3.
+    /// Phase 2 scaffold + Phase 3 mapper: the native socket-based hook
+    /// server is attached to an AgentHookEventMapper that translates
+    /// decoded events into WorkspaceModel state updates.
     private let agentHookServer = AgentHookServer()
+    private lazy var agentHookMapper = AgentHookEventMapper(
+        workspacesProvider: { [weak self] in self?.workspaces ?? [] }
+    )
     private var hasStartedAgentHookServer = false
     private let metadataWatchService = WorkspaceMetadataWatchService.shared
     private let sleepPreventionController = SleepPreventionController()
@@ -768,11 +771,9 @@ final class WorkspaceStore: ObservableObject {
         agentStatusFilePoller.startIfNeeded()
     }
 
-    /// Start the socket-based AgentHookServer on first call. Phase 2
-    /// runs it without a receiver attached, so every incoming event
-    /// is decoded and then acked with `{}` (see AgentHookServer
-    /// `processRequest` guard). A real `AgentHookReceiver` will be
-    /// attached in Phase 3 once the event-mapping layer lands.
+    /// Start the socket-based AgentHookServer on first call. Phase 3
+    /// attaches the real AgentHookEventMapper as the receiver so that
+    /// every inbound event is routed into WorkspaceModel state.
     ///
     /// Any startup error is logged but swallowed — a failed hook
     /// server must not prevent the rest of WorkspaceStore from
@@ -780,6 +781,7 @@ final class WorkspaceStore: ObservableObject {
     private func ensureAgentHookServer() {
         guard !hasStartedAgentHookServer else { return }
         hasStartedAgentHookServer = true
+        agentHookServer.attach(receiver: agentHookMapper)
         do {
             try agentHookServer.start()
         } catch {
