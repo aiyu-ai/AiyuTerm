@@ -107,13 +107,16 @@ final class AgentHookEventMapper: AgentHookReceiver {
         let sessionId = event.sessionId ?? "default"
 
         // Run the CodeIsland reducer to keep our rich snapshot up to
-        // date. We mostly ignore the returned side effects in Phase 3
-        // (Phase 4 will start listening to `.enqueueCompletion` etc).
-        _ = reduceAgentHookEvent(
+        // date. Side effects other than `.playSound` are still
+        // discarded in Phase 3 (Phase 4 will start listening to
+        // `.enqueueCompletion` etc); `.playSound` is forwarded to
+        // AgentSoundManager so the Phase 10.2 audio hookup works.
+        let effects = reduceAgentHookEvent(
             sessions: &snapshots,
             event: event,
             maxHistory: maxHistory
         )
+        Self.dispatchSideEffects(effects)
 
         guard let worktreePath = resolveWorktreePath(for: event, sessionId: sessionId) else {
             Self.logger.debug(
@@ -145,11 +148,12 @@ final class AgentHookEventMapper: AgentHookReceiver {
         let sessionId = event.sessionId ?? "default"
 
         // Always run the reducer first so snapshot state stays fresh.
-        _ = reduceAgentHookEvent(
+        let effects = reduceAgentHookEvent(
             sessions: &snapshots,
             event: event,
             maxHistory: maxHistory
         )
+        Self.dispatchSideEffects(effects)
 
         guard let worktreePath = resolveWorktreePath(for: event, sessionId: sessionId),
               let workspace = findWorkspace(containing: worktreePath)
@@ -204,11 +208,12 @@ final class AgentHookEventMapper: AgentHookReceiver {
     ) async -> Data {
         let sessionId = event.sessionId ?? "default"
 
-        _ = reduceAgentHookEvent(
+        let effects = reduceAgentHookEvent(
             sessions: &snapshots,
             event: event,
             maxHistory: maxHistory
         )
+        Self.dispatchSideEffects(effects)
 
         guard let worktreePath = resolveWorktreePath(for: event, sessionId: sessionId),
               let workspace = findWorkspace(containing: worktreePath)
@@ -399,6 +404,27 @@ final class AgentHookEventMapper: AgentHookReceiver {
         return best
     }
 
+    // MARK: - Private: reducer side-effect dispatch
+
+    /// Phase 10.2: fan reducer side effects out to the services that
+    /// know how to handle them. Today the only handled effect is
+    /// `.playSound`, which we route to `AgentSoundManager`. All
+    /// other cases are intentional no-ops until the phases that
+    /// need them land.
+    ///
+    /// Marked `static` because the only dependency it needs is
+    /// `AgentSoundManager`, which is itself a static enum, and we
+    /// want to keep this safe to call from the `handleEventForceStatus`
+    /// path where we are already on the main actor.
+    private static func dispatchSideEffects(_ effects: [AgentSessionSideEffect]) {
+        guard AgentSoundManager.isEnabled else { return }
+        for effect in effects {
+            if case .playSound(let eventName) = effect {
+                AgentSoundManager.play(eventName)
+            }
+        }
+    }
+
     // MARK: - Private: event status derivation
 
     private enum UnreadMark {
@@ -451,11 +477,12 @@ final class AgentHookEventMapper: AgentHookReceiver {
     ) {
         let sessionId = event.sessionId ?? "default"
 
-        _ = reduceAgentHookEvent(
+        let effects = reduceAgentHookEvent(
             sessions: &snapshots,
             event: event,
             maxHistory: maxHistory
         )
+        Self.dispatchSideEffects(effects)
 
         guard let worktreePath = resolveWorktreePath(for: event, sessionId: sessionId) else {
             Self.logger.debug("forceStatus: unresolved worktree for session \(sessionId, privacy: .public)")
