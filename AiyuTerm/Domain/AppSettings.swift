@@ -289,6 +289,11 @@ struct AppSettings: Codable, Hashable {
     /// Defaults to false so upgrading users do not see a new
     /// floating pill without opting in via Settings first.
     var notchPanelEnabled: Bool = false
+    /// Phase 10.2: gate the AgentSoundManager playback path. When
+    /// false, reducer `.playSound` effects are dropped instead of
+    /// forwarded to `NSSound(named:)`. Defaults to true so the
+    /// feedback sounds are on out of the box for upgrading users.
+    var agentSoundEnabled: Bool = true
 
     init(
         appLanguage: AppLanguage = .english,
@@ -328,7 +333,8 @@ struct AppSettings: Codable, Hashable {
         preferredSSHPresetID: UUID? = nil,
         workspaceGroups: [WorkspaceGroup] = [],
         keyboardShortcutOverrides: [String: KeyboardShortcutOverride] = [:],
-        notchPanelEnabled: Bool = false
+        notchPanelEnabled: Bool = false,
+        agentSoundEnabled: Bool = true
     ) {
         let normalizedKeyboardShortcutOverrides = AiyuTermKeyboardShortcuts.normalizedOverrides(keyboardShortcutOverrides)
         let normalizedAgentPresets = aiyuTermNormalizedAgentPresets(agentPresets)
@@ -391,6 +397,7 @@ struct AppSettings: Codable, Hashable {
         }
         self.workspaceGroups = workspaceGroups
         self.notchPanelEnabled = notchPanelEnabled
+        self.agentSoundEnabled = agentSoundEnabled
     }
 }
 
@@ -434,6 +441,7 @@ extension AppSettings {
         case workspaceGroups
         case keyboardShortcutOverrides
         case notchPanelEnabled
+        case agentSoundEnabled
     }
 
     init(from decoder: any Decoder) throws {
@@ -484,7 +492,8 @@ extension AppSettings {
             preferredSSHPresetID: try container.decodeIfPresent(UUID.self, forKey: .preferredSSHPresetID),
             workspaceGroups: try container.decodeIfPresent([WorkspaceGroup].self, forKey: .workspaceGroups) ?? [],
             keyboardShortcutOverrides: try container.decodeIfPresent([String: KeyboardShortcutOverride].self, forKey: .keyboardShortcutOverrides) ?? [:],
-            notchPanelEnabled: try container.decodeIfPresent(Bool.self, forKey: .notchPanelEnabled) ?? false
+            notchPanelEnabled: try container.decodeIfPresent(Bool.self, forKey: .notchPanelEnabled) ?? false,
+            agentSoundEnabled: try container.decodeIfPresent(Bool.self, forKey: .agentSoundEnabled) ?? true
         )
     }
 }
