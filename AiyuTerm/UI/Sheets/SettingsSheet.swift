@@ -420,6 +420,10 @@ struct SettingsSheet: View {
                     // since Phase 8 has not translated them yet.
                     Toggle("Show agent activity in the notch", isOn: $appSettings.notchPanelEnabled)
 
+                    if appSettings.notchPanelEnabled {
+                        notchPanelOptionsGroup
+                    }
+
                     Divider()
 
                     HStack {
@@ -451,6 +455,41 @@ struct SettingsSheet: View {
                 }
                 .padding(.top, 8)
             }
+        }
+    }
+
+    // Phase 10.4: notch panel behavior options. Labels are kept in English
+    // without localization because the parent notch toggle is also
+    // untranslated until the Phase 8 strings are finalized.
+    private var notchPanelOptionsGroup: some View {
+        GroupBox("Notch Panel") {
+            VStack(alignment: .leading, spacing: 10) {
+                Toggle("Hide in fullscreen", isOn: $appSettings.notchHideInFullscreen)
+                Toggle("Hide when no sessions", isOn: $appSettings.notchHideWhenNoSession)
+                Toggle("Smart suppress notifications", isOn: $appSettings.notchSmartSuppress)
+                Toggle("Collapse on mouse leave", isOn: $appSettings.notchCollapseOnMouseLeave)
+                Toggle("Show tool status", isOn: $appSettings.notchShowToolStatus)
+
+                Stepper(
+                    "Session timeout (minutes): \(appSettings.notchSessionTimeoutMinutes)",
+                    value: $appSettings.notchSessionTimeoutMinutes,
+                    in: 0...180,
+                    step: 5
+                )
+                Stepper(
+                    "Max visible sessions: \(appSettings.notchMaxVisibleSessions)",
+                    value: $appSettings.notchMaxVisibleSessions,
+                    in: 1...30,
+                    step: 1
+                )
+                Stepper(
+                    "Assistant message lines: \(appSettings.notchAiMessageLines)",
+                    value: $appSettings.notchAiMessageLines,
+                    in: 1...10,
+                    step: 1
+                )
+            }
+            .padding(.top, 8)
         }
     }
 
