@@ -371,6 +371,34 @@ final class AgentHookEventMapper: AgentHookReceiver {
     /// Snapshot count, used by tests to assert state bookkeeping.
     var _snapshotCountForTesting: Int { snapshots.count }
 
+    // MARK: - Notch panel read access
+
+    /// Return the most-recently-active `AgentSessionSnapshot`
+    /// whose cached worktree matches `worktreePath`. Used by the
+    /// notch panel to hydrate per-session metadata (model, cwd,
+    /// current tool, last assistant message, …).
+    ///
+    /// We iterate the cache and pick the snapshot with the latest
+    /// `lastActivity`; the `sessionWorktreeCache` is the authoritative
+    /// session→worktree mapping.
+    func latestSnapshot(forWorktreePath path: String) -> AgentSessionSnapshot? {
+        let matchingSessionIds = sessionWorktreeCache
+            .filter { $0.value == path }
+            .map(\.key)
+        var best: AgentSessionSnapshot?
+        for sid in matchingSessionIds {
+            guard let candidate = snapshots[sid] else { continue }
+            if let current = best {
+                if candidate.lastActivity > current.lastActivity {
+                    best = candidate
+                }
+            } else {
+                best = candidate
+            }
+        }
+        return best
+    }
+
     // MARK: - Private: event status derivation
 
     private enum UnreadMark {

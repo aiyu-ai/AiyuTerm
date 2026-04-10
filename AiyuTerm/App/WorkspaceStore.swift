@@ -961,6 +961,21 @@ final class WorkspaceStore: ObservableObject {
             return
         }
         let viewModel = AgentNotchPanelViewModel(state: currentNotchViewState())
+        // Wire up the inline-action callbacks so clicks inside
+        // the notch card hit the same code paths as the sidebar
+        // bubble (Phase 9.7 integration).
+        viewModel.onApprovePermission = { [weak self] path, mode in
+            self?.approveAgentPermission(forWorktreePath: path, mode: mode)
+        }
+        viewModel.onDenyPermission = { [weak self] path in
+            self?.denyAgentPermission(forWorktreePath: path)
+        }
+        viewModel.onAnswerQuestion = { [weak self] path, answer in
+            self?.answerAgentQuestion(forWorktreePath: path, option: answer)
+        }
+        viewModel.onJumpToTerminal = { [weak self] snapshot in
+            self?.jumpToTerminal(forSnapshot: snapshot)
+        }
         agentNotchPanelViewModel = viewModel
         let controller = AgentNotchPanelController<AgentNotchPanelView> {
             AgentNotchPanelView(viewModel: viewModel)
@@ -983,6 +998,9 @@ final class WorkspaceStore: ObservableObject {
 
     private func currentNotchViewState() -> AgentNotchViewState {
         // Aggregate status across every workspace's worktrees.
+        // Phase 9.7 enriches each row with the latest AgentSessionSnapshot
+        // (model / cwd / current tool / last assistant message) so the
+        // notch panel can render session cards.
         var statuses: [AgentSessionStatus] = []
         var worktreeSnapshots: [AgentNotchWorktreeSnapshot] = []
         var pendingCount = 0
@@ -990,18 +1008,28 @@ final class WorkspaceStore: ObservableObject {
             for worktree in workspace.worktrees {
                 let status = workspace.agentStatus(forWorktreePath: worktree.path)
                 statuses.append(status)
-                let hasPerm = workspace.pendingPermissionRequests[worktree.path] != nil
-                let hasQuestion = workspace.pendingQuestionRequests[worktree.path] != nil
-                if hasPerm || hasQuestion { pendingCount += 1 }
-                if status != .none || hasPerm || hasQuestion {
+                let permRequest = workspace.pendingPermissionRequests[worktree.path]
+                let questionRequest = workspace.pendingQuestionRequests[worktree.path]
+                if permRequest != nil || questionRequest != nil { pendingCount += 1 }
+                if status != .none || permRequest != nil || questionRequest != nil {
+                    let snapshot = agentHookMapper.latestSnapshot(
+                        forWorktreePath: worktree.path
+                    )
                     worktreeSnapshots.append(
                         AgentNotchWorktreeSnapshot(
                             id: worktree.path,
                             workspaceName: workspace.name,
                             worktreeDisplayName: worktree.displayName,
                             status: status,
-                            hasPendingPermission: hasPerm,
-                            hasPendingQuestion: hasQuestion
+                            source: snapshot?.source ?? "claude",
+                            model: snapshot?.model,
+                            cwd: snapshot?.cwd ?? worktree.path,
+                            currentTool: snapshot?.currentTool,
+                            toolDescription: snapshot?.toolDescription,
+                            lastAssistantMessage: snapshot?.lastAssistantMessage,
+                            lastUserPrompt: snapshot?.lastUserPrompt,
+                            permissionRequest: permRequest,
+                            questionRequest: questionRequest
                         )
                     )
                 }
@@ -1012,6 +1040,18 @@ final class WorkspaceStore: ObservableObject {
             pendingCount: pendingCount,
             worktrees: worktreeSnapshots
         )
+    }
+
+    /// Phase 9.7: bring the terminal window/tab that hosts the
+    /// given session to the foreground using the
+    /// `AgentTerminalActivator`. We need a real session snapshot
+    /// (for termBundleId / tty / tmux pane), which we pull from
+    /// the mapper.
+    private func jumpToTerminal(forSnapshot snapshot: AgentNotchWorktreeSnapshot) {
+        guard let agentSnapshot = agentHookMapper.latestSnapshot(
+            forWorktreePath: snapshot.id
+        ) else { return }
+        AgentTerminalActivator.activate(session: agentSnapshot)
     }
 
     // MARK: - Phase 6.2: Sidebar bubble action handlers

@@ -195,8 +195,13 @@ final class AgentTerminalActivatorHelpersTests: XCTestCase {
     }
 
     func testCanonicalAppNameWarp() {
+        // Real Warp reports TERM_PROGRAM=Warp, not "WarpTerminal".
+        // (A string containing "terminal" would match the
+        // Terminal.app branch first, which is fine because the
+        // bundle-ID match in resolveTerminalName runs before
+        // canonicalAppName.)
         XCTAssertEqual(
-            AgentTerminalActivatorHelpers.canonicalAppName(from: "WarpTerminal"),
+            AgentTerminalActivatorHelpers.canonicalAppName(from: "Warp"),
             "Warp"
         )
     }
