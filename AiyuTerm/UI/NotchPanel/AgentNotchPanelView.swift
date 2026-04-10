@@ -62,9 +62,46 @@ struct AgentNotchWorktreeSnapshot: Identifiable, Equatable {
     let permissionRequest: AgentPermissionRequest?
     /// Pending question waiting on an answer.
     let questionRequest: AgentQuestionRequest?
+    /// Phase 10.1.b: human-friendly session title resolved from
+    /// the provider's on-disk state (Claude custom/ai title, Codex
+    /// thread name). Nil when no title is available, in which case
+    /// the card falls back to the workspace name.
+    let resolvedTitle: String?
 
     var hasPendingPermission: Bool { permissionRequest != nil }
     var hasPendingQuestion: Bool { questionRequest != nil }
+
+    init(
+        id: String,
+        workspaceName: String,
+        worktreeDisplayName: String,
+        status: AgentSessionStatus,
+        source: String,
+        model: String? = nil,
+        cwd: String? = nil,
+        currentTool: String? = nil,
+        toolDescription: String? = nil,
+        lastAssistantMessage: String? = nil,
+        lastUserPrompt: String? = nil,
+        permissionRequest: AgentPermissionRequest? = nil,
+        questionRequest: AgentQuestionRequest? = nil,
+        resolvedTitle: String? = nil
+    ) {
+        self.id = id
+        self.workspaceName = workspaceName
+        self.worktreeDisplayName = worktreeDisplayName
+        self.status = status
+        self.source = source
+        self.model = model
+        self.cwd = cwd
+        self.currentTool = currentTool
+        self.toolDescription = toolDescription
+        self.lastAssistantMessage = lastAssistantMessage
+        self.lastUserPrompt = lastUserPrompt
+        self.permissionRequest = permissionRequest
+        self.questionRequest = questionRequest
+        self.resolvedTitle = resolvedTitle
+    }
 }
 
 // MARK: - Aggregated view state
@@ -437,8 +474,24 @@ struct SessionCardView: View {
         HStack(spacing: 8) {
             statusDot
             VStack(alignment: .leading, spacing: 0) {
-                Text(snapshot.workspaceName)
-                    .font(.system(size: 11, weight: .semibold))
+                if let title = snapshot.resolvedTitle,
+                   !title.isEmpty {
+                    // Phase 10.1.b: provider-resolved title takes
+                    // the headline slot; the workspace name
+                    // shrinks to a secondary sub-line.
+                    Text(title)
+                        .font(.system(size: 12, weight: .bold))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Text(snapshot.workspaceName)
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                } else {
+                    Text(snapshot.workspaceName)
+                        .font(.system(size: 11, weight: .semibold))
+                }
                 Text(snapshot.worktreeDisplayName)
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(Color.secondary)

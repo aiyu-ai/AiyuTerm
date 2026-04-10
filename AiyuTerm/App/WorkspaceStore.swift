@@ -1067,9 +1067,31 @@ final class WorkspaceStore: ObservableObject {
                 let questionRequest = workspace.pendingQuestionRequests[worktree.path]
                 if permRequest != nil || questionRequest != nil { pendingCount += 1 }
                 if status != .none || permRequest != nil || questionRequest != nil {
-                    let snapshot = agentHookMapper.latestSnapshot(
+                    let withId = agentHookMapper.latestSnapshotWithId(
                         forWorktreePath: worktree.path
                     )
+                    let snapshot = withId?.snapshot
+                    // Phase 10.1.b: resolve a user-facing session
+                    // title from Claude/Codex on-disk state. We
+                    // prefer the reducer-cached `sessionTitle` (set
+                    // by inline title events) and fall back to the
+                    // on-disk JSONL lookup.
+                    let resolvedTitle: String? = {
+                        if let cached = snapshot?.sessionTitle,
+                           !cached.isEmpty {
+                            return cached
+                        }
+                        guard let sid = withId?.sessionId,
+                              let src = snapshot?.source,
+                              AgentSessionTitleStore.supports(provider: src) else {
+                            return nil
+                        }
+                        return AgentSessionTitleStore.title(
+                            for: sid,
+                            provider: src,
+                            cwd: snapshot?.cwd
+                        )?.title
+                    }()
                     worktreeSnapshots.append(
                         AgentNotchWorktreeSnapshot(
                             id: worktree.path,
@@ -1084,7 +1106,8 @@ final class WorkspaceStore: ObservableObject {
                             lastAssistantMessage: snapshot?.lastAssistantMessage,
                             lastUserPrompt: snapshot?.lastUserPrompt,
                             permissionRequest: permRequest,
-                            questionRequest: questionRequest
+                            questionRequest: questionRequest,
+                            resolvedTitle: resolvedTitle
                         )
                     )
                 }

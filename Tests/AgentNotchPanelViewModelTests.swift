@@ -31,7 +31,8 @@ final class AgentNotchPanelViewModelTests: XCTestCase {
         lastAssistantMessage: String? = nil,
         lastUserPrompt: String? = nil,
         permissionRequest: AgentPermissionRequest? = nil,
-        questionRequest: AgentQuestionRequest? = nil
+        questionRequest: AgentQuestionRequest? = nil,
+        resolvedTitle: String? = nil
     ) -> AgentNotchWorktreeSnapshot {
         AgentNotchWorktreeSnapshot(
             id: id,
@@ -46,7 +47,8 @@ final class AgentNotchPanelViewModelTests: XCTestCase {
             lastAssistantMessage: lastAssistantMessage,
             lastUserPrompt: lastUserPrompt,
             permissionRequest: permissionRequest,
-            questionRequest: questionRequest
+            questionRequest: questionRequest,
+            resolvedTitle: resolvedTitle
         )
     }
 
