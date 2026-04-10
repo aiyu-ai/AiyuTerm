@@ -7,30 +7,43 @@
 // Copyright (c) 2026 wxtsky — MIT License
 // Modifications (c) 2026 AiyuAI — Apache License 2.0
 //
-// SwiftUI environment hooks for the ported PixelKit. Phase 11.3C
-// introduces the mascot speed key under an AiyuTerm-specific name so
-// it does not collide with the parallel CLI-mascot porting worktree.
-// A post-merge unification pass can rename this into a shared
-// `agentMascotSpeed` env once both worktrees land.
+// Phase 11.1.5 — UNIFIED mascot env key.
+//
+// Two Wave 3 agents independently created env keys for mascot
+// animation speed in parallel worktrees:
+//   - `AgentMascotEnvironment.swift` — canonical, typed
+//     `agentMascotSpeed: AgentMascotSpeed` (slow / normal / fast)
+//   - `AgentPixelKitEnvironment.swift` (this file) — legacy
+//     `pixelKitMascotSpeed: Double` multiplier
+//
+// The canonical API is `agentMascotSpeed`. This file now exposes
+// `pixelKitMascotSpeed` as a computed accessor that bridges the
+// Double surface to the typed enum, so existing pixel-kit files
+// that were written against the Double API keep compiling
+// without modification. New code should read `agentMascotSpeed`
+// directly.
 //
 
 import SwiftUI
 
-// MARK: - Mascot animation speed
-
-/// Multiplies the wall-clock time feeding the pixel mascot animations.
-/// 1.0 = real time, 0.5 = half speed, 2.0 = double speed. Values must
-/// be positive; clamp defensively when reading, the reducer treats 0
-/// as "pause".
-private struct PixelKitMascotSpeedKey: EnvironmentKey {
-    static let defaultValue: Double = 1.0
-}
-
 extension EnvironmentValues {
-    /// Mascot animation speed multiplier used by the ported
-    /// `AgentClawdView` and sibling mascot views under `PixelKit/`.
+    /// Deprecated mascot animation speed multiplier used by the
+    /// original pixel-kit draft. Internally derived from
+    /// `agentMascotSpeed` so both APIs stay in sync — writes
+    /// snap the nearest enum case.
     var pixelKitMascotSpeed: Double {
-        get { self[PixelKitMascotSpeedKey.self] }
-        set { self[PixelKitMascotSpeedKey.self] = newValue }
+        get { agentMascotSpeed.timeMultiplier }
+        set {
+            // Map the legacy Double back to the nearest enum
+            // case. Anything < 0.75 is slow, > 1.5 is fast,
+            // everything else snaps to normal.
+            if newValue < 0.75 {
+                agentMascotSpeed = .slow
+            } else if newValue > 1.5 {
+                agentMascotSpeed = .fast
+            } else {
+                agentMascotSpeed = .normal
+            }
+        }
     }
 }
