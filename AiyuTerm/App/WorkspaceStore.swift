@@ -70,7 +70,7 @@ final class WorkspaceStore: ObservableObject {
     /// Created lazily the first time the user flips the
     /// `notchPanelEnabled` switch. The controller owns the NSPanel
     /// and tears it down on `hide()`.
-    private var agentNotchPanelController: AgentNotchPanelController<AgentNotchPanelView>?
+    private var agentNotchPanelController: AgentNotchPanelController<AnyView>?
     private var agentNotchPanelViewModel: AgentNotchPanelViewModel?
     /// Phase 11.3D.a: menu-bar status item that mirrors the notch
     /// panel's aggregated state. Created alongside the notch panel
@@ -1000,8 +1000,15 @@ final class WorkspaceStore: ObservableObject {
             self?.jumpToTerminal(forSnapshot: snapshot)
         }
         agentNotchPanelViewModel = viewModel
-        let controller = AgentNotchPanelController<AgentNotchPanelView> {
-            AgentNotchPanelView(viewModel: viewModel)
+        // Phase 11.2.3: erase to AnyView so we can inject the
+        // agentMascotSpeed environment on top of the concrete view.
+        // Phase 11.3 will replace the hardcoded .normal with a value
+        // read from AppSettings.notchMascotSpeed.
+        let controller = AgentNotchPanelController<AnyView> {
+            AnyView(
+                AgentNotchPanelView(viewModel: viewModel)
+                    .environment(\.agentMascotSpeed, .normal)
+            )
         }
         agentNotchPanelController = controller
         controller.show()
