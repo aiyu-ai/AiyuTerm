@@ -57,6 +57,20 @@ final class AgentHookEventMapper: AgentHookReceiver {
     /// Populated on successful resolution, consulted as fallback.
     private var sessionWorktreeCache: [String: String] = [:]
 
+    /// Phase 6.1: outstanding permission continuations keyed by
+    /// request UUID. The UI drains this via `resolvePermission(id:
+    /// decision:)` after the user clicks Approve/Deny.
+    private var pendingPermissionContinuations: [UUID: CheckedContinuation<Data, Never>] = [:]
+
+    /// Same shape for AskUserQuestion / Notification-question flows.
+    private var pendingQuestionContinuations: [UUID: CheckedContinuation<Data, Never>] = [:]
+
+    /// Reverse lookup from worktree path to request UUID so
+    /// `handlePeerDisconnect` and `resolvePermission(forWorktreePath:...)`
+    /// can find the right continuation without asking the UI.
+    private var worktreeToPermissionRequestId: [String: UUID] = [:]
+    private var worktreeToQuestionRequestId: [String: UUID] = [:]
+
     private static let logger = Logger(
         subsystem: "com.aiyuai.aiyuterm",
         category: "AgentHookEventMapper"
@@ -122,32 +136,227 @@ final class AgentHookEventMapper: AgentHookReceiver {
     }
 
     func handlePermissionRequest(_ event: AgentHookEvent) async -> Data {
-        // Phase 3: record the event into state and flip the badge to
-        // permissionNeeded, but always return deny. Phase 6 will plug
-        // in real UI-mediated approval.
-        handleEventForceStatus(event, forcedStatus: .permissionNeeded, markUnread: .permission)
-        return Self.denyResponse
+        // Phase 6.1: enqueue the request into the workspace and
+        // suspend until the UI drains it via
+        // `resolvePermission(forWorktreePath:decision:)`. If we
+        // cannot resolve the worktree (unknown cwd etc) we fall
+        // back to an immediate deny so the bridge never blocks
+        // indefinitely.
+        let sessionId = event.sessionId ?? "default"
+
+        // Always run the reducer first so snapshot state stays fresh.
+        _ = reduceAgentHookEvent(
+            sessions: &snapshots,
+            event: event,
+            maxHistory: maxHistory
+        )
+
+        guard let worktreePath = resolveWorktreePath(for: event, sessionId: sessionId),
+              let workspace = findWorkspace(containing: worktreePath)
+        else {
+            Self.logger.debug(
+                "permission request: no worktree for session \(sessionId, privacy: .public); denying"
+            )
+            return AgentPermissionResponseBuilder.deny
+        }
+        sessionWorktreeCache[sessionId] = worktreePath
+
+        // If an older permission request is pending on this
+        // worktree, resolve it with deny so the UI only ever holds
+        // one bubble at a time. This handles the rare case where
+        // Claude fires a second request before the user decides.
+        if let existing = worktreeToPermissionRequestId[worktreePath],
+           let prior = pendingPermissionContinuations.removeValue(forKey: existing)
+        {
+            prior.resume(returning: AgentPermissionResponseBuilder.deny)
+            workspace.removePermissionRequest(forWorktreePath: worktreePath)
+        }
+
+        let request = AgentPermissionRequest(
+            id: UUID(),
+            sessionId: sessionId,
+            worktreePath: worktreePath,
+            toolName: event.toolName ?? "Unknown",
+            toolDescription: event.toolDescription,
+            timestamp: Date()
+        )
+        workspace.enqueuePermissionRequest(request)
+        workspace.markPermissionUnread(forWorktreePath: worktreePath)
+        workspace.setAgentStatus(.permissionNeeded, forWorktreePath: worktreePath)
+
+        return await withCheckedContinuation { continuation in
+            pendingPermissionContinuations[request.id] = continuation
+            worktreeToPermissionRequestId[worktreePath] = request.id
+        }
     }
 
     func handleAskUserQuestion(_ event: AgentHookEvent) async -> Data {
-        handleEventForceStatus(event, forcedStatus: .permissionNeeded, markUnread: .permission)
-        return Self.denyResponse
+        await enqueueAndSuspendQuestion(event, fallbackHeader: "AskUserQuestion")
     }
 
     func handleQuestion(_ event: AgentHookEvent) async -> Data {
-        handleEventForceStatus(event, forcedStatus: .permissionNeeded, markUnread: .permission)
-        return Self.denyResponse
+        await enqueueAndSuspendQuestion(event, fallbackHeader: nil)
+    }
+
+    private func enqueueAndSuspendQuestion(
+        _ event: AgentHookEvent,
+        fallbackHeader: String?
+    ) async -> Data {
+        let sessionId = event.sessionId ?? "default"
+
+        _ = reduceAgentHookEvent(
+            sessions: &snapshots,
+            event: event,
+            maxHistory: maxHistory
+        )
+
+        guard let worktreePath = resolveWorktreePath(for: event, sessionId: sessionId),
+              let workspace = findWorkspace(containing: worktreePath)
+        else {
+            return AgentQuestionResponseBuilder.skip
+        }
+        sessionWorktreeCache[sessionId] = worktreePath
+
+        // Extract question payload from event. For structured
+        // AskUserQuestion the options live under toolInput.questions;
+        // for Notification questions the payload lives at the top
+        // level.
+        let questionText: String
+        let options: [String]?
+        let header: String?
+        if let payload = AgentQuestionPayload.from(event: event) {
+            questionText = payload.question
+            options = payload.options
+            header = payload.header ?? fallbackHeader
+        } else if event.toolName == "AskUserQuestion",
+                  let questions = event.toolInput?["questions"] as? [[String: Any]],
+                  let first = questions.first,
+                  let text = first["question"] as? String
+        {
+            questionText = text
+            options = first["options"] as? [String]
+            header = (first["header"] as? String) ?? fallbackHeader
+        } else {
+            return AgentQuestionResponseBuilder.skip
+        }
+
+        // Replace any older question on this worktree.
+        if let existing = worktreeToQuestionRequestId[worktreePath],
+           let prior = pendingQuestionContinuations.removeValue(forKey: existing)
+        {
+            prior.resume(returning: AgentQuestionResponseBuilder.skip)
+            workspace.removeQuestionRequest(forWorktreePath: worktreePath)
+        }
+
+        let request = AgentQuestionRequest(
+            id: UUID(),
+            sessionId: sessionId,
+            worktreePath: worktreePath,
+            question: questionText,
+            options: options,
+            header: header,
+            timestamp: Date()
+        )
+        workspace.enqueueQuestionRequest(request)
+        workspace.markPermissionUnread(forWorktreePath: worktreePath)
+        workspace.setAgentStatus(.permissionNeeded, forWorktreePath: worktreePath)
+
+        return await withCheckedContinuation { continuation in
+            pendingQuestionContinuations[request.id] = continuation
+            worktreeToQuestionRequestId[worktreePath] = request.id
+        }
     }
 
     func handlePeerDisconnect(sessionId: String) {
-        // The bridge died before we replied. In Phase 3 all blocking
-        // calls return deny immediately so there is nothing to drain,
-        // but we still clear any lingering waitingApproval /
+        // The bridge died before we replied. Drain any continuation
+        // we were holding for this sessionId so the async task
+        // doesn't leak. We also clear waitingApproval /
         // waitingQuestion state on the snapshot for hygiene.
-        guard var snapshot = snapshots[sessionId] else { return }
-        if snapshot.status == .waitingApproval || snapshot.status == .waitingQuestion {
-            snapshot.status = .processing
-            snapshots[sessionId] = snapshot
+        if var snapshot = snapshots[sessionId] {
+            if snapshot.status == .waitingApproval || snapshot.status == .waitingQuestion {
+                snapshot.status = .processing
+                snapshots[sessionId] = snapshot
+            }
+        }
+
+        // Find continuations whose request.sessionId matches. We do
+        // this by walking worktreeToPermissionRequestId and
+        // checking the cached session->worktree map in reverse.
+        if let worktreePath = sessionWorktreeCache[sessionId] {
+            if let id = worktreeToPermissionRequestId.removeValue(forKey: worktreePath),
+               let continuation = pendingPermissionContinuations.removeValue(forKey: id)
+            {
+                continuation.resume(returning: AgentPermissionResponseBuilder.deny)
+                if let workspace = findWorkspace(containing: worktreePath) {
+                    workspace.removePermissionRequest(forWorktreePath: worktreePath)
+                }
+            }
+            if let id = worktreeToQuestionRequestId.removeValue(forKey: worktreePath),
+               let continuation = pendingQuestionContinuations.removeValue(forKey: id)
+            {
+                continuation.resume(returning: AgentQuestionResponseBuilder.skip)
+                if let workspace = findWorkspace(containing: worktreePath) {
+                    workspace.removeQuestionRequest(forWorktreePath: worktreePath)
+                }
+            }
+        }
+    }
+
+    // MARK: - UI-facing resolve entry points
+
+    /// Resolve the pending permission request on the given worktree
+    /// with the user's decision. Called by WorkspaceStore from the
+    /// sidebar bubble action handler. No-op if no request is
+    /// pending.
+    func resolvePermission(
+        forWorktreePath path: String,
+        decision: AgentPermissionDecision
+    ) {
+        guard let id = worktreeToPermissionRequestId.removeValue(forKey: path),
+              let continuation = pendingPermissionContinuations.removeValue(forKey: id)
+        else {
+            return
+        }
+        continuation.resume(returning: AgentPermissionResponseBuilder.response(for: decision))
+        if let workspace = findWorkspace(containing: path) {
+            workspace.removePermissionRequest(forWorktreePath: path)
+            // Flip badge back to working now that the gate is
+            // cleared. Next real event will refine it.
+            if decision != .deny {
+                workspace.setAgentStatus(.working, forWorktreePath: path)
+                workspace.markPermissionRead(forWorktreePath: path)
+            }
+        }
+    }
+
+    /// Resolve the pending question request with the option the
+    /// user selected. Passing nil for `option` resolves as "skip"
+    /// (equivalent to deny).
+    func resolveQuestion(
+        forWorktreePath path: String,
+        option: String?
+    ) {
+        guard let id = worktreeToQuestionRequestId.removeValue(forKey: path),
+              let continuation = pendingQuestionContinuations.removeValue(forKey: id)
+        else {
+            return
+        }
+        let header = findWorkspace(containing: path)?
+            .pendingQuestionRequests[path]?
+            .header
+        let response: Data
+        if let option {
+            response = AgentQuestionResponseBuilder.answer(option, header: header)
+        } else {
+            response = AgentQuestionResponseBuilder.skip
+        }
+        continuation.resume(returning: response)
+        if let workspace = findWorkspace(containing: path) {
+            workspace.removeQuestionRequest(forWorktreePath: path)
+            if option != nil {
+                workspace.setAgentStatus(.working, forWorktreePath: path)
+                workspace.markPermissionRead(forWorktreePath: path)
+            }
         }
     }
 

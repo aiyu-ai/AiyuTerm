@@ -572,6 +572,17 @@ final class WorkspaceModel: ObservableObject, Identifiable {
     @Published private(set) var unreadCompletedWorktrees: Set<String> = []
     @Published private(set) var unreadPermissionWorktrees: Set<String> = []
 
+    /// Phase 6.1: in-flight permission requests keyed by worktree
+    /// path. Populated by AgentHookEventMapper when the hook server
+    /// receives a blocking `PermissionRequest`; drained by the
+    /// sidebar bubble once the user picks a decision.
+    @Published private(set) var pendingPermissionRequests: [String: AgentPermissionRequest] = [:]
+
+    /// Phase 6.1: in-flight question requests. Separate from the
+    /// permission dict so the UI can treat them differently
+    /// (options list vs approve/deny pair).
+    @Published private(set) var pendingQuestionRequests: [String: AgentQuestionRequest] = [:]
+
     func markCompletionUnread(forWorktreePath path: String) {
         unreadCompletedWorktrees.insert(path)
     }
@@ -586,6 +597,35 @@ final class WorkspaceModel: ObservableObject, Identifiable {
 
     func markPermissionRead(forWorktreePath path: String) {
         unreadPermissionWorktrees.remove(path)
+    }
+
+    // MARK: - Phase 6.1 pending request mutations
+
+    /// Store a pending permission request for the given worktree.
+    /// If a request is already pending on this worktree it is
+    /// replaced (the previous one should have been resolved via
+    /// `removePermissionRequest` before a new one arrives, but the
+    /// replace semantics make the model resilient to drift).
+    func enqueuePermissionRequest(_ request: AgentPermissionRequest) {
+        pendingPermissionRequests[request.worktreePath] = request
+    }
+
+    /// Remove the pending permission request on the given worktree
+    /// (called after the UI bubble resolves the continuation) and
+    /// return the previously-stored request so the mapper can
+    /// reconcile its continuation dictionary.
+    @discardableResult
+    func removePermissionRequest(forWorktreePath path: String) -> AgentPermissionRequest? {
+        pendingPermissionRequests.removeValue(forKey: path)
+    }
+
+    func enqueueQuestionRequest(_ request: AgentQuestionRequest) {
+        pendingQuestionRequests[request.worktreePath] = request
+    }
+
+    @discardableResult
+    func removeQuestionRequest(forWorktreePath path: String) -> AgentQuestionRequest? {
+        pendingQuestionRequests.removeValue(forKey: path)
     }
 
     func clearErrorStatus(forWorktreePath path: String) {

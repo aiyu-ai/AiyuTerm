@@ -233,9 +233,9 @@ final class AgentHookEventMapperTests: XCTestCase {
         XCTAssertEqual(workspace.agentStatus(forWorktreePath: worktreeAlpha), .working)
     }
 
-    // MARK: - Blocking callbacks (Phase 3 deny-by-default)
+    // MARK: - Blocking callbacks (Phase 6.1 continuation model)
 
-    func testPermissionRequestReturnsDenyResponse() async {
+    func testPermissionRequestSuspendsUntilResolvedWithDeny() async {
         let event = AgentHookEvent(
             eventName: "PermissionRequest",
             sessionId: "s13",
@@ -243,26 +243,84 @@ final class AgentHookEventMapperTests: XCTestCase {
             toolInput: ["command": "rm -rf /"],
             rawJSON: ["cwd": worktreeAlpha]
         )
-        let response = await mapper.handlePermissionRequest(event)
-        let json = String(data: response, encoding: .utf8) ?? ""
+        let mapper = self.mapper!
+        let path = self.worktreeAlpha
+        async let response = mapper.handlePermissionRequest(event)
+        // Yield so the mapper can enqueue the pending request
+        // before we assert on state + resolve.
+        try? await Task.sleep(nanoseconds: 50_000_000)
+        await MainActor.run {
+            XCTAssertNotNil(self.workspace.pendingPermissionRequests[path],
+                            "Mapper should enqueue pending request before suspending")
+            XCTAssertEqual(self.workspace.agentStatus(forWorktreePath: path), .permissionNeeded)
+            mapper.resolvePermission(forWorktreePath: path, decision: .deny)
+        }
+        let data = await response
+        let json = String(data: data, encoding: .utf8) ?? ""
         XCTAssertTrue(json.contains("\"behavior\":\"deny\""))
-        XCTAssertEqual(workspace.agentStatus(forWorktreePath: worktreeAlpha), .permissionNeeded)
+        await MainActor.run {
+            XCTAssertNil(self.workspace.pendingPermissionRequests[path],
+                         "Pending request should be drained after resolve")
+        }
     }
 
-    func testAskUserQuestionReturnsDenyAndMarksPermissionNeeded() async {
+    func testPermissionRequestResolvesAllowOnceReturnsAllowJSON() async {
+        let event = AgentHookEvent(
+            eventName: "PermissionRequest",
+            sessionId: "s13b",
+            toolName: "Bash",
+            toolInput: ["command": "ls"],
+            rawJSON: ["cwd": worktreeAlpha]
+        )
+        let mapper = self.mapper!
+        let path = self.worktreeAlpha
+        async let response = mapper.handlePermissionRequest(event)
+        try? await Task.sleep(nanoseconds: 50_000_000)
+        await MainActor.run {
+            mapper.resolvePermission(forWorktreePath: path, decision: .allowOnce)
+        }
+        let data = await response
+        XCTAssertTrue((String(data: data, encoding: .utf8) ?? "").contains("\"behavior\":\"allow\""))
+        await MainActor.run {
+            // After a positive resolution the badge should flip
+            // back to .working so the user sees activity resume.
+            XCTAssertEqual(self.workspace.agentStatus(forWorktreePath: path), .working)
+            XCTAssertFalse(self.workspace.unreadPermissionWorktrees.contains(path))
+        }
+    }
+
+    func testHandleAskUserQuestionEnqueuesQuestionRequest() async {
         let event = AgentHookEvent(
             eventName: "PermissionRequest",
             sessionId: "s14",
             toolName: "AskUserQuestion",
+            toolInput: [
+                "questions": [
+                    [
+                        "question": "Should we proceed?",
+                        "options": ["yes", "no"],
+                        "header": "Confirm",
+                    ],
+                ],
+            ],
             rawJSON: ["cwd": worktreeAlpha]
         )
-        let response = await mapper.handleAskUserQuestion(event)
-        XCTAssertTrue((String(data: response, encoding: .utf8) ?? "").contains("deny"))
-        XCTAssertEqual(workspace.agentStatus(forWorktreePath: worktreeAlpha), .permissionNeeded)
-        XCTAssertTrue(workspace.unreadPermissionWorktrees.contains(worktreeAlpha))
+        let mapper = self.mapper!
+        let path = self.worktreeAlpha
+        async let response = mapper.handleAskUserQuestion(event)
+        try? await Task.sleep(nanoseconds: 50_000_000)
+        await MainActor.run {
+            XCTAssertNotNil(self.workspace.pendingQuestionRequests[path])
+            XCTAssertEqual(self.workspace.pendingQuestionRequests[path]?.options, ["yes", "no"])
+            mapper.resolveQuestion(forWorktreePath: path, option: "yes")
+        }
+        let data = await response
+        let jsonObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        let answers = jsonObj?["answers"] as? [[String: Any]]
+        XCTAssertEqual(answers?.first?["answer"] as? String, "yes")
     }
 
-    func testHandleQuestionMarksPermissionUnread() async {
+    func testHandleQuestionEnqueuesFromNotificationPayload() async {
         let event = AgentHookEvent(
             eventName: "Notification",
             sessionId: "s15",
@@ -272,29 +330,47 @@ final class AgentHookEventMapperTests: XCTestCase {
                 "options": ["yes", "no"],
             ]
         )
-        _ = await mapper.handleQuestion(event)
-        XCTAssertEqual(workspace.agentStatus(forWorktreePath: worktreeAlpha), .permissionNeeded)
-        XCTAssertTrue(workspace.unreadPermissionWorktrees.contains(worktreeAlpha))
+        let mapper = self.mapper!
+        let path = self.worktreeAlpha
+        async let response = mapper.handleQuestion(event)
+        try? await Task.sleep(nanoseconds: 50_000_000)
+        await MainActor.run {
+            XCTAssertEqual(self.workspace.pendingQuestionRequests[path]?.question, "Continue?")
+            XCTAssertEqual(self.workspace.agentStatus(forWorktreePath: path), .permissionNeeded)
+            XCTAssertTrue(self.workspace.unreadPermissionWorktrees.contains(path))
+            // Skip the question (nil option).
+            mapper.resolveQuestion(forWorktreePath: path, option: nil)
+        }
+        let data = await response
+        XCTAssertTrue((String(data: data, encoding: .utf8) ?? "").contains("\"behavior\":\"deny\""))
     }
 
     // MARK: - Peer disconnect hygiene
 
-    func testPeerDisconnectClearsWaitingState() {
-        // Seed a snapshot into waitingApproval state via a permission
-        // request and then simulate the bridge dying.
-        Task {
-            _ = await mapper.handlePermissionRequest(AgentHookEvent(
-                eventName: "PermissionRequest",
-                sessionId: "s16",
-                toolName: "Bash",
-                toolInput: ["command": "rm"],
-                rawJSON: ["cwd": worktreeAlpha]
-            ))
+    func testPeerDisconnectDrainsPendingPermission() async {
+        let event = AgentHookEvent(
+            eventName: "PermissionRequest",
+            sessionId: "s16",
+            toolName: "Bash",
+            toolInput: ["command": "rm"],
+            rawJSON: ["cwd": worktreeAlpha]
+        )
+        let mapper = self.mapper!
+        let path = self.worktreeAlpha
+        async let response = mapper.handlePermissionRequest(event)
+        try? await Task.sleep(nanoseconds: 50_000_000)
+        await MainActor.run {
+            XCTAssertNotNil(self.workspace.pendingPermissionRequests[path])
+            // Simulate bridge process dying mid-flight.
+            mapper.handlePeerDisconnect(sessionId: "s16")
         }
-        mapper.handlePeerDisconnect(sessionId: "s16")
-        // Should not crash; the mapper's internal state should have
-        // been hygenically drained. Nothing observable on the public
-        // surface for Phase 3.
-        XCTAssertGreaterThanOrEqual(mapper._snapshotCountForTesting, 0)
+        let data = await response
+        XCTAssertTrue(
+            (String(data: data, encoding: .utf8) ?? "").contains("\"behavior\":\"deny\""),
+            "Peer disconnect must drain the continuation with a deny response"
+        )
+        await MainActor.run {
+            XCTAssertNil(self.workspace.pendingPermissionRequests[path])
+        }
     }
 }
