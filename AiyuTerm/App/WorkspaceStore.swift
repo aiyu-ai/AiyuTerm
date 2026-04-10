@@ -8,6 +8,7 @@
 import AppKit
 import Combine
 import Foundation
+import os.log
 
 extension Notification.Name {
     static let aiyuTermAppSettingsDidChange = Notification.Name("aiyuterm.appSettingsDidChange")
@@ -55,6 +56,11 @@ final class WorkspaceStore: ObservableObject {
     let tmuxPanelStore = TmuxPanelStore()
     private let tmuxAgentPoller = TmuxAgentStatusPoller()
     let agentStatusFilePoller = AgentStatusFilePoller()
+    /// Phase 2 scaffold: the native socket-based hook server. Starts
+    /// in "no receiver attached" mode so it simply acks every incoming
+    /// connection with `{}`. A real receiver is wired in Phase 3.
+    private let agentHookServer = AgentHookServer()
+    private var hasStartedAgentHookServer = false
     private let metadataWatchService = WorkspaceMetadataWatchService.shared
     private let sleepPreventionController = SleepPreventionController()
     private var persistsWorkspaceState: Bool
@@ -657,6 +663,7 @@ final class WorkspaceStore: ObservableObject {
         configureUpdater(checkInBackground: true)
         syncAutomationServices()
         ensureAgentFilePoller()
+        ensureAgentHookServer()
         ClaudeCodeHooksService.ensureHookScript()
         persist()
     }
@@ -759,6 +766,27 @@ final class WorkspaceStore: ObservableObject {
             self?.workspaces ?? []
         }
         agentStatusFilePoller.startIfNeeded()
+    }
+
+    /// Start the socket-based AgentHookServer on first call. Phase 2
+    /// runs it without a receiver attached, so every incoming event
+    /// is decoded and then acked with `{}` (see AgentHookServer
+    /// `processRequest` guard). A real `AgentHookReceiver` will be
+    /// attached in Phase 3 once the event-mapping layer lands.
+    ///
+    /// Any startup error is logged but swallowed — a failed hook
+    /// server must not prevent the rest of WorkspaceStore from
+    /// functioning.
+    private func ensureAgentHookServer() {
+        guard !hasStartedAgentHookServer else { return }
+        hasStartedAgentHookServer = true
+        do {
+            try agentHookServer.start()
+        } catch {
+            let logger = Logger(subsystem: "com.aiyuai.aiyuterm", category: "WorkspaceStore")
+            logger.error("AgentHookServer failed to start: \(String(describing: error), privacy: .public)")
+            hasStartedAgentHookServer = false
+        }
     }
 
     func selectGlobalCanvasCard(_ cardID: GlobalCanvasCardID) {

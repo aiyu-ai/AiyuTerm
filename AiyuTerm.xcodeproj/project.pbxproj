@@ -8,9 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		5A4973AA2F6F90ED00B79656 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 5A4973A92F6F90ED00B79656 /* Sentry */; };
+		757E4283F4CE0682C939CCD6 /* AiyuTermHookBridge in Embed Agent Hook Bridge */ = {isa = PBXBuildFile; fileRef = 1EE07383E2B472E309774CAD /* AiyuTermHookBridge */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		7F0A1B2C3D4E5F6071829301 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 7F0A1B2C3D4E5F6071829302 /* Sparkle */; };
+		88AB53481065EC242FC90E82 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 737ABDC0F2231B765E85ACD5 /* main.swift */; };
 		8B1A2B3C4D5E6F708090A001 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8B1A2B3C4D5E6F708090A002 /* XCTest.framework */; };
 		9D1A2B3C4D5E6F708091A001 /* YiTong in Frameworks */ = {isa = PBXBuildFile; productRef = 9D1A2B3C4D5E6F708091A002 /* YiTong */; };
+		A17FB0D9092A366CEC5B22F2 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E2A352E8FFDB5BDC0FEBDFBE /* Cocoa.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -21,14 +24,38 @@
 			remoteGlobalIDString = 5A45CEF82F67D58F00861AB5;
 			remoteInfo = AiyuTerm;
 		};
+		AB2A1A5F0708A7B165AFD044 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5A45CEF12F67D58F00861AB5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1E4DDA8E3CB91AB7DF680FD5;
+			remoteInfo = AiyuTermHookBridge;
+		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		CC332F2AE9F5D2BF23F1F1CB /* Embed Agent Hook Bridge */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Contents/Helpers;
+			dstSubfolderSpec = 1;
+			files = (
+				757E4283F4CE0682C939CCD6 /* AiyuTermHookBridge in Embed Agent Hook Bridge */,
+			);
+			name = "Embed Agent Hook Bridge";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		1EE07383E2B472E309774CAD /* AiyuTermHookBridge */ = {isa = PBXFileReference; includeInIndex = 0; path = AiyuTermHookBridge; sourceTree = BUILT_PRODUCTS_DIR; };
 		5A45CEF92F67D58F00861AB5 /* AiyuTerm.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AiyuTerm.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5A45D2092F692B3200861AB5 /* AiyuTerm.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = AiyuTerm.xcodeproj; sourceTree = "<group>"; };
 		5A45D2732F692C4D00861AB5 /* AiyuTerm.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = AiyuTerm.xcodeproj; sourceTree = "<group>"; };
+		737ABDC0F2231B765E85ACD5 /* main.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		8B1A2B3C4D5E6F708090A002 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
 		8B1A2B3C4D5E6F708090A004 /* AiyuTermTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AiyuTermTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E2A352E8FFDB5BDC0FEBDFBE /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -52,6 +79,8 @@
 		};
 		8B1A2B3C4D5E6F708090A005 /* Tests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = Tests;
 			sourceTree = "<group>";
 		};
@@ -65,6 +94,14 @@
 				9D1A2B3C4D5E6F708091A001 /* YiTong in Frameworks */,
 				7F0A1B2C3D4E5F6071829301 /* Sparkle in Frameworks */,
 				5A4973AA2F6F90ED00B79656 /* Sentry in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		743CBC78FA9FD41FB12B51BF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A17FB0D9092A366CEC5B22F2 /* Cocoa.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -86,6 +123,7 @@
 				8B1A2B3C4D5E6F708090A005 /* Tests */,
 				5A45D2A42F692C6D00861AB5 /* Frameworks */,
 				5A45CEFA2F67D58F00861AB5 /* Products */,
+				8178CAD191E5D273F16FF340 /* AiyuTermHookBridge */,
 			);
 			sourceTree = "<group>";
 		};
@@ -94,6 +132,7 @@
 			children = (
 				5A45CEF92F67D58F00861AB5 /* AiyuTerm.app */,
 				8B1A2B3C4D5E6F708090A004 /* AiyuTermTests.xctest */,
+				1EE07383E2B472E309774CAD /* AiyuTermHookBridge */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -116,13 +155,47 @@
 			isa = PBXGroup;
 			children = (
 				8B1A2B3C4D5E6F708090A002 /* XCTest.framework */,
+				DA6E50E0817FC93499B09C7D /* OS X */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		8178CAD191E5D273F16FF340 /* AiyuTermHookBridge */ = {
+			isa = PBXGroup;
+			children = (
+				737ABDC0F2231B765E85ACD5 /* main.swift */,
+			);
+			name = AiyuTermHookBridge;
+			path = AiyuTermHookBridge;
+			sourceTree = "<group>";
+		};
+		DA6E50E0817FC93499B09C7D /* OS X */ = {
+			isa = PBXGroup;
+			children = (
+				E2A352E8FFDB5BDC0FEBDFBE /* Cocoa.framework */,
+			);
+			name = "OS X";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		1E4DDA8E3CB91AB7DF680FD5 /* AiyuTermHookBridge */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C28BA2CA8E46684D6A7A06EB /* Build configuration list for PBXNativeTarget "AiyuTermHookBridge" */;
+			buildPhases = (
+				90A0B9AAF508F86D7220D6B8 /* Sources */,
+				743CBC78FA9FD41FB12B51BF /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AiyuTermHookBridge;
+			productName = AiyuTermHookBridge;
+			productReference = 1EE07383E2B472E309774CAD /* AiyuTermHookBridge */;
+			productType = "com.apple.product-type.tool";
+		};
 		5A45CEF82F67D58F00861AB5 /* AiyuTerm */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 5A45CF072F67D59100861AB5 /* Build configuration list for PBXNativeTarget "AiyuTerm" */;
@@ -131,10 +204,12 @@
 				5A45CEF62F67D58F00861AB5 /* Frameworks */,
 				5A45CEF72F67D58F00861AB5 /* Resources */,
 				8C1D2E3F4A5B6C7D8E9F0001 /* Copy Ghostty Resources */,
+				CC332F2AE9F5D2BF23F1F1CB /* Embed Agent Hook Bridge */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				6375C1E216389A20BF5D3CCD /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				5A45CEFB2F67D58F00861AB5 /* AiyuTerm */,
@@ -219,6 +294,7 @@
 			targets = (
 				5A45CEF82F67D58F00861AB5 /* AiyuTerm */,
 				8B1A2B3C4D5E6F708090A007 /* AiyuTermTests */,
+				1E4DDA8E3CB91AB7DF680FD5 /* AiyuTermHookBridge */,
 			);
 		};
 /* End PBXProject section */
@@ -277,9 +353,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		90A0B9AAF508F86D7220D6B8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				88AB53481065EC242FC90E82 /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		6375C1E216389A20BF5D3CCD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AiyuTermHookBridge;
+			target = 1E4DDA8E3CB91AB7DF680FD5 /* AiyuTermHookBridge */;
+			targetProxy = AB2A1A5F0708A7B165AFD044 /* PBXContainerItemProxy */;
+		};
 		8B1A2B3C4D5E6F708090A00A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 5A45CEF82F67D58F00861AB5 /* AiyuTerm */;
@@ -488,6 +578,32 @@
 			};
 			name = Release;
 		};
+		7EF45078651E0F3049F27713 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD)";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.aiyuai.aiyuterm.hook-bridge";
+				PRODUCT_NAME = "aiyuterm-hook-bridge";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
 		8B1A2B3C4D5E6F708090A00B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -626,6 +742,32 @@
 			};
 			name = Release;
 		};
+		D99A32011F5BBD87472EA420 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD)";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_OPTIMIZATION_LEVEL = s;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				ONLY_ACTIVE_ARCH = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.aiyuai.aiyuterm.hook-bridge";
+				PRODUCT_NAME = "aiyuterm-hook-bridge";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -652,6 +794,15 @@
 			buildConfigurations = (
 				8B1A2B3C4D5E6F708090A00B /* Debug */,
 				8B1A2B3C4D5E6F708090A00C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C28BA2CA8E46684D6A7A06EB /* Build configuration list for PBXNativeTarget "AiyuTermHookBridge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D99A32011F5BBD87472EA420 /* Release */,
+				7EF45078651E0F3049F27713 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
