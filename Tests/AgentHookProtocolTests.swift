@@ -162,6 +162,106 @@ final class AgentHookEventDecodingTests: XCTestCase {
         XCTAssertEqual(event.toolDescription, "Updating tasks")
     }
 
+    func testEditToolDescriptionShowsLastPathComponent() {
+        let event = AgentHookEvent(
+            eventName: "PreToolUse",
+            sessionId: "s",
+            toolName: "Edit",
+            toolInput: ["file_path": "/src/App/module/view.swift"]
+        )
+        XCTAssertEqual(event.toolDescription, "view.swift")
+    }
+
+    func testWriteToolDescriptionShowsLastPathComponent() {
+        let event = AgentHookEvent(
+            eventName: "PreToolUse",
+            sessionId: "s",
+            toolName: "Write",
+            toolInput: ["file_path": "/src/App/Helpers/helpers.swift"]
+        )
+        XCTAssertEqual(event.toolDescription, "helpers.swift")
+    }
+
+    func testGrepToolDescriptionIncludesSearchScope() {
+        let event = AgentHookEvent(
+            eventName: "PreToolUse",
+            sessionId: "s",
+            toolName: "Grep",
+            toolInput: ["pattern": "TODO", "path": "/src/App"]
+        )
+        XCTAssertEqual(event.toolDescription, "TODO in App")
+    }
+
+    func testGrepToolDescriptionWithoutPathOmitsScope() {
+        let event = AgentHookEvent(
+            eventName: "PreToolUse",
+            sessionId: "s",
+            toolName: "Grep",
+            toolInput: ["pattern": "FIXME"]
+        )
+        XCTAssertEqual(event.toolDescription, "FIXME")
+    }
+
+    func testGlobToolDescriptionReturnsPattern() {
+        let event = AgentHookEvent(
+            eventName: "PreToolUse",
+            sessionId: "s",
+            toolName: "Glob",
+            toolInput: ["pattern": "**/*.swift"]
+        )
+        XCTAssertEqual(event.toolDescription, "**/*.swift")
+    }
+
+    func testWebSearchToolDescriptionReturnsQuery() {
+        let event = AgentHookEvent(
+            eventName: "PreToolUse",
+            sessionId: "s",
+            toolName: "WebSearch",
+            toolInput: ["query": "swift actor isolation"]
+        )
+        XCTAssertEqual(event.toolDescription, "swift actor isolation")
+    }
+
+    func testTaskToolDescriptionPrefersDescription() {
+        let event = AgentHookEvent(
+            eventName: "PreToolUse",
+            sessionId: "s",
+            toolName: "Task",
+            toolInput: ["description": "Code reviewer", "prompt": "Review the PR..."]
+        )
+        XCTAssertEqual(event.toolDescription, "Code reviewer")
+    }
+
+    func testTaskToolDescriptionFallsBackToPromptPrefix() {
+        let event = AgentHookEvent(
+            eventName: "PreToolUse",
+            sessionId: "s",
+            toolName: "Task",
+            toolInput: ["prompt": "This is an extremely long prompt that keeps going"]
+        )
+        // The Models.swift implementation takes the first 40 chars of prompt.
+        XCTAssertEqual(event.toolDescription, "This is an extremely long prompt that ke")
+    }
+
+    func testUnknownToolFallsBackToFilePath() {
+        let event = AgentHookEvent(
+            eventName: "PreToolUse",
+            sessionId: "s",
+            toolName: "SomeCustomTool",
+            toolInput: ["file_path": "/tmp/foo/bar.txt"]
+        )
+        XCTAssertEqual(event.toolDescription, "bar.txt")
+    }
+
+    func testUnknownToolFallsBackToTopLevelMessage() {
+        let event = AgentHookEvent(
+            eventName: "Notification",
+            sessionId: "s",
+            rawJSON: ["message": "Something happened"]
+        )
+        XCTAssertEqual(event.toolDescription, "Something happened")
+    }
+
     func testFailsWhenHookEventNameMissing() {
         let json = "{\"session_id\":\"abc\"}"
         XCTAssertNil(AgentHookEvent(from: json.data(using: .utf8)!))
@@ -381,6 +481,110 @@ final class AgentSessionSnapshotReducerTests: XCTestCase {
         )
         XCTAssertEqual(sessions["s1"]?.status, .running)
         XCTAssertEqual(sessions["s1"]?.subagents["agent-1"]?.currentTool, "Read")
+    }
+
+    func testPostToolUseFailureRecordsFailedEntry() {
+        var sessions: [String: AgentSessionSnapshot] = [:]
+        _ = reduceAgentHookEvent(
+            sessions: &sessions,
+            event: AgentHookEvent(
+                eventName: "PreToolUse",
+                sessionId: "s1",
+                toolName: "Bash",
+                toolInput: ["command": "rm -rf /tmp/broken"]
+            ),
+            maxHistory: 10
+        )
+        _ = reduceAgentHookEvent(
+            sessions: &sessions,
+            event: AgentHookEvent(eventName: "PostToolUseFailure", sessionId: "s1"),
+            maxHistory: 10
+        )
+        XCTAssertEqual(sessions["s1"]?.toolHistory.count, 1)
+        XCTAssertEqual(sessions["s1"]?.toolHistory.first?.tool, "Bash")
+        XCTAssertFalse(sessions["s1"]?.toolHistory.first?.success ?? true,
+                       "PostToolUseFailure must record success=false")
+        XCTAssertEqual(sessions["s1"]?.status, .processing)
+    }
+
+    func testPermissionDeniedTransitionsToProcessing() {
+        var sessions: [String: AgentSessionSnapshot] = [:]
+        sessions["s1"] = {
+            var snap = AgentSessionSnapshot()
+            snap.status = .running
+            snap.currentTool = "Bash"
+            snap.toolDescription = "rm -rf foo"
+            return snap
+        }()
+        _ = reduceAgentHookEvent(
+            sessions: &sessions,
+            event: AgentHookEvent(eventName: "PermissionDenied", sessionId: "s1"),
+            maxHistory: 10
+        )
+        XCTAssertEqual(sessions["s1"]?.status, .processing)
+        XCTAssertNil(sessions["s1"]?.currentTool)
+        XCTAssertNil(sessions["s1"]?.toolDescription)
+    }
+
+    func testPermissionDeniedDoesNotOverwriteWaitingState() {
+        var sessions: [String: AgentSessionSnapshot] = [:]
+        sessions["s1"] = {
+            var snap = AgentSessionSnapshot()
+            snap.status = .waitingApproval
+            return snap
+        }()
+        _ = reduceAgentHookEvent(
+            sessions: &sessions,
+            event: AgentHookEvent(eventName: "PermissionDenied", sessionId: "s1"),
+            maxHistory: 10
+        )
+        XCTAssertEqual(sessions["s1"]?.status, .waitingApproval)
+    }
+
+    func testSubagentStopWithoutAgentIdRevertsParentToProcessing() {
+        var sessions: [String: AgentSessionSnapshot] = [:]
+        sessions["s1"] = {
+            var snap = AgentSessionSnapshot()
+            snap.status = .running
+            snap.currentTool = "Agent"
+            snap.toolDescription = "code-reviewer"
+            return snap
+        }()
+        _ = reduceAgentHookEvent(
+            sessions: &sessions,
+            event: AgentHookEvent(eventName: "SubagentStop", sessionId: "s1"),
+            maxHistory: 10
+        )
+        XCTAssertEqual(sessions["s1"]?.status, .processing)
+        XCTAssertNil(sessions["s1"]?.currentTool)
+    }
+
+    func testAfterAgentResponseCapturesAssistantMessage() {
+        var sessions: [String: AgentSessionSnapshot] = [:]
+        _ = reduceAgentHookEvent(
+            sessions: &sessions,
+            event: AgentHookEvent(
+                eventName: "AfterAgentResponse",
+                sessionId: "s1",
+                rawJSON: ["text": "Here is the result of my analysis."]
+            ),
+            maxHistory: 10
+        )
+        XCTAssertEqual(sessions["s1"]?.lastAssistantMessage, "Here is the result of my analysis.")
+        XCTAssertEqual(sessions["s1"]?.recentMessages.last?.isUser, false)
+        XCTAssertEqual(sessions["s1"]?.recentMessages.last?.text, "Here is the result of my analysis.")
+        XCTAssertEqual(sessions["s1"]?.status, .processing)
+    }
+
+    func testPreCompactTransitionsToProcessingWithStatusDescription() {
+        var sessions: [String: AgentSessionSnapshot] = [:]
+        _ = reduceAgentHookEvent(
+            sessions: &sessions,
+            event: AgentHookEvent(eventName: "PreCompact", sessionId: "s1"),
+            maxHistory: 10
+        )
+        XCTAssertEqual(sessions["s1"]?.status, .processing)
+        XCTAssertEqual(sessions["s1"]?.toolDescription, "Compacting context\u{2026}")
     }
 
     func testToolHistoryRespectsMaxSize() {
