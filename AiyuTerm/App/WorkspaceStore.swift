@@ -9,6 +9,7 @@ import AppKit
 import Combine
 import Foundation
 import os.log
+import SwiftUI
 
 extension Notification.Name {
     static let aiyuTermAppSettingsDidChange = Notification.Name("aiyuterm.appSettingsDidChange")
@@ -64,6 +65,13 @@ final class WorkspaceStore: ObservableObject {
         workspacesProvider: { [weak self] in self?.workspaces ?? [] }
     )
     private var hasStartedAgentHookServer = false
+
+    /// Phase 8.4: notch activity panel lifecycle.
+    /// Created lazily the first time the user flips the
+    /// `notchPanelEnabled` switch. The controller owns the NSPanel
+    /// and tears it down on `hide()`.
+    private var agentNotchPanelController: AgentNotchPanelController<AgentNotchPanelView>?
+    private var agentNotchPanelViewModel: AgentNotchPanelViewModel?
     private let metadataWatchService = WorkspaceMetadataWatchService.shared
     private let sleepPreventionController = SleepPreventionController()
     private var persistsWorkspaceState: Bool
@@ -674,6 +682,8 @@ final class WorkspaceStore: ObservableObject {
         migrateLegacyAgentStatusIfNeeded()
         ClaudeCodeHooksService.ensureBridgeHookScript()
         installAgentCLIHooks()
+        // Phase 8.4: present the notch panel if the user has it on.
+        ensureNotchPanelIfEnabled()
         persist()
     }
 
@@ -928,6 +938,82 @@ final class WorkspaceStore: ObservableObject {
         }
     }
 
+    // MARK: - Phase 8.4: Notch panel lifecycle
+
+    /// Ensures the notch activity panel is visible iff
+    /// `appSettings.notchPanelEnabled` is true. Safe to call
+    /// repeatedly — the controller handles show/hide idempotency.
+    ///
+    /// Called from `loadIfNeeded()` and from `updateAppSettings`
+    /// so the panel toggles without requiring a restart.
+    func ensureNotchPanelIfEnabled() {
+        if appSettings.notchPanelEnabled {
+            showNotchPanel()
+        } else {
+            hideNotchPanel()
+        }
+    }
+
+    private func showNotchPanel() {
+        if agentNotchPanelController != nil {
+            agentNotchPanelController?.show()
+            refreshNotchPanelState()
+            return
+        }
+        let viewModel = AgentNotchPanelViewModel(state: currentNotchViewState())
+        agentNotchPanelViewModel = viewModel
+        let controller = AgentNotchPanelController<AgentNotchPanelView> {
+            AgentNotchPanelView(viewModel: viewModel)
+        }
+        agentNotchPanelController = controller
+        controller.show()
+    }
+
+    private func hideNotchPanel() {
+        agentNotchPanelController?.hide()
+    }
+
+    /// Push a fresh AgentNotchViewState into the view-model.
+    /// Called from the agent-status observers once Phase 8.5
+    /// wires them up; Phase 8.4 calls it on initial show.
+    func refreshNotchPanelState() {
+        guard let viewModel = agentNotchPanelViewModel else { return }
+        viewModel.update(state: currentNotchViewState())
+    }
+
+    private func currentNotchViewState() -> AgentNotchViewState {
+        // Aggregate status across every workspace's worktrees.
+        var statuses: [AgentSessionStatus] = []
+        var worktreeSnapshots: [AgentNotchWorktreeSnapshot] = []
+        var pendingCount = 0
+        for workspace in workspaces {
+            for worktree in workspace.worktrees {
+                let status = workspace.agentStatus(forWorktreePath: worktree.path)
+                statuses.append(status)
+                let hasPerm = workspace.pendingPermissionRequests[worktree.path] != nil
+                let hasQuestion = workspace.pendingQuestionRequests[worktree.path] != nil
+                if hasPerm || hasQuestion { pendingCount += 1 }
+                if status != .none || hasPerm || hasQuestion {
+                    worktreeSnapshots.append(
+                        AgentNotchWorktreeSnapshot(
+                            id: worktree.path,
+                            workspaceName: workspace.name,
+                            worktreeDisplayName: worktree.displayName,
+                            status: status,
+                            hasPendingPermission: hasPerm,
+                            hasPendingQuestion: hasQuestion
+                        )
+                    )
+                }
+            }
+        }
+        return AgentNotchViewState(
+            aggregatedStatus: AgentSessionStatus.highestPriority(in: statuses),
+            pendingCount: pendingCount,
+            worktrees: worktreeSnapshots
+        )
+    }
+
     // MARK: - Phase 6.2: Sidebar bubble action handlers
 
     /// Approve the pending permission request on the given worktree.
@@ -1062,9 +1148,12 @@ final class WorkspaceStore: ObservableObject {
             preferredAgentPresetID: settings.preferredAgentPresetID,
             sshPresets: settings.sshPresets,
             preferredSSHPresetID: settings.preferredSSHPresetID,
-            keyboardShortcutOverrides: settings.keyboardShortcutOverrides
+            keyboardShortcutOverrides: settings.keyboardShortcutOverrides,
+            notchPanelEnabled: settings.notchPanelEnabled
         )
         LocalizationManager.shared.updateSelectedLanguage(appSettings.appLanguage)
+        // Phase 8.4: toggling notchPanelEnabled live without restart.
+        ensureNotchPanelIfEnabled()
         let validAgentPresetIDs = Set(appSettings.agentPresets.map(\.id))
         for workspace in workspaces {
             workspace.settings = normalizedWorkspaceSettings(

@@ -285,6 +285,10 @@ struct AppSettings: Codable, Hashable {
     var preferredSSHPresetID: UUID?
     var workspaceGroups: [WorkspaceGroup]
     var keyboardShortcutOverrides: [String: KeyboardShortcutOverride]
+    /// Phase 8.4: gate the notch-area agent activity panel.
+    /// Defaults to false so upgrading users do not see a new
+    /// floating pill without opting in via Settings first.
+    var notchPanelEnabled: Bool = false
 
     init(
         appLanguage: AppLanguage = .english,
@@ -323,7 +327,8 @@ struct AppSettings: Codable, Hashable {
         sshPresets: [SSHPreset] = SSHPreset.builtInPresets,
         preferredSSHPresetID: UUID? = nil,
         workspaceGroups: [WorkspaceGroup] = [],
-        keyboardShortcutOverrides: [String: KeyboardShortcutOverride] = [:]
+        keyboardShortcutOverrides: [String: KeyboardShortcutOverride] = [:],
+        notchPanelEnabled: Bool = false
     ) {
         let normalizedKeyboardShortcutOverrides = AiyuTermKeyboardShortcuts.normalizedOverrides(keyboardShortcutOverrides)
         let normalizedAgentPresets = aiyuTermNormalizedAgentPresets(agentPresets)
@@ -385,6 +390,7 @@ struct AppSettings: Codable, Hashable {
             self.preferredSSHPresetID = nil
         }
         self.workspaceGroups = workspaceGroups
+        self.notchPanelEnabled = notchPanelEnabled
     }
 }
 
@@ -427,6 +433,7 @@ extension AppSettings {
         case preferredSSHPresetID
         case workspaceGroups
         case keyboardShortcutOverrides
+        case notchPanelEnabled
     }
 
     init(from decoder: any Decoder) throws {
@@ -476,7 +483,8 @@ extension AppSettings {
             sshPresets: try container.decodeIfPresent([SSHPreset].self, forKey: .sshPresets) ?? SSHPreset.builtInPresets,
             preferredSSHPresetID: try container.decodeIfPresent(UUID.self, forKey: .preferredSSHPresetID),
             workspaceGroups: try container.decodeIfPresent([WorkspaceGroup].self, forKey: .workspaceGroups) ?? [],
-            keyboardShortcutOverrides: try container.decodeIfPresent([String: KeyboardShortcutOverride].self, forKey: .keyboardShortcutOverrides) ?? [:]
+            keyboardShortcutOverrides: try container.decodeIfPresent([String: KeyboardShortcutOverride].self, forKey: .keyboardShortcutOverrides) ?? [:],
+            notchPanelEnabled: try container.decodeIfPresent(Bool.self, forKey: .notchPanelEnabled) ?? false
         )
     }
 }
