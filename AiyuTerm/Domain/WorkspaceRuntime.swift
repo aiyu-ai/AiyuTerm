@@ -7,9 +7,12 @@
 
 import Combine
 import Foundation
+import OSLog
 
 @MainActor
 final class WorkspaceModel: ObservableObject, Identifiable {
+    private static let logger = Logger(subsystem: "com.aiyuai.aiyuterm", category: "WorkspaceRuntime")
+
     let id: UUID
     let kind: WorkspaceKind
     let repositoryRoot: String
@@ -643,8 +646,16 @@ final class WorkspaceModel: ObservableObject, Identifiable {
     func setAgentStatus(_ status: AgentSessionStatus, forWorktreePath path: String) {
         guard let controllers = worktreeControllers[path] else { return }
         for controller in controllers.values {
-            for session in controller.sessions.values where session.agentStatus != status {
-                session.agentStatus = status
+            for session in controller.sessions.values {
+                guard session.agentStatus.canTransition(to: status) else {
+                    Self.logger.debug(
+                        "Blocked transition: \(String(describing: session.agentStatus)) -> \(String(describing: status)) for \(path)"
+                    )
+                    continue
+                }
+                if session.agentStatus != status {
+                    session.agentStatus = status
+                }
             }
         }
     }

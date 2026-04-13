@@ -85,14 +85,20 @@ final class ShellSession: ObservableObject, Identifiable {
     @Published var rows: Int = 24
     @Published var cols: Int = 80
     @Published var surfaceStatus = TerminalSurfaceStatusSnapshot()
-    @Published var agentStatus: AgentSessionStatus = .none {
-        didSet {
-            if agentStatus != oldValue {
-                onAgentStatusChange?(agentStatus)
+    private var agentStatusBacking: AgentSessionStatus = .none
+    var agentStatus: AgentSessionStatus {
+        get { agentStatusBacking }
+        set {
+            guard agentStatusBacking.canTransition(to: newValue) else { return }
+            let oldValue = agentStatusBacking
+            objectWillChange.send()
+            agentStatusBacking = newValue
+            if newValue != oldValue {
+                onAgentStatusChange?(newValue)
             }
             agentStatusClearTask?.cancel()
             agentStatusClearTask = nil
-            if agentStatus == .working {
+            if newValue == .working {
                 agentStatusClearTask = Task { [weak self] in
                     // Allow enough time for Claude Code to transition from
                     // loading ("Schlepping...") to active processing (braille
