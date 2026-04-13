@@ -44,6 +44,11 @@ struct AgentHookEvent {
     /// Full payload for event-specific fields (cwd, model, transcript_path, etc.)
     let rawJSON: [String: Any]
 
+    /// Correlated tool_use_id resolved by `AgentToolUseIdCache` during
+    /// `processRequest`. Only populated for `PermissionRequest` events
+    /// where the cache found a matching `PreToolUse` entry.
+    var resolvedToolUseId: String?
+
     init?(from data: Data) {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let eventName = json["hook_event_name"] as? String
@@ -56,6 +61,7 @@ struct AgentHookEvent {
         self.toolInput = json["tool_input"] as? [String: Any]
         self.agentId = json["agent_id"] as? String
         self.rawJSON = json
+        self.resolvedToolUseId = nil
     }
 
     /// Convenience initializer used by tests. Lets tests pass a pre-built
@@ -79,6 +85,7 @@ struct AgentHookEvent {
         if let agentId { merged["agent_id"] = agentId }
         if let toolInput { merged["tool_input"] = toolInput }
         self.rawJSON = merged
+        self.resolvedToolUseId = nil
     }
 
     /// A short human-readable description of the tool call this event

@@ -76,6 +76,11 @@ final class AgentHookServer {
 
     private var connectionContexts: [ObjectIdentifier: ConnectionContext] = [:]
 
+    /// FIFO cache that correlates `PreToolUse` tool_use_id values with
+    /// subsequent `PermissionRequest` events that share the same
+    /// (sessionId, toolName, toolInput) composite key.
+    private var toolUseIdCache = AgentToolUseIdCache()
+
     // MARK: - Lifecycle
 
     init() {}
@@ -224,12 +229,45 @@ final class AgentHookServer {
             return
         }
 
+        // -- tool_use_id correlation cache management --
+        let normalizedName = AgentHookEventNormalizer.normalize(event.eventName)
+        let cacheSessionId = event.sessionId ?? "default"
+
+        if normalizedName == "PreToolUse",
+           let toolUseId = event.rawJSON["tool_use_id"] as? String
+        {
+            toolUseIdCache.store(
+                sessionId: cacheSessionId,
+                toolName: event.toolName,
+                toolInput: event.toolInput,
+                toolUseId: toolUseId
+            )
+        } else if normalizedName == "PostToolUse",
+                  let toolUseId = event.rawJSON["tool_use_id"] as? String
+        {
+            toolUseIdCache.remove(toolUseId: toolUseId)
+        }
+
+        toolUseIdCache.sweepExpired(olderThan: Date().addingTimeInterval(-30))
+
+        // Resolve tool_use_id for permission requests so downstream
+        // handlers can correlate the permission with its originating
+        // PreToolUse event.
+        var mutableEvent = event
         if event.eventName == "PermissionRequest" {
-            let sessionId = event.sessionId ?? "default"
+            mutableEvent.resolvedToolUseId = toolUseIdCache.resolve(
+                sessionId: cacheSessionId,
+                toolName: event.toolName,
+                toolInput: event.toolInput
+            )
+        }
+
+        if mutableEvent.eventName == "PermissionRequest" {
+            let sessionId = mutableEvent.sessionId ?? "default"
 
             // Auto-approve internal helpers without a round-trip to
             // the UI layer.
-            if let toolName = event.toolName, Self.autoApproveTools.contains(toolName) {
+            if let toolName = mutableEvent.toolName, Self.autoApproveTools.contains(toolName) {
                 let response = #"{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}"#
                 sendResponse(connection: connection, data: Data(response.utf8))
                 return
@@ -237,12 +275,13 @@ final class AgentHookServer {
 
             // `AskUserQuestion` is a structured question, not a
             // permission — route it to the question handler.
-            if event.toolName == "AskUserQuestion" {
+            if mutableEvent.toolName == "AskUserQuestion" {
                 monitorPeerDisconnect(connection: connection, sessionId: sessionId)
                 let weakServer: AgentHookServer? = self
+                let capturedEvent = mutableEvent
                 Task { @MainActor in
                     guard let server = weakServer else { return }
-                    let responseBody = await receiver.handleAskUserQuestion(event)
+                    let responseBody = await receiver.handleAskUserQuestion(capturedEvent)
                     server.sendResponse(connection: connection, data: responseBody)
                 }
                 return
@@ -250,24 +289,26 @@ final class AgentHookServer {
 
             monitorPeerDisconnect(connection: connection, sessionId: sessionId)
             let weakServerPerm: AgentHookServer? = self
+            let capturedPermEvent = mutableEvent
             Task { @MainActor in
                 guard let server = weakServerPerm else { return }
-                let responseBody = await receiver.handlePermissionRequest(event)
+                let responseBody = await receiver.handlePermissionRequest(capturedPermEvent)
                 server.sendResponse(connection: connection, data: responseBody)
             }
-        } else if AgentHookEventNormalizer.normalize(event.eventName) == "Notification",
-                  AgentQuestionPayload.from(event: event) != nil
+        } else if AgentHookEventNormalizer.normalize(mutableEvent.eventName) == "Notification",
+                  AgentQuestionPayload.from(event: mutableEvent) != nil
         {
-            let questionSessionId = event.sessionId ?? "default"
+            let questionSessionId = mutableEvent.sessionId ?? "default"
             monitorPeerDisconnect(connection: connection, sessionId: questionSessionId)
             let weakServerQ: AgentHookServer? = self
+            let capturedQEvent = mutableEvent
             Task { @MainActor in
                 guard let server = weakServerQ else { return }
-                let responseBody = await receiver.handleQuestion(event)
+                let responseBody = await receiver.handleQuestion(capturedQEvent)
                 server.sendResponse(connection: connection, data: responseBody)
             }
         } else {
-            receiver.handleEvent(event)
+            receiver.handleEvent(mutableEvent)
             sendResponse(connection: connection, data: Data("{}".utf8))
         }
     }
@@ -312,5 +353,115 @@ final class AgentHookServer {
                 connection.cancel()
             }
         )
+    }
+}
+
+// MARK: - AgentToolUseIdCache
+
+/// FIFO cache that correlates `PreToolUse` events (which carry a
+/// `tool_use_id`) with subsequent `PermissionRequest` events that
+/// share the same (sessionId, toolName, toolInput) tuple but lack
+/// their own `tool_use_id`.
+///
+/// Entries are stored on `PreToolUse` and consumed (FIFO) on
+/// `PermissionRequest.resolve()`. `PostToolUse` removes by exact
+/// `toolUseId` so that completed tools don't linger.
+struct AgentToolUseIdCache {
+
+    // MARK: - Types
+
+    private struct Entry {
+        let toolUseId: String
+        let storedAt: Date
+    }
+
+    // MARK: - State
+
+    /// Keyed by composite string: "sessionId:toolName:sortedInputJSON"
+    private var cache: [String: [Entry]] = [:]
+
+    // MARK: - Composite key
+
+    /// Build a deterministic composite key from session, tool name,
+    /// and tool input. The input dictionary is serialized with sorted
+    /// keys so that key ordering differences across JSON encoders do
+    /// not produce distinct cache keys.
+    static func buildCompositeKey(
+        sessionId: String,
+        toolName: String?,
+        toolInput: [String: Any]?
+    ) -> String {
+        let sortedInput: String
+        if let input = toolInput,
+           let data = try? JSONSerialization.data(
+               withJSONObject: input,
+               options: .sortedKeys
+           ),
+           let str = String(data: data, encoding: .utf8)
+        {
+            sortedInput = str
+        } else {
+            sortedInput = "{}"
+        }
+        return "\(sessionId):\(toolName ?? ""):\(sortedInput)"
+    }
+
+    // MARK: - Mutations
+
+    /// Store a tool_use_id from a `PreToolUse` event. Multiple
+    /// entries with the same composite key are kept in FIFO order.
+    mutating func store(
+        sessionId: String,
+        toolName: String?,
+        toolInput: [String: Any]?,
+        toolUseId: String
+    ) {
+        let key = Self.buildCompositeKey(
+            sessionId: sessionId,
+            toolName: toolName,
+            toolInput: toolInput
+        )
+        cache[key, default: []].append(
+            Entry(toolUseId: toolUseId, storedAt: Date())
+        )
+    }
+
+    /// Consume the oldest tool_use_id matching the composite key
+    /// (FIFO). Returns `nil` if no entry matches.
+    mutating func resolve(
+        sessionId: String,
+        toolName: String?,
+        toolInput: [String: Any]?
+    ) -> String? {
+        let key = Self.buildCompositeKey(
+            sessionId: sessionId,
+            toolName: toolName,
+            toolInput: toolInput
+        )
+        guard var entries = cache[key], !entries.isEmpty else {
+            return nil
+        }
+        let first = entries.removeFirst()
+        cache[key] = entries.isEmpty ? nil : entries
+        return first.toolUseId
+    }
+
+    /// Remove a specific tool_use_id (called on `PostToolUse` so
+    /// completed tools don't linger in the cache).
+    mutating func remove(toolUseId: String) {
+        for (key, var entries) in cache {
+            entries.removeAll { $0.toolUseId == toolUseId }
+            cache[key] = entries.isEmpty ? nil : entries
+        }
+    }
+
+    /// Remove all entries older than `threshold`. Called on every
+    /// `processRequest` with a 30-second window to prevent unbounded
+    /// growth from orphaned PreToolUse events.
+    mutating func sweepExpired(olderThan threshold: Date) {
+        for (key, var entries) in cache {
+            entries.removeAll { $0.storedAt < threshold }
+            cache[key] = entries.isEmpty ? nil : entries
+        }
     }
 }
