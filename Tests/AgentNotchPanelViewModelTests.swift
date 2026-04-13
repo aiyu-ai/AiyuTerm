@@ -58,6 +58,7 @@ final class AgentNotchPanelViewModelTests: XCTestCase {
     ) -> AgentPermissionRequest {
         AgentPermissionRequest(
             id: UUID(),
+            toolUseId: nil,
             sessionId: "sid-1",
             worktreePath: worktreePath,
             toolName: toolName,

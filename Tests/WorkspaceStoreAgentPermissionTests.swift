@@ -200,7 +200,9 @@ final class WorkspaceStoreAgentPermissionTests: XCTestCase {
 
     // MARK: - race conditions
 
-    func testSecondPermissionRequestCancelsFirstWithDeny() async {
+    func testSecondPermissionRequestQueuesWithoutDenyingFirst() async {
+        // Phase 12.9: second request queues behind the first instead
+        // of auto-denying it. Both are resolved in FIFO order.
         let first = AgentHookEvent(
             eventName: "PermissionRequest",
             sessionId: "p62-first",
@@ -222,16 +224,24 @@ final class WorkspaceStoreAgentPermissionTests: XCTestCase {
         async let secondResponse = mapper.handlePermissionRequest(second)
         try? await Task.sleep(nanoseconds: 50_000_000)
 
-        // The first continuation should have been drained with deny
-        // by the second request's pre-emption guard.
+        // Both should be queued — first is NOT auto-denied.
+        XCTAssertEqual(mapper._permissionQueueDepth(forWorktreePath: path), 2,
+                       "Both requests should be queued")
+
+        // Resolve the first (head) — second should be promoted.
+        mapper.resolvePermission(forWorktreePath: path, decision: .allowOnce)
         let firstData = await firstResponse
         XCTAssertTrue(
-            (String(data: firstData, encoding: .utf8) ?? "").contains("deny"),
-            "Pre-empted first request must resolve with deny"
+            (String(data: firstData, encoding: .utf8) ?? "").contains("allow"),
+            "First request resolved with allow"
         )
+        XCTAssertEqual(mapper._permissionQueueDepth(forWorktreePath: path), 1,
+                       "Second request should remain queued after first resolved")
 
+        // Resolve the second.
         mapper.resolvePermission(forWorktreePath: path, decision: .allowOnce)
         let secondData = await secondResponse
         XCTAssertTrue((String(data: secondData, encoding: .utf8) ?? "").contains("allow"))
+        XCTAssertEqual(mapper._permissionQueueDepth(forWorktreePath: path), 0)
     }
 }

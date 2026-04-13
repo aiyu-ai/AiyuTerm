@@ -22,6 +22,10 @@ import Foundation
 /// `WorkspaceModel.pendingPermissionRequests` keyed by worktree path.
 struct AgentPermissionRequest: Identifiable, Equatable, Sendable {
     let id: UUID
+    /// Correlation id from Claude Code's `tool_use_id` field, resolved
+    /// by `AgentHookServer` before dispatch. `nil` for events that
+    /// lack a tool_use_id (tests, older bridge versions).
+    let toolUseId: String?
     let sessionId: String
     let worktreePath: String
     let toolName: String

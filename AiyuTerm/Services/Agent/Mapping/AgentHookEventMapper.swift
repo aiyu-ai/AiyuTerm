@@ -57,18 +57,26 @@ final class AgentHookEventMapper: AgentHookReceiver {
     /// Populated on successful resolution, consulted as fallback.
     private var sessionWorktreeCache: [String: String] = [:]
 
-    /// Phase 6.1: outstanding permission continuations keyed by
-    /// request UUID. The UI drains this via `resolvePermission(id:
-    /// decision:)` after the user clicks Approve/Deny.
-    private var pendingPermissionContinuations: [UUID: CheckedContinuation<Data, Never>] = [:]
+    /// Phase 12.9: FIFO queue of pending permission requests per
+    /// worktree. Multiple concurrent permission requests are queued;
+    /// only the head entry is shown in the sidebar bubble UI. When the
+    /// head is resolved the next entry is promoted.
+    private var permissionQueues: [String: [PendingPermission]] = [:]
+
+    /// A single queued permission request with its async continuation.
+    struct PendingPermission {
+        let id: UUID
+        let toolUseId: String?
+        let request: AgentPermissionRequest
+        let continuation: CheckedContinuation<Data, Never>
+        let enqueuedAt: Date
+    }
 
     /// Same shape for AskUserQuestion / Notification-question flows.
     private var pendingQuestionContinuations: [UUID: CheckedContinuation<Data, Never>] = [:]
 
-    /// Reverse lookup from worktree path to request UUID so
-    /// `handlePeerDisconnect` and `resolvePermission(forWorktreePath:...)`
-    /// can find the right continuation without asking the UI.
-    private var worktreeToPermissionRequestId: [String: UUID] = [:]
+    /// Reverse lookup from worktree path to question request UUID so
+    /// `handlePeerDisconnect` can find the right continuation.
     private var worktreeToQuestionRequestId: [String: UUID] = [:]
 
     private static let logger = Logger(
@@ -144,12 +152,11 @@ final class AgentHookEventMapper: AgentHookReceiver {
     }
 
     func handlePermissionRequest(_ event: AgentHookEvent) async -> Data {
-        // Phase 6.1: enqueue the request into the workspace and
-        // suspend until the UI drains it via
-        // `resolvePermission(forWorktreePath:decision:)`. If we
-        // cannot resolve the worktree (unknown cwd etc) we fall
-        // back to an immediate deny so the bridge never blocks
-        // indefinitely.
+        // Phase 12.9: enqueue the request into a per-worktree FIFO
+        // queue and suspend until the UI resolves it. Multiple
+        // concurrent requests are queued silently; only the head
+        // entry is shown in the sidebar bubble. If we cannot resolve
+        // the worktree we deny immediately so the bridge never hangs.
         let sessionId = event.sessionId ?? "default"
 
         // Always run the reducer first so snapshot state stays fresh.
@@ -170,32 +177,33 @@ final class AgentHookEventMapper: AgentHookReceiver {
         }
         sessionWorktreeCache[sessionId] = worktreePath
 
-        // If an older permission request is pending on this
-        // worktree, resolve it with deny so the UI only ever holds
-        // one bubble at a time. This handles the rare case where
-        // Claude fires a second request before the user decides.
-        if let existing = worktreeToPermissionRequestId[worktreePath],
-           let prior = pendingPermissionContinuations.removeValue(forKey: existing)
-        {
-            prior.resume(returning: AgentPermissionResponseBuilder.deny)
-            workspace.removePermissionRequest(forWorktreePath: worktreePath)
-        }
-
         let request = AgentPermissionRequest(
             id: UUID(),
+            toolUseId: event.resolvedToolUseId,
             sessionId: sessionId,
             worktreePath: worktreePath,
             toolName: event.toolName ?? "Unknown",
             toolDescription: event.toolDescription,
             timestamp: Date()
         )
-        workspace.enqueuePermissionRequest(request)
-        workspace.markPermissionUnread(forWorktreePath: worktreePath)
-        workspace.setAgentStatus(.permissionNeeded, forWorktreePath: worktreePath)
+
+        let isFirstInQueue = permissionQueues[worktreePath]?.isEmpty ?? true
 
         return await withCheckedContinuation { continuation in
-            pendingPermissionContinuations[request.id] = continuation
-            worktreeToPermissionRequestId[worktreePath] = request.id
+            let pending = PendingPermission(
+                id: request.id,
+                toolUseId: event.resolvedToolUseId,
+                request: request,
+                continuation: continuation,
+                enqueuedAt: Date()
+            )
+            permissionQueues[worktreePath, default: []].append(pending)
+
+            if isFirstInQueue {
+                workspace.enqueuePermissionRequest(request)
+                workspace.markPermissionUnread(forWorktreePath: worktreePath)
+                workspace.setAgentStatus(.permissionNeeded, forWorktreePath: worktreePath)
+            }
         }
     }
 
@@ -289,18 +297,19 @@ final class AgentHookEventMapper: AgentHookReceiver {
             }
         }
 
-        // Find continuations whose request.sessionId matches. We do
-        // this by walking worktreeToPermissionRequestId and
-        // checking the cached session->worktree map in reverse.
+        // Drain all queued permission continuations and the question
+        // continuation for this session's worktree.
         if let worktreePath = sessionWorktreeCache[sessionId] {
-            if let id = worktreeToPermissionRequestId.removeValue(forKey: worktreePath),
-               let continuation = pendingPermissionContinuations.removeValue(forKey: id)
-            {
-                continuation.resume(returning: AgentPermissionResponseBuilder.deny)
+            // Drain entire permission queue for this worktree.
+            if let queue = permissionQueues.removeValue(forKey: worktreePath) {
+                for pending in queue {
+                    pending.continuation.resume(returning: AgentPermissionResponseBuilder.deny)
+                }
                 if let workspace = findWorkspace(containing: worktreePath) {
                     workspace.removePermissionRequest(forWorktreePath: worktreePath)
                 }
             }
+            // Drain question continuation (still single-slot).
             if let id = worktreeToQuestionRequestId.removeValue(forKey: worktreePath),
                let continuation = pendingQuestionContinuations.removeValue(forKey: id)
             {
@@ -314,27 +323,38 @@ final class AgentHookEventMapper: AgentHookReceiver {
 
     // MARK: - UI-facing resolve entry points
 
-    /// Resolve the pending permission request on the given worktree
-    /// with the user's decision. Called by WorkspaceStore from the
-    /// sidebar bubble action handler. No-op if no request is
-    /// pending.
+    /// Resolve the head permission request on the given worktree
+    /// with the user's decision. If more requests are queued behind
+    /// it the next one is promoted to the sidebar bubble. Called by
+    /// WorkspaceStore from the sidebar bubble action handler.
+    /// No-op if the queue is empty.
     func resolvePermission(
         forWorktreePath path: String,
         decision: AgentPermissionDecision
     ) {
-        guard let id = worktreeToPermissionRequestId.removeValue(forKey: path),
-              let continuation = pendingPermissionContinuations.removeValue(forKey: id)
-        else {
-            return
-        }
-        continuation.resume(returning: AgentPermissionResponseBuilder.response(for: decision))
+        guard var queue = permissionQueues[path], !queue.isEmpty else { return }
+
+        let head = queue.removeFirst()
+        permissionQueues[path] = queue.isEmpty ? nil : queue
+
+        head.continuation.resume(returning: AgentPermissionResponseBuilder.response(for: decision))
+
         if let workspace = findWorkspace(containing: path) {
             workspace.removePermissionRequest(forWorktreePath: path)
-            // Flip badge back to working now that the gate is
-            // cleared. Next real event will refine it.
-            if decision != .deny {
-                workspace.setAgentStatus(.working, forWorktreePath: path)
-                workspace.markPermissionRead(forWorktreePath: path)
+
+            if let next = queue.first {
+                // Promote the next queued request to the UI.
+                workspace.enqueuePermissionRequest(next.request)
+                workspace.markPermissionUnread(forWorktreePath: path)
+                // Status stays .permissionNeeded — no transition needed.
+            } else {
+                // Queue drained: flip badge back to working so the
+                // user sees activity resume. Next real event will
+                // refine it.
+                if decision != .deny {
+                    workspace.setAgentStatus(.working, forWorktreePath: path)
+                    workspace.markPermissionRead(forWorktreePath: path)
+                }
             }
         }
     }
@@ -370,6 +390,36 @@ final class AgentHookEventMapper: AgentHookReceiver {
         }
     }
 
+    // MARK: - Stale queue cleanup (Phase 12.11)
+
+    /// Drain all queued permission entries older than `threshold`,
+    /// resuming their continuations with deny. If the drain empties a
+    /// worktree's queue entirely, clear the UI request too.
+    func drainStalePermissions(olderThan threshold: Date) {
+        for (path, var queue) in permissionQueues {
+            let stale = queue.filter { $0.enqueuedAt < threshold }
+            for entry in stale {
+                entry.continuation.resume(returning: AgentPermissionResponseBuilder.deny)
+            }
+            queue.removeAll { $0.enqueuedAt < threshold }
+            if queue.isEmpty {
+                permissionQueues[path] = nil
+                if let workspace = findWorkspace(containing: path) {
+                    workspace.removePermissionRequest(forWorktreePath: path)
+                }
+            } else {
+                permissionQueues[path] = queue
+                // If the head was drained, promote the new head.
+                if stale.contains(where: { $0.id == stale.first?.id }) {
+                    if let workspace = findWorkspace(containing: path) {
+                        workspace.removePermissionRequest(forWorktreePath: path)
+                        workspace.enqueuePermissionRequest(queue[0].request)
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Helpers exposed for tests
 
     /// Clear all internal state. Used by tests to reset between cases.
@@ -380,6 +430,12 @@ final class AgentHookEventMapper: AgentHookReceiver {
 
     /// Snapshot count, used by tests to assert state bookkeeping.
     var _snapshotCountForTesting: Int { snapshots.count }
+
+    /// Number of queued permission requests for a worktree, used by
+    /// tests to verify queue depth without exposing internal types.
+    func _permissionQueueDepth(forWorktreePath path: String) -> Int {
+        permissionQueues[path]?.count ?? 0
+    }
 
     // MARK: - Notch panel read access
 
