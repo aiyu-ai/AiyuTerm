@@ -84,7 +84,7 @@ final class AgentHookEventMapper: AgentHookReceiver {
     /// state transitions that we don't want to forward to the badge
     /// layer yet (e.g. PreCompact during context compaction).
     private static let silentEventNames: Set<String> = [
-        "SessionStart", "SessionEnd", "PreCompact",
+        "SessionStart", "SessionEnd",
     ]
 
     /// Canonical "allow once" permission response body. Phase 6 will
@@ -530,6 +530,9 @@ final class AgentHookEventMapper: AgentHookReceiver {
             workspace.markPermissionRead(forWorktreePath: worktreePath)
             workspace.setAgentStatus(.working, forWorktreePath: worktreePath)
 
+        case .compacting:
+            workspace.setAgentStatus(.compacting, forWorktreePath: worktreePath)
+
         case .error:
             workspace.setAgentStatus(.error, forWorktreePath: worktreePath)
 
@@ -611,6 +614,12 @@ final class AgentHookEventMapper: AgentHookReceiver {
 
         case "PermissionRequest":
             return .permissionNeeded
+
+        case "PreCompact":
+            return .compacting
+
+        case "PostCompact":
+            return .working
 
         case "PermissionDenied":
             // Permission flow finished — return to working so the

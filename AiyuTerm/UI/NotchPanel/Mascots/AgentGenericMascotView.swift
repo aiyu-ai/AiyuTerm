@@ -40,6 +40,7 @@ struct AgentGenericMascotView: View {
     private var background: Color {
         switch status {
         case .working:           return Color.blue.opacity(0.85)
+        case .compacting:        return Color.secondary.opacity(0.65)
         case .permissionNeeded:  return Color.pink.opacity(0.85)
         case .taskCompleted:     return Color.green.opacity(0.80)
         case .error:             return Color.red.opacity(0.85)

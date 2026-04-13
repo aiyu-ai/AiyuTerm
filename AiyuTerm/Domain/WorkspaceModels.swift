@@ -1438,6 +1438,7 @@ private extension PersistedWorkspaceState {
 enum AgentSessionStatus: Equatable {
     case none
     case working
+    case compacting
     case permissionNeeded
     case taskCompleted
     case error
@@ -1464,11 +1465,46 @@ enum AgentSessionStatus: Equatable {
 
     private var priority: Int {
         switch self {
-        case .permissionNeeded: return 4
-        case .error: return 3
-        case .taskCompleted: return 2
+        case .permissionNeeded: return 5
+        case .error: return 4
+        case .taskCompleted: return 3
+        case .compacting: return 2
         case .working: return 1
         case .none: return 0
+        }
+    }
+
+    /// Validates whether a transition from the current status to the
+    /// target status is allowed. Prevents nonsensical jumps such as
+    /// `.taskCompleted` -> `.compacting` that would confuse the badge
+    /// display layer.
+    func canTransition(to target: AgentSessionStatus) -> Bool {
+        if self == target { return true }
+        switch self {
+        case .none:
+            return true
+        case .working:
+            return true
+        case .compacting:
+            switch target {
+            case .working, .taskCompleted, .error, .none: return true
+            case .permissionNeeded, .compacting: return false
+            }
+        case .permissionNeeded:
+            switch target {
+            case .working, .none, .error, .permissionNeeded: return true
+            case .taskCompleted, .compacting: return false
+            }
+        case .taskCompleted:
+            switch target {
+            case .working, .none: return true
+            case .taskCompleted, .compacting, .permissionNeeded, .error: return false
+            }
+        case .error:
+            switch target {
+            case .working, .none: return true
+            case .error, .compacting, .permissionNeeded, .taskCompleted: return false
+            }
         }
     }
 
@@ -1480,6 +1516,7 @@ enum AgentSessionStatus: Equatable {
         switch self {
         case .none: return .hidden
         case .working: return .spinner
+        case .compacting: return .compacting
         case .taskCompleted: return isUnread ? .completedUnread : .completedRead
         case .permissionNeeded: return isUnread ? .permissionNeeded : .permissionNeededRead
         case .error: return .error
@@ -1490,6 +1527,7 @@ enum AgentSessionStatus: Equatable {
 enum AgentBadgeDisplayState: Equatable {
     case hidden
     case spinner
+    case compacting
     case completedUnread
     case completedRead
     case error

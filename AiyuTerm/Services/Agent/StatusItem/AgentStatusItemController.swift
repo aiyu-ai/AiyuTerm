@@ -136,6 +136,8 @@ final class AgentStatusItemController: NSObject {
         switch currentStatus {
         case .working:
             return ("hourglass", "Agent working")
+        case .compacting:
+            return ("hourglass", "Agent compacting")
         case .taskCompleted:
             return ("checkmark.circle.fill", "Agent task complete")
         case .error:
@@ -154,6 +156,8 @@ final class AgentStatusItemController: NSObject {
             return base
         case .working:
             return "\(base) — working"
+        case .compacting:
+            return "\(base) — compacting"
         case .permissionNeeded:
             return "\(base) — \(currentPendingCount) pending permission"
         case .taskCompleted:

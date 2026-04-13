@@ -204,6 +204,7 @@ enum AgentNotchViewStateSorting {
         if snapshot.hasPendingQuestion { return 1 }
         switch snapshot.status {
         case .working: return 2
+        case .compacting: return 2
         case .taskCompleted: return 3
         case .error: return 4
         case .permissionNeeded: return 5
@@ -377,6 +378,11 @@ struct AgentNotchCollapsedView: View {
                 .controlSize(.mini)
                 .tint(Color.white)
                 .frame(width: 12, height: 12)
+        case .compacting:
+            ProgressView()
+                .controlSize(.mini)
+                .tint(Color.white.opacity(0.6))
+                .frame(width: 12, height: 12)
         case .permissionNeeded:
             Image(systemName: "hand.raised.fill")
                 .font(.system(size: 11, weight: .semibold))
@@ -409,6 +415,7 @@ struct AgentNotchCollapsedView: View {
         var parts: [String] = []
         switch state.aggregatedStatus {
         case .working: parts.append("agent working")
+        case .compacting: parts.append("agent compacting")
         case .permissionNeeded: parts.append("permission needed")
         case .taskCompleted: parts.append("task completed")
         case .error: parts.append("error")
@@ -605,6 +612,7 @@ struct SessionCardView: View {
         if snapshot.hasPendingQuestion { return .blue }
         switch snapshot.status {
         case .working: return .blue
+        case .compacting: return .secondary
         case .permissionNeeded: return .pink
         case .taskCompleted: return .green
         case .error: return .red

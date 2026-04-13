@@ -47,6 +47,7 @@ struct AgentClaudeMascotView: View {
         switch status {
         case .none:              return Self.coreC.opacity(0.82)
         case .working:           return Self.coreHot
+        case .compacting:        return Self.coreC.opacity(0.65)
         case .taskCompleted:     return Self.completedC
         case .permissionNeeded:  return Self.permissionC
         case .error:             return Self.errorC
@@ -56,6 +57,7 @@ struct AgentClaudeMascotView: View {
     private var pulseRange: (lo: CGFloat, hi: CGFloat) {
         switch status {
         case .working:           return (0.88, 1.12)
+        case .compacting:        return (0.93, 1.06)
         case .permissionNeeded:  return (0.80, 1.22)
         case .error:             return (0.85, 1.18)
         case .taskCompleted:     return (0.95, 1.06)
@@ -66,6 +68,7 @@ struct AgentClaudeMascotView: View {
     private var spinPeriod: Double {
         switch status {
         case .working:           return 2.4
+        case .compacting:        return 3.0
         case .permissionNeeded:  return 1.6
         case .error:             return 1.4
         case .taskCompleted:     return 3.6

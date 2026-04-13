@@ -1911,6 +1911,7 @@ struct SidebarItemIconView: View {
         case .taskCompleted: return Color(red: 0.19, green: 0.82, blue: 0.35)
         case .error: return Color(red: 1.0, green: 0.27, blue: 0.23)
         case .working: return Color(red: 0.31, green: 0.63, blue: 1.0)
+        case .compacting: return Color(red: 0.55, green: 0.60, blue: 0.72)
         case .none: return nil
         }
     }
@@ -2085,7 +2086,7 @@ struct AgentStatusOverlayBadge: View {
         case .completedUnread, .completedRead: return "checkmark"
         case .permissionNeeded, .permissionNeededRead: return "exclamationmark"
         case .error: return "xmark"
-        case .spinner, .hidden: return ""
+        case .spinner, .compacting, .hidden: return ""
         }
     }
 
@@ -2097,7 +2098,7 @@ struct AgentStatusOverlayBadge: View {
             return [Color(red: 1.0, green: 0.18, blue: 0.57), Color(red: 0.90, green: 0.0, blue: 0.31)]
         case .error:
             return [Color(red: 1.0, green: 0.27, blue: 0.23), Color(red: 0.84, green: 0.18, blue: 0.13)]
-        case .spinner, .hidden:
+        case .spinner, .compacting, .hidden:
             return [.clear, .clear]
         }
     }
@@ -2107,7 +2108,13 @@ struct AgentStatusOverlayBadge: View {
     }
 
     private var spinnerColor: Color {
-        Color(red: 0.31, green: 0.63, blue: 1.0)
+        displayState == .compacting
+            ? Color(red: 0.55, green: 0.60, blue: 0.72)
+            : Color(red: 0.31, green: 0.63, blue: 1.0)
+    }
+
+    private var spinnerOpacity: Double {
+        displayState == .compacting ? 0.6 : 1.0
     }
 
     /// Pulse duration per state. Returns nil for non-pulsing states.
@@ -2122,7 +2129,7 @@ struct AgentStatusOverlayBadge: View {
 
     var body: some View {
         Group {
-            if displayState == .spinner {
+            if displayState == .spinner || displayState == .compacting {
                 spinnerBody
             } else if let duration = pulseDuration {
                 pulsingBadgeBody(duration: duration)
@@ -2147,6 +2154,7 @@ struct AgentStatusOverlayBadge: View {
                     .frame(width: spinnerSize, height: spinnerSize)
                     .rotationEffect(Angle(degrees: angle))
             }
+            .opacity(spinnerOpacity)
         }
     }
 

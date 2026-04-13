@@ -66,12 +66,15 @@ final class AgentSessionStatusAggregationTests: XCTestCase {
         XCTAssertFalse(AgentSessionStatus.none.isUserDismissible)
     }
 
-    func testTaskCompletedIsUserDismissible() {
-        XCTAssertTrue(AgentSessionStatus.taskCompleted.isUserDismissible)
+    func testTaskCompletedIsNotUserDismissible() {
+        // Only .error is user-dismissible (WorkspaceModels.swift:1456).
+        // .taskCompleted and .permissionNeeded are "readable on interaction"
+        // (shrink badge) but not fully dismissible to .none.
+        XCTAssertFalse(AgentSessionStatus.taskCompleted.isUserDismissible)
     }
 
-    func testPermissionNeededIsUserDismissible() {
-        XCTAssertTrue(AgentSessionStatus.permissionNeeded.isUserDismissible)
+    func testPermissionNeededIsNotUserDismissible() {
+        XCTAssertFalse(AgentSessionStatus.permissionNeeded.isUserDismissible)
     }
 
     func testErrorIsUserDismissible() {
@@ -102,11 +105,42 @@ final class AgentSessionStatusAggregationTests: XCTestCase {
         XCTAssertEqual(AgentSessionStatus.none.badgeDisplayState(isUnread: false), .hidden)
     }
 
-    func testBadgeDisplayStatePermissionNeeded() {
-        XCTAssertEqual(AgentSessionStatus.permissionNeeded.badgeDisplayState(isUnread: false), .permissionNeeded)
+    func testBadgeDisplayStatePermissionNeededRead() {
+        // When isUnread is false, .permissionNeeded maps to .permissionNeededRead
+        XCTAssertEqual(AgentSessionStatus.permissionNeeded.badgeDisplayState(isUnread: false), .permissionNeededRead)
+    }
+
+    func testBadgeDisplayStatePermissionNeededUnread() {
+        XCTAssertEqual(AgentSessionStatus.permissionNeeded.badgeDisplayState(isUnread: true), .permissionNeeded)
     }
 
     func testBadgeDisplayStateError() {
         XCTAssertEqual(AgentSessionStatus.error.badgeDisplayState(isUnread: false), .error)
+    }
+
+    // MARK: - Compacting aggregation tests (P12.2)
+
+    func testHighestPriorityStatusReturnsCompactingOverWorking() {
+        let statuses: [AgentSessionStatus] = [.working, .compacting]
+        let result = AgentSessionStatus.highestPriority(in: statuses)
+        XCTAssertEqual(result, .compacting)
+    }
+
+    func testHighestPriorityStatusReturnsCompletedOverCompacting() {
+        let statuses: [AgentSessionStatus] = [.compacting, .taskCompleted]
+        let result = AgentSessionStatus.highestPriority(in: statuses)
+        XCTAssertEqual(result, .taskCompleted)
+    }
+
+    func testCompactingBadgeDisplayStateIgnoresUnread() {
+        // .compacting always maps to .compacting regardless of unread flag
+        XCTAssertEqual(
+            AgentSessionStatus.compacting.badgeDisplayState(isUnread: true),
+            .compacting
+        )
+        XCTAssertEqual(
+            AgentSessionStatus.compacting.badgeDisplayState(isUnread: false),
+            .compacting
+        )
     }
 }

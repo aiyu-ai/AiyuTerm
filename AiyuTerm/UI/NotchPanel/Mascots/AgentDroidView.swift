@@ -36,7 +36,7 @@ struct AgentDroidView: View {
         ZStack {
             switch status {
             case .none, .taskCompleted:          sleepScene
-            case .working:                       workScene
+            case .working, .compacting:          workScene
             case .permissionNeeded, .error:      alertScene
             }
         }
