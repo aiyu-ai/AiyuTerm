@@ -79,6 +79,29 @@ final class AgentHookEventMapper: AgentHookReceiver {
     /// `handlePeerDisconnect` can find the right continuation.
     private var worktreeToQuestionRequestId: [String: UUID] = [:]
 
+    // MARK: - PID / CWD tracking (Phase 12.15)
+
+    /// Last known PID of the Claude Code CLI process per session.
+    private var sessionPids: [String: Int32] = [:]
+
+    /// Last known working directory of the Claude Code CLI per session.
+    private var sessionCwds: [String: String] = [:]
+
+    // MARK: - Calibration timer & JSONL (Phase 12.16-17)
+
+    /// Periodic timer that runs PID liveness checks and JSONL
+    /// reconciliation for all active sessions.
+    private var calibrationTimer: DispatchSourceTimer?
+
+    /// Incremental JSONL parser shared across calibration and
+    /// file-watcher callbacks.
+    private let conversationParser = AgentConversationParser()
+
+    /// File-system watcher for JSONL conversation files. Fires a
+    /// callback when new data is appended so we can reconcile
+    /// without waiting for the next calibration tick.
+    private let jsonlWatcher = AgentJSONLWatcher()
+
     private static let logger = Logger(
         subsystem: "com.aiyuai.aiyuterm",
         category: "AgentHookEventMapper"
@@ -114,6 +137,10 @@ final class AgentHookEventMapper: AgentHookReceiver {
     func handleEvent(_ event: AgentHookEvent) {
         let sessionId = event.sessionId ?? "default"
 
+        // Lazy-start calibration on first event (tests don't want
+        // timers created in init).
+        if calibrationTimer == nil { startCalibration() }
+
         // Run the CodeIsland reducer to keep our rich snapshot up to
         // date. Side effects other than `.playSound` are still
         // discarded in Phase 3 (Phase 4 will start listening to
@@ -126,6 +153,10 @@ final class AgentHookEventMapper: AgentHookReceiver {
         )
         Self.dispatchSideEffects(effects)
 
+        // Track PID and CWD from the event payload (Phase 12.15).
+        if let pid = event.rawJSON["pid"] as? Int { sessionPids[sessionId] = Int32(pid) }
+        if let cwd = event.rawJSON["cwd"] as? String { sessionCwds[sessionId] = cwd }
+
         guard let worktreePath = resolveWorktreePath(for: event, sessionId: sessionId) else {
             Self.logger.debug(
                 "handleEvent: unresolved worktree for session \(sessionId, privacy: .public) event=\(event.eventName, privacy: .public)"
@@ -136,6 +167,19 @@ final class AgentHookEventMapper: AgentHookReceiver {
         // Cache successful resolution so future events for this
         // session can fall back to it when cwd is missing.
         sessionWorktreeCache[sessionId] = worktreePath
+
+        // Start JSONL watcher for this session if we have a cwd
+        // (Phase 12.17). The watcher fires on file-system writes so
+        // we can reconcile without waiting for the calibration tick.
+        if let cwd = event.rawJSON["cwd"] as? String {
+            let encodedCwd = cwd.claudeProjectDirEncoded()
+            let jsonlPath = (NSString(string: "~/.claude/projects/\(encodedCwd)/\(sessionId).jsonl") as NSString).expandingTildeInPath
+
+            let capturedWorktree = worktreePath
+            jsonlWatcher.watch(sessionId: sessionId, filePath: jsonlPath) { [weak self] in
+                self?.onJSONLFileChanged(sessionId: sessionId, jsonlPath: jsonlPath, worktreePath: capturedWorktree)
+            }
+        }
 
         guard let workspace = findWorkspace(containing: worktreePath) else {
             return
@@ -297,27 +341,13 @@ final class AgentHookEventMapper: AgentHookReceiver {
             }
         }
 
-        // Drain all queued permission continuations and the question
-        // continuation for this session's worktree.
+        // Stop watching the JSONL file for this session (Phase 12.17).
+        jsonlWatcher.unwatch(sessionId: sessionId)
+
+        // Drain all queued permission and question continuations for
+        // this session's worktree via the shared helper.
         if let worktreePath = sessionWorktreeCache[sessionId] {
-            // Drain entire permission queue for this worktree.
-            if let queue = permissionQueues.removeValue(forKey: worktreePath) {
-                for pending in queue {
-                    pending.continuation.resume(returning: AgentPermissionResponseBuilder.deny)
-                }
-                if let workspace = findWorkspace(containing: worktreePath) {
-                    workspace.removePermissionRequest(forWorktreePath: worktreePath)
-                }
-            }
-            // Drain question continuation (still single-slot).
-            if let id = worktreeToQuestionRequestId.removeValue(forKey: worktreePath),
-               let continuation = pendingQuestionContinuations.removeValue(forKey: id)
-            {
-                continuation.resume(returning: AgentQuestionResponseBuilder.skip)
-                if let workspace = findWorkspace(containing: worktreePath) {
-                    workspace.removeQuestionRequest(forWorktreePath: worktreePath)
-                }
-            }
+            drainQueuesForWorktree(worktreePath)
         }
     }
 
@@ -390,6 +420,163 @@ final class AgentHookEventMapper: AgentHookReceiver {
         }
     }
 
+    // MARK: - Calibration timer (Phase 12.16)
+
+    /// Start the periodic calibration timer. Safe to call multiple
+    /// times — subsequent calls are no-ops while the timer is live.
+    func startCalibration() {
+        guard calibrationTimer == nil else { return }
+        let timer = DispatchSource.makeTimerSource(queue: .main)
+        timer.schedule(deadline: .now() + 3, repeating: 3.0)
+        timer.setEventHandler { [weak self] in
+            self?.runCalibration()
+        }
+        timer.resume()
+        calibrationTimer = timer
+    }
+
+    /// Cancel the calibration timer and release all JSONL watchers.
+    func stopCalibration() {
+        calibrationTimer?.cancel()
+        calibrationTimer = nil
+        jsonlWatcher.unwatchAll()
+    }
+
+    /// Single calibration pass: PID liveness check, JSONL
+    /// reconciliation for active sessions, stale queue cleanup.
+    func runCalibration() {
+        for (sessionId, _) in snapshots {
+            guard let worktreePath = sessionWorktreeCache[sessionId],
+                  let workspace = findWorkspace(containing: worktreePath)
+            else { continue }
+
+            // 1. PID liveness check — if the CLI process is dead,
+            //    drain queues and clear any "active" badge state.
+            if let pid = sessionPids[sessionId] {
+                if kill(pid, 0) != 0 && errno == ESRCH {
+                    drainQueuesForWorktree(worktreePath)
+                    let current = workspace.agentStatus(forWorktreePath: worktreePath)
+                    if current == .working || current == .compacting || current == .permissionNeeded {
+                        workspace.setAgentStatus(.none, forWorktreePath: worktreePath)
+                    }
+                    continue
+                }
+            }
+
+            // 2. JSONL reconciliation for active sessions only.
+            let current = workspace.agentStatus(forWorktreePath: worktreePath)
+            guard current == .working || current == .permissionNeeded || current == .compacting
+            else { continue }
+
+            guard let cwd = sessionCwds[sessionId] else { continue }
+            let encodedCwd = cwd.claudeProjectDirEncoded()
+            let jsonlPath = (NSString(string: "~/.claude/projects/\(encodedCwd)/\(sessionId).jsonl") as NSString).expandingTildeInPath
+
+            Task {
+                guard let result = await conversationParser.parseIncremental(
+                    sessionId: sessionId, jsonlFilePath: jsonlPath
+                ) else { return }
+
+                await MainActor.run { [weak self] in
+                    self?.reconcile(
+                        sessionId: sessionId,
+                        worktreePath: worktreePath,
+                        workspace: workspace,
+                        jsonlResult: result
+                    )
+                }
+            }
+        }
+
+        // 3. Stale permission queue cleanup (5-minute TTL).
+        drainStalePermissions(olderThan: Date().addingTimeInterval(-300))
+    }
+
+    // MARK: - JSONL reconciliation (Phase 12.16-17)
+
+    /// Called by both the calibration timer and the file-watcher
+    /// callback. Applies JSONL-derived state corrections to the
+    /// workspace badge.
+    private func reconcile(
+        sessionId: String,
+        worktreePath: String,
+        workspace: WorkspaceModel,
+        jsonlResult: AgentJSONLParseResult
+    ) {
+        // Rule 1: Interrupt detected -> clear to .none, drain queues.
+        if jsonlResult.interruptDetected {
+            drainQueuesForWorktree(worktreePath)
+            workspace.setAgentStatus(.none, forWorktreePath: worktreePath)
+            return
+        }
+
+        // Rule 2: /clear detected -> reset parser state so next
+        // incremental parse starts fresh.
+        if jsonlResult.clearDetected {
+            Task { await conversationParser.resetSession(sessionId) }
+            return
+        }
+
+        // Rule 3: Tool completion reconciliation.
+        // We don't auto-transition to .taskCompleted — that's the
+        // Stop hook's job. The JSONL data is used for future
+        // enrichment (tool result previews etc).
+    }
+
+    /// Callback invoked by the JSONL file-system watcher when the
+    /// conversation file is extended with new data.
+    private func onJSONLFileChanged(
+        sessionId: String,
+        jsonlPath: String,
+        worktreePath: String
+    ) {
+        Task {
+            guard let result = await conversationParser.parseIncremental(
+                sessionId: sessionId, jsonlFilePath: jsonlPath
+            ) else { return }
+
+            await MainActor.run { [weak self] in
+                guard let self,
+                      let workspace = self.findWorkspace(containing: worktreePath)
+                else { return }
+
+                self.reconcile(
+                    sessionId: sessionId,
+                    worktreePath: worktreePath,
+                    workspace: workspace,
+                    jsonlResult: result
+                )
+            }
+        }
+    }
+
+    // MARK: - Queue draining (shared helper)
+
+    /// Drain all pending permission and question continuations for
+    /// a worktree. Shared by `handlePeerDisconnect`, `runCalibration`,
+    /// and `reconcile`.
+    private func drainQueuesForWorktree(_ worktreePath: String) {
+        // Drain permission queue.
+        if let queue = permissionQueues.removeValue(forKey: worktreePath) {
+            for pending in queue {
+                pending.continuation.resume(returning: AgentPermissionResponseBuilder.deny)
+            }
+            if let workspace = findWorkspace(containing: worktreePath) {
+                workspace.removePermissionRequest(forWorktreePath: worktreePath)
+            }
+        }
+
+        // Drain question continuation.
+        if let id = worktreeToQuestionRequestId.removeValue(forKey: worktreePath),
+           let continuation = pendingQuestionContinuations.removeValue(forKey: id)
+        {
+            continuation.resume(returning: AgentQuestionResponseBuilder.skip)
+            if let workspace = findWorkspace(containing: worktreePath) {
+                workspace.removeQuestionRequest(forWorktreePath: worktreePath)
+            }
+        }
+    }
+
     // MARK: - Stale queue cleanup (Phase 12.11)
 
     /// Drain all queued permission entries older than `threshold`,
@@ -426,6 +613,9 @@ final class AgentHookEventMapper: AgentHookReceiver {
     func _resetForTesting() {
         snapshots.removeAll()
         sessionWorktreeCache.removeAll()
+        sessionPids.removeAll()
+        sessionCwds.removeAll()
+        stopCalibration()
     }
 
     /// Snapshot count, used by tests to assert state bookkeeping.
