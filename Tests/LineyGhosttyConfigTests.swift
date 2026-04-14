@@ -26,7 +26,7 @@ final class AiyuTermGhosttyConfigTests: XCTestCase {
 
         XCTAssertEqual(
             contents,
-            "# Managed by AiyuTerm. Manual edits will be overwritten.\n"
+            "# Managed by AiyuTerm. Manual edits will be overwritten.\nscrollbar-visible = false\n"
         )
     }
 }

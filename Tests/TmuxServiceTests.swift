@@ -42,9 +42,21 @@ final class TmuxServiceTests: XCTestCase {
 
     // MARK: - Attach arguments
 
-    func testAttachArgumentsUsesSessionID() {
+    func testAttachArgumentsUsesSessionID() async throws {
+        // Resolve tmux path first so attachArguments can produce output.
+        let available = await TmuxService.isTmuxAvailable()
+        guard available else {
+            // tmux is not installed -- skip rather than fail.
+            throw XCTSkip("tmux is not installed on this machine")
+        }
         let args = TmuxService.attachArguments(sessionID: "$0")
-        XCTAssertEqual(args, ["-lc", "tmux set-option -g allow-passthrough on \\; set-option -g mouse on \\; attach -t '$0'"])
+        XCTAssertNotNil(args)
+        // The resolved tmux path varies by machine; verify the session ID
+        // is embedded correctly rather than matching the full string.
+        XCTAssertEqual(args?.count, 2)
+        XCTAssertEqual(args?.first, "-lc")
+        XCTAssertTrue(args?[1].hasSuffix("set-option -g allow-passthrough on \\; set-option -g mouse on \\; attach -t '$0'") ?? false)
+        XCTAssertTrue(args?[1].contains("tmux") ?? false)
     }
 
     func testAttachArgumentsRejectsInvalidSessionID() {

@@ -10,7 +10,15 @@ import XCTest
 
 @MainActor
 final class WorkspaceStoreTests: XCTestCase {
+    // Stores that access computed properties triggering lazy subsystems
+    // must outlive the test method to avoid a TmuxPanelStore deinit
+    // race (signal abrt in swift_task_deinitOnExecutorImpl). Assigning
+    // to this property defers deallocation to tearDown where the test
+    // infrastructure is still intact.
+    private var retainedStore: WorkspaceStore?
+
     override func tearDown() {
+        retainedStore = nil
         LocalizationManager.shared.updateSelectedLanguage(.automatic)
         super.tearDown()
     }
@@ -100,6 +108,7 @@ final class WorkspaceStoreTests: XCTestCase {
     func testCommandPaletteItemsLocalizeForSimplifiedChinese() {
         LocalizationManager.shared.updateSelectedLanguage(.simplifiedChinese)
         let store = WorkspaceStore(persistsWorkspaceState: false)
+        retainedStore = store
 
         let items = store.commandPaletteItems
 
@@ -111,6 +120,7 @@ final class WorkspaceStoreTests: XCTestCase {
     func testSleepPreventionStringsLocalizeForSimplifiedChinese() {
         LocalizationManager.shared.updateSelectedLanguage(.simplifiedChinese)
         let store = WorkspaceStore(persistsWorkspaceState: false)
+        retainedStore = store
 
         XCTAssertEqual(store.sleepPreventionStatusText, "禁止休眠")
         XCTAssertEqual(store.sleepPreventionPrimaryActionLabel, "开始禁止休眠")

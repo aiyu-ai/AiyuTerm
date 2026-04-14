@@ -9,6 +9,16 @@ import XCTest
 @testable import AiyuTerm
 
 final class SleepPreventionSupportTests: XCTestCase {
+    override func setUp() {
+        super.setUp()
+        LocalizationManager.shared.updateSelectedLanguage(.english)
+    }
+
+    override func tearDown() {
+        LocalizationManager.shared.updateSelectedLanguage(.automatic)
+        super.tearDown()
+    }
+
     func testSleepPreventionDurationsMatchExpectedSeconds() {
         XCTAssertEqual(SleepPreventionDurationOption.oneHour.duration, 3_600)
         XCTAssertEqual(SleepPreventionDurationOption.twelveHours.duration, 43_200)

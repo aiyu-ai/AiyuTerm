@@ -344,6 +344,10 @@ func aiyuTermGhosttySSHWordNavigationEscapeSequence(
     modifierFlags: NSEvent.ModifierFlags,
     backendConfiguration: SessionBackendConfiguration
 ) -> String? {
+    guard backendConfiguration.kind == .ssh else {
+        return nil
+    }
+
     let relevantModifiers = aiyuTermGhosttyRelevantModifierFlags(modifierFlags)
     guard relevantModifiers.contains(.option),
           !relevantModifiers.contains(.command),

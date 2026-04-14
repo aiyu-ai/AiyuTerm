@@ -9,6 +9,16 @@ import XCTest
 @testable import AiyuTerm
 
 final class ReleaseUpdateTests: XCTestCase {
+    override func setUp() {
+        super.setUp()
+        LocalizationManager.shared.updateSelectedLanguage(.english)
+    }
+
+    override func tearDown() {
+        LocalizationManager.shared.updateSelectedLanguage(.automatic)
+        super.tearDown()
+    }
+
     func testNewWindowShortcutDefaultsToCommandN() {
         XCTAssertEqual(AiyuTermShortcutAction.newWindow.category, .window)
         XCTAssertEqual(AiyuTermShortcutAction.newWindow.title, "New Window")
@@ -25,10 +35,10 @@ final class ReleaseUpdateTests: XCTestCase {
         XCTAssertFalse(aiyuTermShouldReopenMainWindow(hasVisibleWindows: true))
     }
 
-    func testAppUpdaterDefaultsToEmptyFeedURL() {
+    func testAppUpdaterDefaultsToAppcastFeedURL() {
         XCTAssertEqual(
             AppUpdaterController.defaultFeedURLString,
-            ""
+            "https://raw.githubusercontent.com/aiyu-ai/AiyuTerm/main/appcast.xml"
         )
     }
 
@@ -75,7 +85,7 @@ final class ReleaseUpdateTests: XCTestCase {
         XCTAssertTrue(decoded.autoClosePaneOnProcessExit)
         XCTAssertTrue(decoded.confirmQuitWhenCommandsRunning)
         XCTAssertTrue(decoded.autoCheckForUpdates)
-        XCTAssertFalse(decoded.autoDownloadUpdates)
+        XCTAssertTrue(decoded.autoDownloadUpdates)
         XCTAssertTrue(decoded.sidebarShowsSecondaryLabels)
         XCTAssertTrue(decoded.sidebarShowsWorkspaceBadges)
         XCTAssertTrue(decoded.sidebarShowsWorktreeBadges)

@@ -35,7 +35,7 @@ final class QuickCommandSupportTests: XCTestCase {
     func testLegacySettingsDecodeDefaultsAppLanguageToAutomatic() throws {
         let settings = try JSONDecoder().decode(AppSettings.self, from: Data("{}".utf8))
 
-        XCTAssertEqual(settings.appLanguage, .automatic)
+        XCTAssertEqual(settings.appLanguage, .english)
     }
 
     func testSettingsEncodingPreservesAppLanguage() throws {

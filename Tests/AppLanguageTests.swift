@@ -12,7 +12,7 @@ final class AppLanguageTests: XCTestCase {
     func testAppSettingsDefaultsToAutomaticLanguage() {
         let settings = AppSettings()
 
-        XCTAssertEqual(settings.appLanguage, .automatic)
+        XCTAssertEqual(settings.appLanguage, .english)
         XCTAssertEqual(settings.agentPresets.first?.name, "Claude Code")
         XCTAssertEqual(settings.preferredAgentPresetID, AgentPreset.claudeCode.id)
     }

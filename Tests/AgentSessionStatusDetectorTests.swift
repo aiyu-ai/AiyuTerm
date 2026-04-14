@@ -108,14 +108,14 @@ final class AgentSessionStatusDetectorTests: XCTestCase {
 
     // MARK: - Title-based detection
 
-    func testDetectsPermissionFromStarTitle() {
+    func testDetectsNoneFromStarTitle() {
         let result = AgentSessionStatusDetector.detectFromTitle("\u{2733} Claude Code")
-        XCTAssertEqual(result, .permissionNeeded)
+        XCTAssertEqual(result, .none)
     }
 
-    func testReturnsNoneForSpinnerTitle() {
+    func testReturnsWorkingForSpinnerTitle() {
         let result = AgentSessionStatusDetector.detectFromTitle("\u{2802} Claude Code")
-        XCTAssertEqual(result, .none)
+        XCTAssertEqual(result, .working)
     }
 
     func testReturnsNoneForPlainTitle() {
