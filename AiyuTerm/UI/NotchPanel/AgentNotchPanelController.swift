@@ -74,6 +74,11 @@ final class KeyableNotchPanel: NSPanel {
 final class NotchHostingView<Content: View>: NSHostingView<Content> {
     private var applyingDeferred = false
 
+    // Explicit deinit works around a Swift 6.2 compiler crash in the
+    // EarlyPerfInliner pass on the auto-generated deinit of generic
+    // NSHostingView subclasses (rdar://FB16XXXXXX).
+    deinit {}
+
     override func mouseDown(with event: NSEvent) {
         window?.makeKey()
         super.mouseDown(with: event)
